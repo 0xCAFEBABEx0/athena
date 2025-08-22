@@ -77,7 +77,6 @@ export default buildConfig({
   collections: [Pages, Posts, Media, Categories, Users],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
-  graphQL: false,
   plugins: [
     ...plugins,
     vercelBlobStorage({
