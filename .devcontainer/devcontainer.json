@@ -1,5 +1,5 @@
 {
-  "name": "Athena DevContainer",
+  "name": "Athena Payload CMS DevContainer",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspace",
