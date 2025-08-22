@@ -1,0 +1,63 @@
+# Athena Project Rules
+
+This is a Payload CMS + Next.js project with PostgreSQL backend.
+
+## Project Structure
+
+- **Backend**: Payload CMS with PostgreSQL
+- **Frontend**: Next.js App Router
+- **Database**: PostgreSQL (Neon cloud)
+- **Package Manager**: Bun
+- **Styling**: Tailwind CSS
+
+## Development Guidelines
+
+### Code Style
+- Use TypeScript for all new code
+- Follow ESLint and Prettier configurations
+- Use meaningful variable and function names
+- Add JSDoc comments for complex functions
+
+### Component Guidelines
+- Use functional components with hooks
+- Implement proper TypeScript interfaces
+- Follow React best practices
+- Use Tailwind CSS for styling
+
+### Database
+- Use Prisma schema for database modeling
+- Run migrations for schema changes
+- Use proper indexing for performance
+
+### Testing
+- Write unit tests for utilities
+- Write integration tests for API endpoints
+- Use Playwright for E2E testing
+
+### Performance
+- Optimize images with next/image
+- Use proper caching strategies
+- Implement lazy loading where appropriate
+
+### Security
+- Validate all user inputs
+- Use environment variables for sensitive data
+- Implement proper authentication and authorization
+
+## File Naming Conventions
+
+- Components: PascalCase (e.g., `UserProfile.tsx`)
+- Utilities: camelCase (e.g., `formatDate.ts`)
+- Constants: UPPER_SNAKE_CASE (e.g., `API_ENDPOINTS.ts`)
+- Types: PascalCase (e.g., `UserTypes.ts`)
+
+## Git Workflow
+
+- Use conventional commits
+- Create feature branches from main
+- Submit PRs for review
+- Keep commits atomic and meaningful
+description:
+globs:
+alwaysApply: false
+---

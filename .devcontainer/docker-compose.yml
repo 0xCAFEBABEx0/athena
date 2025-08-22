@@ -2,16 +2,16 @@ services:
   # Dev Container app service
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
-      target: development  # 開発用ターゲットを指定
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+      target: development # 開発用ターゲットを指定
     volumes:
-      - .:/workspace:cached
+      - ..:/workspace:cached
       - node_modules:/workspace/node_modules
     working_dir: /workspace
     command: sleep infinity
-    ports:
-      - '3000:3000'
+    expose:
+      - '3000'
     environment:
       - NODE_ENV=development
       - DATABASE_URI=postgres://postgres@postgres:5432/payload_db
@@ -22,8 +22,8 @@ services:
 
   postgres:
     image: postgres
-    ports:
-      - '54320:5432'
+    expose:
+      - '5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_DB: payload_db # THIS MUST MATCH YOUR DB NAME IN .env
@@ -33,11 +33,12 @@ services:
     networks:
       - athena-network
     env_file:
-      - .env
+      - ../.env
 
 volumes:
   node_modules:
   postgres_data:
+
 
 networks:
   athena-network:
