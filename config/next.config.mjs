@@ -9,6 +9,19 @@ const nextConfig = {
   
   // Enable standalone output for Docker
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+  
+  // Image configuration
+  images: {
+    domains: ['localhost'],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3000',
+        pathname: '/api/**',
+      },
+    ],
+  },
 }
 
 // Check if Sentry should be enabled
