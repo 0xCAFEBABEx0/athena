@@ -80,14 +80,7 @@ git push origin main
 
 This project is configured for deployment on Vercel with automatic deployments triggered by Git pushes.
 
-### Environment Variables
-
-Set the following environment variables in your Vercel project:
-
-- `PAYLOAD_SECRET` - Secret key for Payload CMS
-- `MONGODB_URI` - MongoDB connection string (if using MongoDB)
-- `POSTGRES_URL` - PostgreSQL connection string (if using PostgreSQL)
-- `SENTRY_DSN` - Sentry DSN for error tracking
+- See docs: [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md), [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md), [docs/SENTRY_SETUP.md](./docs/SENTRY_SETUP.md)
 
 ## Sentry Integration
 

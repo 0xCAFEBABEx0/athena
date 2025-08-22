@@ -1,67 +1,19 @@
 {
-  "name": "Payload CMS Development",
-  "dockerComposeFile": "../docker-compose.yml",
+  "name": "Athena DevContainer",
+  "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspace",
-  
-  // Configure tool-specific properties.
+  "forwardPorts": [3000],
   "customizations": {
     "vscode": {
-      "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "typescript.preferences.useAliasesForRenames": false,
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "editor.codeActionsOnSave": {
-          "source.fixAll.eslint": "explicit"
-        }
-      },
-      
-      // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
         "esbenp.prettier-vscode",
-        "bradlc.vscode-tailwindcss",
-        "ms-vscode.vscode-typescript-next",
-        "ms-vscode.vscode-eslint",
-        "ms-vscode.vscode-json",
-        "formulahendry.auto-rename-tag",
-        "christian-kohler.path-intellisense",
-        "ms-vscode.vscode-node-azure-pack",
-        "github.copilot",
-        "github.copilot-chat"
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss"
       ]
     }
   },
-
-  // Features to add to the dev container. More info: https://containers.dev/features.
-  "features": {
-    "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
-  },
-
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  "forwardPorts": [3000, 54320],
-  "portsAttributes": {
-    "3000": {
-      "label": "Next.js App",
-      "onAutoForward": "notify"
-    },
-    "54320": {
-      "label": "PostgreSQL Database"
-    }
-  },
-
-  // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "bun install",
-
-  // Use 'postStartCommand' to run commands after the container starts.
-  "postStartCommand": "echo 'Dev container is ready! Run: bun run dev'",
-
-  // Configure tool-specific properties.
   "remoteUser": "vscode",
-  
-  // Set `remoteEnv` to locally sourced environment variables.
-  "remoteEnv": {
-    "PATH": "${containerEnv:PATH}:/home/vscode/.bun/bin"
-  }
-} 
+  "remoteEnv": { "PATH": "${containerEnv:PATH}:/home/vscode/.bun/bin" },
+  "postCreateCommand": "bash -lc 'command -v bun >/dev/null 2>&1 || curl -fsSL https://bun.sh/install | bash; bun install --no-save'"
+}

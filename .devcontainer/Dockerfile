@@ -13,10 +13,13 @@ WORKDIR /app
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:${PATH}"
 
+# Toggle reproducible installs when desired
+ARG BUN_FROZEN_LOCKFILE=false
+
 # Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* bun.lock* ./
 RUN \
-  if [ -f bun.lock ]; then bun install --frozen-lockfile; \
+  if [ -f bun.lock ]; then if [ "$BUN_FROZEN_LOCKFILE" = "true" ]; then bun install --frozen-lockfile; else bun install --no-save; fi; \
   elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
   elif [ -f package-lock.json ]; then npm ci; \
@@ -29,10 +32,10 @@ RUN apk add --no-cache git bash sudo shadow curl
 
 # Use existing node user and make it compatible with vscode
 RUN usermod -l vscode node && \
-    groupmod -n vscode node && \
-    usermod -d /home/vscode -m vscode && \
-    usermod -s /bin/bash vscode && \
-    echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+  groupmod -n vscode node && \
+  usermod -d /home/vscode -m vscode && \
+  usermod -s /bin/bash vscode && \
+  echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Install Bun for development
 USER vscode

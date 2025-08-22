@@ -4,7 +4,6 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    
     "baseUrl": ".",
     "esModuleInterop": true,
     "target": "ES2022",
@@ -43,9 +42,9 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "redirects.js",
-    "next.config.js",
-    "next-sitemap.config.cjs"
+    "config/redirects.js",
+    "config/next.config.mjs",
+    "config/next-sitemap.config.cjs"
   ],
   "exclude": [
     "node_modules"
