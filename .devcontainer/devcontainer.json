@@ -1,11 +1,21 @@
 {
   "name": "Athena Payload CMS DevContainer",
-  "dockerComposeFile": "docker-compose.yml",
+  "dockerComposeFile": "../docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspace",
-  "forwardPorts": [3000],
+  "forwardPorts": [
+    3000
+  ],
   "customizations": {
     "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss",
+        "google.antigravity"
+      ]
+    },
+    "cursor": {
       "extensions": [
         "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint",
@@ -14,6 +24,8 @@
     }
   },
   "remoteUser": "vscode",
-  "remoteEnv": { "PATH": "${containerEnv:PATH}:/home/vscode/.bun/bin" },
-  "postCreateCommand": "bash -lc 'command -v bun >/dev/null 2>&1 || curl -fsSL https://bun.sh/install | bash; bun install --no-save'"
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/home/vscode/.bun/bin"
+  }
+  // "postCreateCommand": "bun install"
 }

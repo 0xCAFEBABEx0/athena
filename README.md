@@ -80,7 +80,12 @@ git push origin main
 
 This project is configured for deployment on Vercel with automatic deployments triggered by Git pushes.
 
-- See docs: [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md), [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md), [docs/SENTRY_SETUP.md](./docs/SENTRY_SETUP.md)
+- See docs: 
+  - [CI/CD Pipeline](./docs/CI_CD.md) - CI/CD details and flow diagrams
+  - [Deployment Guide](./docs/DEPLOYMENT.md) - Deployment procedures and environment setup
+  - [Development Workflow](./docs/DEVELOPMENT_WORKFLOW.md) - Branch strategy and development flow
+  - [Development Guide](./docs/DEVELOPMENT.md) - Development environment setup
+  - [Sentry Setup](./docs/SENTRY_SETUP.md) - Error tracking configuration
 
 ## Sentry Integration
 

@@ -2,6 +2,10 @@
 
 This project follows a **Development → Preview → Production** workflow using Vercel and GitHub.
 
+> **📚 Related Documentation**: 
+> - [CI/CD Pipeline Details](./CI_CD.md) - Complete CI/CD documentation and flow diagrams
+> - [Development Workflow](./DEVELOPMENT_WORKFLOW.md) - Branch strategy and development flow
+
 ## Workflow Overview
 
 ```
@@ -96,19 +100,36 @@ git push origin main
 
 ## Automated Deployments
 
-### GitHub Actions
-The project includes GitHub Actions workflows that automatically:
+### Vercel Automatic Deployment (Primary)
 
-1. **Lint and Type Check** on all pushes and PRs
-2. **Deploy to Preview** when pushing to `preview` branch
-3. **Deploy to Production** when pushing to `main` branch
+This project uses **Vercel's Git integration** for automatic deployments:
 
-### Required Secrets
-Set these secrets in your GitHub repository:
+1. **Preview Environment**: Pushing to `preview` branch automatically deploys to Preview environment
+2. **Production Environment**: Pushing to `main` branch automatically deploys to Production environment
+3. **Development Branch**: Pushing to `development` branch does not trigger deployment (disabled in configuration)
+
+Vercel is directly integrated with the GitHub repository and automatically executes builds and deployments when it detects pushes.
+
+### GitHub Actions (Supporting)
+
+GitHub Actions workflows execute the following processes:
+
+1. **Lint and Type Check**: Executed on all pushes and PRs
+2. **Deployment Jobs**: Currently disabled (using Vercel automatic deployment)
+
+> **Details**: For complete CI/CD pipeline documentation, see [CI_CD.md](./CI_CD.md).
+
+### Enabling Deployment via GitHub Actions (Optional)
+
+To manage deployments via GitHub Actions, configure the following Secrets:
 
 - `VERCEL_TOKEN`: Vercel authentication token
 - `VERCEL_ORG_ID`: Vercel organization ID
 - `VERCEL_PROJECT_ID`: Vercel project ID
+
+Then uncomment the deployment jobs in `.github/workflows/deployment.yml`.
+
+> **Note**: Currently, Vercel automatic deployment is working correctly, so deployment via GitHub Actions is not required.
 
 ## Environment Variables
 

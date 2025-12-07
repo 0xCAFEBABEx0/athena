@@ -1,14 +1,17 @@
+name: athena-devcontainer
+
 services:
   # Dev Container app service
   app:
     build:
-      context: ..
-      dockerfile: .devcontainer/Dockerfile
+      context: .
+      dockerfile: Dockerfile
       target: development # 開発用ターゲットを指定
     volumes:
-      - ..:/workspace:cached
+      - .:/workspace:cached
       - node_modules:/workspace/node_modules
     working_dir: /workspace
+    init: true
     command: sleep infinity
     expose:
       - '3000'
@@ -16,12 +19,13 @@ services:
       - NODE_ENV=development
       - DATABASE_URI=postgres://postgres@postgres:5432/payload_db
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - athena-network
 
   postgres:
-    image: postgres
+    image: postgres:16
     expose:
       - '5432'
     environment:
@@ -30,10 +34,15 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d payload_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - athena-network
     env_file:
-      - ../.env
+      - .env
 
 volumes:
   node_modules:
