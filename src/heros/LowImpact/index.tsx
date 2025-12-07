@@ -1,6 +1,7 @@
 import React from 'react'
 
 import type { Page } from '@/payload-types'
+import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
 
 import RichText from '@/components/RichText'
 
@@ -18,7 +19,7 @@ export const LowImpactHero: React.FC<LowImpactHeroType> = ({ children, richText 
   return (
     <div className="container mt-16">
       <div className="max-w-[48rem]">
-        {children || (richText && <RichText data={richText as any} enableGutter={false} />)}
+        {children || (richText && <RichText data={richText as unknown as DefaultTypedEditorState} enableGutter={false} />)}
       </div>
     </div>
   )

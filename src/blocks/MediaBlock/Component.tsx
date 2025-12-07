@@ -5,6 +5,7 @@ import React from 'react'
 import RichText from '@/components/RichText'
 
 import type { MediaBlock as MediaBlockProps } from '@/payload-types'
+import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
 
 import { Media } from '../../components/Media'
 
@@ -59,7 +60,7 @@ export const MediaBlock: React.FC<Props> = (props) => {
             captionClassName,
           )}
         >
-          <RichText data={caption as any} enableGutter={false} />
+          <RichText data={caption as unknown as DefaultTypedEditorState} enableGutter={false} />
         </div>
       )}
     </div>
