@@ -6,10 +6,10 @@ const nextConfig = {
     // Enable Web Vitals tracking
     webVitalsAttribution: ['CLS', 'LCP'],
   },
-  
+
   // Enable standalone output for Docker
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
-  
+
   // Image configuration
   images: {
     domains: ['localhost'],
@@ -26,7 +26,7 @@ const nextConfig = {
 
 // Check if Sentry should be enabled
 // Temporarily disable Sentry for Next.js 15 compatibility
-const shouldUseSentry = false // process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
+const shouldUseSentry = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
 const hasSentryConfig = process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
 
 let finalConfig = nextConfig
