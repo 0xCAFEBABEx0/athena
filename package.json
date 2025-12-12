@@ -7,7 +7,7 @@
   "scripts": {
     "build": "cross-env NODE_ENV=production NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs",
-    "ci": "cross-env NODE_OPTIONS=--no-deprecation bun run build",
+    "ci": "bun run build",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev --turbopack",
     "dev:prod": "cross-env NODE_OPTIONS=--no-deprecation rm -rf .next && bun run build && bun run start",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
@@ -17,7 +17,7 @@
     "lint:fix": "cross-env NODE_OPTIONS=--no-deprecation next lint --fix",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && rm -f bun.lock && bun install",
-    "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
+    "start": "cross-env NODE_ENV=production NODE_OPTIONS=--no-deprecation next start",
     "test": "echo \"Info: No tests specified\" && exit 0",
     "deploy:preview": "git checkout preview && git merge development && git push origin preview",
     "deploy:production": "git checkout main && git merge preview && git push origin main",
