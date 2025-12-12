@@ -3,6 +3,7 @@ import React from 'react'
 import RichText from '@/components/RichText'
 
 import type { ContentBlock as ContentBlockProps } from '@/payload-types'
+import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
 
 import { CMSLink } from '../../components/Link'
 
@@ -31,7 +32,7 @@ export const ContentBlock: React.FC<ContentBlockProps> = (props) => {
                 })}
                 key={index}
               >
-                {richText && <RichText data={richText} enableGutter={false} />}
+                {richText && <RichText data={richText as unknown as DefaultTypedEditorState} enableGutter={false} />}
 
                 {enableLink && <CMSLink {...link} />}
               </div>
