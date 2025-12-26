@@ -26,8 +26,8 @@
 
 ## 🗄️ Database
 
-- Use Prisma schema for modeling.
-- Run migrations for schema changes.
+- Use Payload CMS collections for data modeling.
+- Run migrations with `bun payload migrate` for schema changes.
 
 ## 🧪 Testing
 
