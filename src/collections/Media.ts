@@ -14,38 +14,8 @@ import { authenticated } from '../access/authenticated'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
-const generateVercelBlobURL = (filename: string): string | undefined => {
-  const token = process.env.BLOB_READ_WRITE_TOKEN
-  if (!token) return undefined
-  const match = token.match(/^vercel_blob_rw_([a-z\d]+)_[a-z\d]+$/i)
-  if (!match) return undefined
-  const storeId = match[1].toLowerCase()
-  return `https://${storeId}.public.blob.vercel-storage.com/${filename}`
-}
-
 export const Media: CollectionConfig = {
   slug: 'media',
-  hooks: {
-    afterRead: [
-      ({ doc }) => {
-        if (process.env.BLOB_READ_WRITE_TOKEN) {
-          if (doc.filename) {
-            const url = generateVercelBlobURL(doc.filename)
-            if (url) doc.url = url
-          }
-          if (doc.sizes) {
-            Object.values(doc.sizes).forEach((size: any) => {
-              if (size.filename) {
-                const url = generateVercelBlobURL(size.filename)
-                if (url) size.url = url
-              }
-            })
-          }
-        }
-        return doc
-      },
-    ],
-  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -70,9 +40,7 @@ export const Media: CollectionConfig = {
   ],
   upload: {
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload
-    // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload
-    staticDir: process.env.BLOB_READ_WRITE_TOKEN ? undefined : path.resolve(dirname, '../../public/media'),
-    disableLocalStorage: !!process.env.BLOB_READ_WRITE_TOKEN,
+    staticDir: path.resolve(dirname, '../../public/media'),
     adminThumbnail: 'thumbnail',
     focalPoint: true,
     imageSizes: [
