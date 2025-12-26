@@ -1,16 +1,15 @@
 # Payload Website Template
 
-<!-- Vercel Deploy Test - Updated at 2025-07-26 -->
-
 This is a [Payload](https://github.com/payloadcms/payload) website template perfect for a personal site, blog, or any content-driven website.
 
 ## Features
 
-- **Payload CMS** - Headless CMS with admin panel
-- **Next.js 15** - React framework with App Router
+- **Payload CMS 3.69.0** - Headless CMS with admin panel
+- **Next.js 15.4.10** - React framework with App Router and Turbopack
 - **TypeScript** - Type-safe development
 - **Bun** - Fast package manager and runtime (17x faster than pnpm)
 - **Tailwind CSS** - Utility-first CSS framework
+- **daisyUI** - Tailwind CSS component library for rapid UI development
 - **Sentry Integration** - Error tracking and performance monitoring
 - **Vercel Analytics & Speed Insights** - Performance monitoring
 - **Form Builder** - Dynamic form creation
@@ -26,8 +25,8 @@ This project follows a **Development → Preview → Production** workflow using
 ### 1. **Development (Local)**
 ```bash
 # Clone and setup
-git clone https://github.com/w9be1tip0v/zeus.git
-cd zeus
+git clone https://github.com/0xCAFEBABEx0/athena.git
+cd athena
 bun install
 
 # Set up environment variables
@@ -138,7 +137,3 @@ src/
 ## License
 
 MIT
-
----
-
-**Deployment Trigger**: This commit triggers a new Vercel deployment.

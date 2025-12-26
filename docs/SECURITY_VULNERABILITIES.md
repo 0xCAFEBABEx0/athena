@@ -11,8 +11,8 @@ This report documents the security vulnerability investigation for Next.js and R
 ## Current Dependency Versions
 
 - **Next.js**: `15.2.6` ✅
-- **React**: `19.1.2` ✅
-- **React DOM**: `19.1.2` ✅
+- **React**: `19.1.4` ✅
+- **React DOM**: `19.1.4` ✅
 
 ## Critical Vulnerabilities Status
 

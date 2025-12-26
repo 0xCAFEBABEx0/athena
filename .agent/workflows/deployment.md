@@ -26,7 +26,7 @@ git push origin preview
 
 **Manual Command:**
 ```bash
-pnpm run deploy:preview
+bun run deploy:preview
 ```
 
 ### 2. Deploy to Production
@@ -41,7 +41,7 @@ git push origin main
 
 **Manual Command:**
 ```bash
-pnpm run deploy:production
+bun run deploy:production
 ```
 
 ## ✅ Verification
