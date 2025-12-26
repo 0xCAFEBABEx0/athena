@@ -26,22 +26,21 @@ git push origin preview
 
 **Manual Command:**
 ```bash
-pnpm run deploy:preview
+bun run deploy:preview
 ```
 
 ### 2. Deploy to Production
-Automated via GitHub Actions when pushing to `main` branch.
+**Requirement:** GitHub Repository Rules enforce Pull Requests for the `main` branch.
 
+1. Create a Pull Request from `preview` to `main` on GitHub.
+2. Wait for checks to pass.
+3. Merge the Pull Request.
+
+**Manual Command (Local Sync only):**
 ```bash
-# Merge preview to main
+# Sync local main with remote after PR merge
 git checkout main
-git merge preview
-git push origin main
-```
-
-**Manual Command:**
-```bash
-pnpm run deploy:production
+git pull origin main
 ```
 
 ## ✅ Verification

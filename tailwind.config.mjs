@@ -1,5 +1,6 @@
 import tailwindcssAnimate from 'tailwindcss-animate'
 import typography from '@tailwindcss/typography'
+import daisyui from 'daisyui'
 
 /** @type {import('tailwindcss').Config} */
 const config = {
@@ -10,7 +11,60 @@ const config = {
     './src/**/*.{ts,tsx}',
   ],
   darkMode: ['selector', '[data-theme="dark"]'],
-  plugins: [tailwindcssAnimate, typography],
+  plugins: [tailwindcssAnimate, typography, daisyui],
+  daisyui: {
+    themes: [
+      {
+        light: {
+          primary: 'hsl(222.2 47.4% 11.2%)',
+          'primary-content': 'hsl(210 40% 98%)',
+          secondary: 'hsl(210 40% 96.1%)',
+          'secondary-content': 'hsl(222.2 47.4% 11.2%)',
+          accent: 'hsl(210 40% 96.1%)',
+          'accent-content': 'hsl(222.2 47.4% 11.2%)',
+          neutral: 'hsl(222.2 84% 4.9%)',
+          'neutral-content': 'hsl(210 40% 98%)',
+          'base-100': 'hsl(0 0% 100%)',
+          'base-200': 'hsl(240 5% 96%)',
+          'base-300': 'hsl(240 6% 80%)',
+          info: 'hsl(196 52% 74%)',
+          success: 'hsl(196 52% 74%)',
+          warning: 'hsl(34 89% 85%)',
+          error: 'hsl(0 84.2% 60.2%)',
+          '--rounded-btn': '0.2rem',
+          '--rounded-badge': '0.2rem',
+          '--rounded-box': '0.4rem',
+        },
+        dark: {
+          primary: 'hsl(210 40% 98%)',
+          'primary-content': 'hsl(222.2 47.4% 11.2%)',
+          secondary: 'hsl(217.2 32.6% 17.5%)',
+          'secondary-content': 'hsl(210 40% 98%)',
+          accent: 'hsl(217.2 32.6% 17.5%)',
+          'accent-content': 'hsl(210 40% 98%)',
+          neutral: 'hsl(210 40% 98%)',
+          'neutral-content': 'hsl(222.2 47.4% 11.2%)',
+          'base-100': 'hsl(0 0% 0%)',
+          'base-200': 'hsl(0 0% 4%)',
+          'base-300': 'hsl(217.2 32.6% 17.5%)',
+          info: 'hsl(196 100% 14%)',
+          success: 'hsl(196 100% 14%)',
+          warning: 'hsl(34 51% 25%)',
+          error: 'hsl(0 62.8% 30.6%)',
+          '--rounded-btn': '0.2rem',
+          '--rounded-badge': '0.2rem',
+          '--rounded-box': '0.4rem',
+        },
+      },
+    ],
+    darkTheme: 'dark',
+    base: true,
+    styled: true,
+    utils: true,
+    prefix: '',
+    logs: true,
+    themeRoot: ':root',
+  },
   prefix: '',
   safelist: [
     'lg:col-span-4',

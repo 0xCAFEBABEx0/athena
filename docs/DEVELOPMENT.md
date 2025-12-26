@@ -138,6 +138,7 @@ src/utilities/env.ts      # Environment configuration utility
 
 ### Technologies
 - **Tailwind CSS**: Utility-first CSS framework
+- **daisyUI**: Tailwind CSS component library (buttons, cards, inputs, etc.)
 - **Radix UI**: Headless UI components
 - **Geist Font**: Modern typography
 - **Lucide React**: Icon library

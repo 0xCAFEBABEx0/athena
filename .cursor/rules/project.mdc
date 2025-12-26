@@ -1,3 +1,9 @@
+---
+description: Athena Project Rules - Payload CMS + Next.js development guidelines
+globs: 
+alwaysApply: true
+---
+
 # Athena Project Rules
 
 This is a Payload CMS + Next.js project with PostgreSQL backend.
@@ -25,8 +31,8 @@ This is a Payload CMS + Next.js project with PostgreSQL backend.
 - Use Tailwind CSS for styling
 
 ### Database
-- Use Prisma schema for database modeling
-- Run migrations for schema changes
+- Use Payload CMS collections for data modeling
+- Run migrations with `bun payload migrate` for schema changes
 - Use proper indexing for performance
 
 ### Testing
@@ -57,7 +63,3 @@ This is a Payload CMS + Next.js project with PostgreSQL backend.
 - Create feature branches from main
 - Submit PRs for review
 - Keep commits atomic and meaningful
-description:
-globs:
-alwaysApply: false
----

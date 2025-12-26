@@ -241,12 +241,18 @@ export const seed = async ({
     data: {
       relatedPosts: [post2Doc.id, post3Doc.id],
     },
+    context: {
+      disableRevalidate: true,
+    },
   })
   await payload.update({
     id: post2Doc.id,
     collection: 'posts',
     data: {
       relatedPosts: [post1Doc.id, post3Doc.id],
+    },
+    context: {
+      disableRevalidate: true,
     },
   })
   await payload.update({
@@ -255,7 +261,11 @@ export const seed = async ({
     data: {
       relatedPosts: [post1Doc.id, post2Doc.id],
     },
+    context: {
+      disableRevalidate: true,
+    },
   })
+
 
   payload.logger.info(`— Seeding contact form...`)
 
@@ -272,11 +282,13 @@ export const seed = async ({
       collection: 'pages',
       depth: 0,
       data: home({ heroImage: imageHomeDoc, metaImage: image2Doc }),
+      context: { disableRevalidate: true },
     }),
     payload.create({
       collection: 'pages',
       depth: 0,
       data: contactPageData({ contactForm: contactForm }),
+      context: { disableRevalidate: true },
     }),
   ])
 
@@ -306,6 +318,7 @@ export const seed = async ({
           },
         ],
       },
+      context: { disableRevalidate: true },
     }),
     payload.updateGlobal({
       slug: 'footer',
@@ -336,6 +349,7 @@ export const seed = async ({
           },
         ],
       },
+      context: { disableRevalidate: true },
     }),
   ])
 
