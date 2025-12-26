@@ -32,62 +32,53 @@ const hasSentryConfig = process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
 let finalConfig = nextConfig
 
 if (shouldUseSentry && hasSentryConfig) {
-  finalConfig = withSentryConfig(nextConfig, {
-    // For all available options, see:
-    // https://www.npmjs.com/package/@sentry/webpack-plugin#options
+  finalConfig = withSentryConfig(
+    nextConfig,
+    {
+      // For all available options, see:
+      // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-    org: process.env.SENTRY_ORG,
-    project: process.env.SENTRY_PROJECT,
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
 
-    // Only print logs for uploading source maps in CI
-    silent: !process.env.CI,
+      // Only print logs for uploading source maps in CI
+      silent: !process.env.CI,
 
-    // For all available options, see:
-    // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+      // For all available options, see:
+      // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 
-    // Upload a larger set of source maps for prettier stack traces (increases build time)
-    widenClientFileUpload: true,
+      // Upload a larger set of source maps for prettier stack traces (increases build time)
+      widenClientFileUpload: true,
 
-    // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-    tunnelRoute: '/monitoring',
+      // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+      tunnelRoute: '/monitoring',
 
-    // Automatically tree-shake Sentry logger statements to reduce bundle size
-    disableLogger: true,
-
-    // Enables automatic instrumentation of Vercel Cron Monitors.
-    automaticVercelMonitors: true,
-
-    // Source map configuration using newer options
-    sourcemaps: {
-      // Use improved source map handling
-      disable: false,
-      // Clean up source maps after upload for better security
-      deleteSourcemapsAfterUpload: true,
-      // Custom source rewriting to improve source map references
-      rewriteSources: (source) => {
-        // Remove absolute paths and make sources relative
-        if (source.startsWith('webpack://')) {
-          return source.replace('webpack://', '~/')
-        }
-        return source.replace(process.cwd(), '~')
+      // Source map configuration using newer options
+      sourcemaps: {
+        // Use improved source map handling
+        disable: false,
+        // Clean up source maps after upload for better security
+        deleteSourcemapsAfterUpload: true,
+        // Custom source rewriting to improve source map references
+        rewriteSources: (source) => {
+          // Remove absolute paths and make sources relative
+          if (source.startsWith('webpack://')) {
+            return source.replace('webpack://', '~/')
+          }
+          return source.replace(process.cwd(), '~')
+        },
       },
     },
+    {
+      // Automatically tree-shake Sentry logger statements to reduce bundle size
+      treeshake: {
+        removeDebugLogging: true,
+      },
 
-    // Webpack configuration to improve source map generation
-    webpack: (config, { isServer, dev }) => {
-      // Only modify source map settings for production builds
-      if (!dev) {
-        // Use hidden source maps for client-side to prevent public exposure
-        if (!isServer) {
-          config.devtool = 'hidden-source-map'
-        } else {
-          // Use regular source maps for server-side
-          config.devtool = 'source-map'
-        }
-      }
-      return config
+      // Enables automatic instrumentation of Vercel Cron Monitors.
+      automaticVercelMonitors: true,
     },
-  })
+  )
 } else {
   console.warn('Sentry configuration incomplete - building without Sentry source map upload')
   if (shouldUseSentry && !hasSentryConfig) {

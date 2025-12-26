@@ -87,16 +87,16 @@ logger.info("User action", {
 
 ## Testing
 
-1. Start your development server: `npm run dev`
+1. Start your development server: `bun dev`
 2. Navigate to `/sentry-test`
 3. Click the test buttons to verify Sentry functionality
 4. Check your Sentry dashboard for captured events
 
 ## DSN Configuration
 
-The project is configured with the DSN from your `.cursorrules/rules.md`:
-```
-https://d945358f21d8cc73ed5efd69996a3050@o4509728862568448.ingest.us.sentry.io/4509728863813632
-```
+The Sentry DSN is configured via environment variables:
 
-Make sure this DSN is correct for your Sentry project. 
+- **Client-side**: `NEXT_PUBLIC_SENTRY_DSN`
+- **Server-side**: `SENTRY_DSN`
+
+Make sure these environment variables are set correctly for each environment (development, preview, production). 

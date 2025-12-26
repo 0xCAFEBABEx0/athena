@@ -46,13 +46,13 @@ Production (Live)
 ### Quick Commands
 ```bash
 # Deploy to preview
-pnpm run deploy:preview
+bun run deploy:preview
 
 # Deploy to production
-pnpm run deploy:production
+bun run deploy:production
 
 # Check current environment
-pnpm run env:check
+bun run env:check
 ```
 
 ### Manual Deployment Flow
@@ -198,19 +198,19 @@ Configure these in the Vercel dashboard for each environment:
 #### 1. Build Failures
 ```bash
 # Check build locally
-pnpm build
+bun run build
 
 # Check for linting issues
-pnpm lint
+bun run lint
 
 # Regenerate types
-pnpm generate:types
+bun run generate:types
 ```
 
 #### 2. Environment Variable Issues
 ```bash
 # Check environment configuration
-pnpm run env:check
+bun run env:check
 
 # Verify Vercel environment variables
 vercel env ls

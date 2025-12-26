@@ -17,12 +17,14 @@ const Pagination = ({ className, ...props }: React.ComponentProps<'nav'>) => (
 const PaginationContent: React.FC<
   { ref?: React.Ref<HTMLUListElement> } & React.HTMLAttributes<HTMLUListElement>
 > = ({ className, ref, ...props }) => (
-  <ul className={cn('flex flex-row items-center gap-1', className)} ref={ref} {...props} />
+  <ul className={cn('join flex flex-row items-center gap-1', className)} ref={ref} {...props} />
 )
 
 const PaginationItem: React.FC<
   { ref?: React.Ref<HTMLLIElement> } & React.HTMLAttributes<HTMLLIElement>
-> = ({ className, ref, ...props }) => <li className={cn('', className)} ref={ref} {...props} />
+> = ({ className, ref, ...props }) => (
+  <li className={cn('join-item', className)} ref={ref} {...props} />
+)
 
 type PaginationLinkProps = {
   isActive?: boolean
@@ -37,6 +39,7 @@ const PaginationLink = ({ className, isActive, size = 'icon', ...props }: Pagina
         size,
         variant: isActive ? 'outline' : 'ghost',
       }),
+      'join-item',
       className,
     )}
     {...props}

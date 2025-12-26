@@ -5,6 +5,7 @@ import type { Post } from '@/payload-types'
 
 import { Media } from '@/components/Media'
 import { formatAuthors } from '@/utilities/formatAuthors'
+import { cn } from '@/utilities/ui'
 
 export const PostHero: React.FC<{
   post: Post
@@ -14,29 +15,52 @@ export const PostHero: React.FC<{
   const hasAuthors =
     populatedAuthors && populatedAuthors.length > 0 && formatAuthors(populatedAuthors) !== ''
 
+  // More robust image check: ensure image object exists, has a valid URL,
+  // and the URL is actually usable (starts with http or /)
+  const hasImage =
+    heroImage &&
+    typeof heroImage === 'object' &&
+    'url' in heroImage &&
+    heroImage.url &&
+    (heroImage.url.startsWith('http') || heroImage.url.startsWith('/'))
+
+  const hasCategories =
+    categories && categories.length > 0 && categories.some((cat) => typeof cat === 'object')
+
   return (
-    <div className="relative -mt-[10.4rem] flex items-end">
-      <div className="container z-10 relative lg:grid lg:grid-cols-[1fr_48rem_1fr] text-white pb-8">
-        <div className="col-start-1 col-span-1 md:col-start-2 md:col-span-2">
-          <div className="uppercase text-sm mb-6">
-            {categories?.map((category, index) => {
-              if (typeof category === 'object' && category !== null) {
-                const { title: categoryTitle } = category
+    <div
+      className={cn('relative', {
+        '-mt-[10.4rem] flex items-end': hasImage,
+        'pt-8': !hasImage,
+      })}
+    >
+      <div
+        className={cn('container z-10 relative', {
+          'lg:grid lg:grid-cols-[1fr_48rem_1fr] text-white pb-8': hasImage,
+        })}
+      >
+        <div className={cn({ 'col-start-1 col-span-1 md:col-start-2 md:col-span-2': hasImage })}>
+          {hasCategories && (
+            <div className="uppercase text-sm mb-6">
+              {categories?.map((category, index) => {
+                if (typeof category === 'object' && category !== null) {
+                  const { title: categoryTitle } = category
 
-                const titleToUse = categoryTitle || 'Untitled category'
+                  const titleToUse = categoryTitle || 'Untitled category'
 
-                const isLast = index === categories.length - 1
+                  const isLast = index === categories.length - 1
 
-                return (
-                  <React.Fragment key={index}>
-                    {titleToUse}
-                    {!isLast && <React.Fragment>, &nbsp;</React.Fragment>}
-                  </React.Fragment>
-                )
-              }
-              return null
-            })}
-          </div>
+                  return (
+                    <React.Fragment key={index}>
+                      {titleToUse}
+                      {!isLast && <React.Fragment>, &nbsp;</React.Fragment>}
+                    </React.Fragment>
+                  )
+                }
+                return null
+              })}
+            </div>
+          )}
 
           <div className="">
             <h1 className="mb-6 text-3xl md:text-5xl lg:text-6xl">{title}</h1>
@@ -62,12 +86,12 @@ export const PostHero: React.FC<{
           </div>
         </div>
       </div>
-      <div className="min-h-[80vh] select-none">
-        {heroImage && typeof heroImage !== 'string' && (
+      {hasImage && (
+        <div className="min-h-[80vh] select-none">
           <Media fill priority imgClassName="-z-10 object-cover" resource={heroImage} />
-        )}
-        <div className="absolute pointer-events-none left-0 bottom-0 w-full h-1/2 bg-gradient-to-t from-black to-transparent" />
-      </div>
+          <div className="absolute pointer-events-none left-0 bottom-0 w-full h-1/2 bg-gradient-to-t from-black to-transparent" />
+        </div>
+      )}
     </div>
   )
 }
