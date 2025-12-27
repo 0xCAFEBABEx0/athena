@@ -1,5 +1,6 @@
 import { formatDateTime } from 'src/utilities/formatDateTime'
-import React from 'react'
+import { useHeaderTheme } from '@/providers/HeaderTheme'
+import React, { useEffect } from 'react'
 
 import type { Post } from '@/payload-types'
 
@@ -12,11 +13,15 @@ export const PostHero: React.FC<{
 }> = ({ post }) => {
   const { categories, heroImage, populatedAuthors, publishedAt, title } = post
 
+  const { setHeaderTheme } = useHeaderTheme()
+
+  useEffect(() => {
+    setHeaderTheme('dark')
+  })
+
   const hasAuthors =
     populatedAuthors && populatedAuthors.length > 0 && formatAuthors(populatedAuthors) !== ''
 
-  // More robust image check: ensure image object exists, has a valid URL,
-  // and the URL is actually usable (starts with http or /)
   const hasImage =
     heroImage &&
     typeof heroImage === 'object' &&
@@ -33,6 +38,7 @@ export const PostHero: React.FC<{
         '-mt-[10.4rem] flex items-end': hasImage,
         'pt-8': !hasImage,
       })}
+      data-theme="dark"
     >
       <div
         className={cn('container z-10 relative', {
