@@ -20,6 +20,11 @@ const nextConfig = {
         port: '3000',
         pathname: '/api/**',
       },
+      {
+        protocol: 'https',
+        hostname: '**.public.blob.vercel-storage.com',
+        port: '',
+      },
     ],
   },
 }
