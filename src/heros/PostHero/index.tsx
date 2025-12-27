@@ -35,7 +35,7 @@ export const PostHero: React.FC<{
 
   return (
     <div
-      className={cn('relative', {
+      className={cn('relative bg-transparent', {
         '-mt-[10.4rem] flex items-end': hasImage,
         'pt-8': !hasImage,
       })}
@@ -95,7 +95,7 @@ export const PostHero: React.FC<{
       </div>
       {hasImage && (
         <div className="min-h-[80vh] select-none">
-          <Media fill priority imgClassName="-z-10 object-cover" resource={heroImage} />
+          <Media fill priority imgClassName="object-cover" resource={heroImage} />
           <div className="absolute pointer-events-none left-0 bottom-0 w-full h-1/2 bg-gradient-to-t from-black to-transparent" />
         </div>
       )}
