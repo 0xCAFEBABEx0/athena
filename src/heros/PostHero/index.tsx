@@ -1,3 +1,4 @@
+'use client'
 import { formatDateTime } from 'src/utilities/formatDateTime'
 import { useHeaderTheme } from '@/providers/HeaderTheme'
 import React, { useEffect } from 'react'
@@ -17,7 +18,7 @@ export const PostHero: React.FC<{
 
   useEffect(() => {
     setHeaderTheme('dark')
-  })
+  }, [])
 
   const hasAuthors =
     populatedAuthors && populatedAuthors.length > 0 && formatAuthors(populatedAuthors) !== ''
