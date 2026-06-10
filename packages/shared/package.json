@@ -1,0 +1,10 @@
+{
+  "name": "@athena/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./payload-types": "./src/payload-types.ts",
+    "./constants": "./src/constants.ts"
+  }
+}

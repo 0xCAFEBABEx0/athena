@@ -91,7 +91,9 @@ export default buildConfig({
   secret: process.env.PAYLOAD_SECRET,
   sharp,
   typescript: {
-    outputFile: path.resolve(dirname, 'payload-types.ts'),
+    // Generated types live in the shared workspace package so apps/web can
+    // consume them without depending on the cms app.
+    outputFile: path.resolve(dirname, '../../../packages/shared/src/payload-types.ts'),
   },
   jobs: {
     access: {
