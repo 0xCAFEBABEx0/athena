@@ -1,3 +1,4 @@
+import { withPayload } from '@payloadcms/next/withPayload'
 import { withSentryConfig } from '@sentry/nextjs'
 
 /** @type {import('next').NextConfig} */
@@ -5,6 +6,23 @@ const nextConfig = {
   experimental: {
     // Enable Web Vitals tracking
     webVitalsAttribution: ['CLS', 'LCP'],
+  },
+
+  // The Vercel Blob client upload handler imports `getFileKey` from
+  // `@payloadcms/plugin-cloud-storage/utilities`, whose barrel also re-exports
+  // `resolveSignedURLKey` -- the one server-only module in that barrel. It pulls
+  // in `payload/internal` (undici, telemetry), which references `node:*`
+  // builtins webpack cannot bundle for the browser. That code never runs
+  // client-side, so alias the `payload/internal` bridge to an empty module in
+  // the client build to keep the server chain out of the bundle.
+  webpack: (webpackConfig, { isServer }) => {
+    if (!isServer) {
+      webpackConfig.resolve.alias = {
+        ...webpackConfig.resolve.alias,
+        'payload/internal': false,
+      }
+    }
+    return webpackConfig
   },
 
   // Enable standalone output for Docker
@@ -34,11 +52,13 @@ const nextConfig = {
 const shouldUseSentry = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
 const hasSentryConfig = process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
 
-let finalConfig = nextConfig
+// Wrap with Payload's Next plugin so server-only packages (undici, sharp, etc.)
+// are correctly externalized from client/edge bundles.
+let finalConfig = withPayload(nextConfig, { devBundleServerPackages: false })
 
 if (shouldUseSentry && hasSentryConfig) {
   finalConfig = withSentryConfig(
-    nextConfig,
+    finalConfig,
     {
       // For all available options, see:
       // https://www.npmjs.com/package/@sentry/webpack-plugin#options
