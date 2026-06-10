@@ -1,5 +1,5 @@
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
-import { vercelPostgresAdapter } from '@payloadcms/db-vercel-postgres'
+import { postgresAdapter } from '@payloadcms/db-postgres'
 
 import sharp from 'sharp' // sharp-import
 import path from 'path'
@@ -25,7 +25,8 @@ import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
-import { getServerSideURL } from './utilities/getURL'
+import { getServerSideURL, getWebURL } from './utilities/getURL'
+import { getLoggerConfig } from './utilities/workersLogger'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -69,13 +70,18 @@ export default buildConfig({
   },
   // This config helps us configure global or default features that the other editors can inherit
   editor: defaultLexical,
-  db: vercelPostgresAdapter({
+  db: postgresAdapter({
     pool: {
-      connectionString: process.env.POSTGRES_URL || 'postgresql://dummy:dummy@localhost:5432/dummy',
+      connectionString:
+        process.env.POSTGRES_URL ||
+        process.env.DATABASE_URL ||
+        'postgresql://dummy:dummy@localhost:5432/dummy',
     },
   }),
   collections: [Pages, Posts, Media, Categories, Users],
-  cors: [getServerSideURL()].filter(Boolean),
+  // The web frontend lives on its own origin and POSTs form submissions here.
+  cors: [getServerSideURL(), getWebURL()].filter(Boolean),
+  csrf: [getServerSideURL(), getWebURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins: [
     ...plugins,
@@ -89,6 +95,7 @@ export default buildConfig({
     }),
   ],
   secret: process.env.PAYLOAD_SECRET,
+  logger: getLoggerConfig(),
   sharp,
   typescript: {
     // Generated types live in the shared workspace package so apps/web can

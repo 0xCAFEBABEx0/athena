@@ -1,55 +1,25 @@
 /**
- * Environment configuration utility
- * Manages environment variables for different deployment stages
+ * Environment configuration utility.
+ *
+ * Platform-neutral: deployment stage comes from DEPLOY_ENV
+ * ('development' | 'preview' | 'production'), set per environment in
+ * wrangler.jsonc vars (Cloudflare) or the host's env settings. VERCEL_ENV is
+ * honored as a fallback while the Vercel bridge deployment is still alive.
  */
 
-export const getEnvironment = () => {
-  // Vercel automatically sets VERCEL_ENV
-  if (process.env.VERCEL_ENV) {
-    return process.env.VERCEL_ENV as 'development' | 'preview' | 'production'
+export type DeployEnv = 'development' | 'preview' | 'production'
+
+export const getEnvironment = (): DeployEnv => {
+  const explicit = process.env.DEPLOY_ENV || process.env.VERCEL_ENV
+  if (explicit === 'production' || explicit === 'preview' || explicit === 'development') {
+    return explicit
   }
-  
-  // Fallback to NODE_ENV
+
   if (process.env.NODE_ENV === 'production') {
     return 'production'
   }
-  
+
   return 'development'
-}
-
-export const getServerUrl = () => {
-  const env = getEnvironment()
-  
-  switch (env) {
-    case 'production':
-      // Use production URL from Vercel
-      return process.env.VERCEL_PROJECT_PRODUCTION_URL 
-        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-        : process.env.PAYLOAD_PUBLIC_SERVER_URL || 'https://zeus.vercel.app'
-    
-    case 'preview':
-      // Use preview URL from Vercel
-      return process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}`
-        : process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'
-    
-    case 'development':
-    default:
-      // Local development
-      return process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'
-  }
-}
-
-export const getDatabaseUrl = () => {
-  const env = getEnvironment()
-  
-  // In production and preview, use the main database
-  if (env === 'production' || env === 'preview') {
-    return process.env.DATABASE_URL
-  }
-  
-  // In development, you might want to use a different database
-  return process.env.DATABASE_URL || process.env.DATABASE_URL_DEV
 }
 
 export const isProduction = () => getEnvironment() === 'production'
@@ -57,9 +27,7 @@ export const isPreview = () => getEnvironment() === 'preview'
 export const isDevelopment = () => getEnvironment() === 'development'
 
 export const getSentryEnvironment = () => {
-  const env = getEnvironment()
-  
-  switch (env) {
+  switch (getEnvironment()) {
     case 'production':
       return 'production'
     case 'preview':
@@ -68,4 +36,4 @@ export const getSentryEnvironment = () => {
     default:
       return 'development'
   }
-} 
+}

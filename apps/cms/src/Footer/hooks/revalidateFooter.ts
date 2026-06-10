@@ -1,12 +1,17 @@
 import type { GlobalAfterChangeHook } from 'payload'
 
-import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS } from '@athena/shared/constants'
 
-export const revalidateFooter: GlobalAfterChangeHook = ({ doc, req: { payload, context } }) => {
+import { invalidateWeb } from '../../utilities/invalidateWeb'
+
+export const revalidateFooter: GlobalAfterChangeHook = async ({
+  doc,
+  req: { payload, context },
+}) => {
   if (!context.disableRevalidate) {
-    payload.logger.info(`Revalidating footer`)
+    payload.logger.info(`Invalidating footer`)
 
-    revalidateTag('global_footer')
+    await invalidateWeb({ tags: [CACHE_TAGS.footer], payload })
   }
 
   return doc

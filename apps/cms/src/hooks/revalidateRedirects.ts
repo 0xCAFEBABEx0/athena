@@ -1,11 +1,16 @@
 import type { CollectionAfterChangeHook } from 'payload'
 
-import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS } from '@athena/shared/constants'
 
-export const revalidateRedirects: CollectionAfterChangeHook = ({ doc, req: { payload } }) => {
-  payload.logger.info(`Revalidating redirects`)
+import { invalidateWeb } from '../utilities/invalidateWeb'
 
-  revalidateTag('redirects')
+export const revalidateRedirects: CollectionAfterChangeHook = async ({
+  doc,
+  req: { payload },
+}) => {
+  payload.logger.info(`Invalidating redirects`)
+
+  await invalidateWeb({ tags: [CACHE_TAGS.redirects], payload })
 
   return doc
 }

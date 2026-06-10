@@ -1,17 +1,25 @@
 import canUseDOM from './canUseDOM'
 
+/**
+ * Origin of this CMS app (admin + API).
+ * CMS_URL is the canonical setting; NEXT_PUBLIC_SERVER_URL is honored for
+ * backwards compatibility with the existing Vercel deployment.
+ */
 export const getServerSideURL = () => {
-  let url = process.env.NEXT_PUBLIC_SERVER_URL
+  return (
+    process.env.CMS_URL ||
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+    'http://localhost:3000'
+  )
+}
 
-  if (!url && process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  }
-
-  if (!url) {
-    url = 'http://localhost:3000'
-  }
-
-  return url
+/**
+ * Origin of the public web frontend (the Astro app). Used for CORS/CSRF,
+ * preview URLs, and cache-invalidation webhooks. Empty string while the
+ * frontend still lives in this app (bridge period) — callers must handle that.
+ */
+export const getWebURL = () => {
+  return process.env.WEB_URL || ''
 }
 
 export const getClientSideURL = () => {
@@ -23,9 +31,5 @@ export const getClientSideURL = () => {
     return `${protocol}//${domain}${port ? `:${port}` : ''}`
   }
 
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  }
-
-  return process.env.NEXT_PUBLIC_SERVER_URL || ''
+  return process.env.CMS_URL || process.env.NEXT_PUBLIC_SERVER_URL || ''
 }

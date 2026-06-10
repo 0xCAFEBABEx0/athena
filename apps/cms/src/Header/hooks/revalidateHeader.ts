@@ -1,12 +1,17 @@
 import type { GlobalAfterChangeHook } from 'payload'
 
-import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS } from '@athena/shared/constants'
 
-export const revalidateHeader: GlobalAfterChangeHook = ({ doc, req: { payload, context } }) => {
+import { invalidateWeb } from '../../utilities/invalidateWeb'
+
+export const revalidateHeader: GlobalAfterChangeHook = async ({
+  doc,
+  req: { payload, context },
+}) => {
   if (!context.disableRevalidate) {
-    payload.logger.info(`Revalidating header`)
+    payload.logger.info(`Invalidating header`)
 
-    revalidateTag('global_header')
+    await invalidateWeb({ tags: [CACHE_TAGS.header], payload })
   }
 
   return doc

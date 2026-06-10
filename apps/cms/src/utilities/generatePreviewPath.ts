@@ -19,7 +19,11 @@ export const generatePreviewPath = ({ collection, slug }: Props) => {
     previewSecret: process.env.PREVIEW_SECRET || '',
   })
 
-  const url = `/next/preview?${encodedParams.toString()}`
+  // When the Astro web app exists, preview happens on its origin.
+  // Until then (bridge period), use the legacy in-app Next preview route.
+  const webURL = process.env.WEB_URL
 
-  return url
+  return webURL
+    ? `${webURL}/api/preview?${encodedParams.toString()}`
+    : `/next/preview?${encodedParams.toString()}`
 }

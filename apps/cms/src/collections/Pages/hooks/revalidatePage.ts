@@ -1,42 +1,42 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'payload'
 
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { CACHE_TAGS } from '@athena/shared/constants'
 
 import type { Page } from '../../../payload-types'
+import { invalidateWeb } from '../../../utilities/invalidateWeb'
 
-export const revalidatePage: CollectionAfterChangeHook<Page> = ({
+export const revalidatePage: CollectionAfterChangeHook<Page> = async ({
   doc,
   previousDoc,
   req: { payload, context },
 }) => {
   if (!context.disableRevalidate) {
+    const paths: string[] = []
+
     if (doc._status === 'published') {
-      const path = doc.slug === 'home' ? '/' : `/${doc.slug}`
-
-      payload.logger.info(`Revalidating page at path: ${path}`)
-
-      revalidatePath(path)
-      revalidateTag('pages-sitemap')
+      paths.push(doc.slug === 'home' ? '/' : `/${doc.slug}`)
     }
 
-    // If the page was previously published, we need to revalidate the old path
+    // If the page was previously published, we need to invalidate the old path
     if (previousDoc?._status === 'published' && doc._status !== 'published') {
-      const oldPath = previousDoc.slug === 'home' ? '/' : `/${previousDoc.slug}`
+      paths.push(previousDoc.slug === 'home' ? '/' : `/${previousDoc.slug}`)
+    }
 
-      payload.logger.info(`Revalidating old page at path: ${oldPath}`)
-
-      revalidatePath(oldPath)
-      revalidateTag('pages-sitemap')
+    if (paths.length) {
+      payload.logger.info(`Invalidating page paths: ${paths.join(', ')}`)
+      await invalidateWeb({ paths, tags: [CACHE_TAGS.pages, CACHE_TAGS.sitemap], payload })
     }
   }
   return doc
 }
 
-export const revalidateDelete: CollectionAfterDeleteHook<Page> = ({ doc, req: { context } }) => {
+export const revalidateDelete: CollectionAfterDeleteHook<Page> = async ({
+  doc,
+  req: { payload, context },
+}) => {
   if (!context.disableRevalidate) {
     const path = doc?.slug === 'home' ? '/' : `/${doc?.slug}`
-    revalidatePath(path)
-    revalidateTag('pages-sitemap')
+    await invalidateWeb({ paths: [path], tags: [CACHE_TAGS.pages, CACHE_TAGS.sitemap], payload })
   }
 
   return doc
