@@ -1,48 +1,39 @@
 ---
-description: Sentry setup, configuration, and testing workflow
+description: Sentry configuration and verification for apps/cms
 ---
 
-# Sentry Setup & Testing
+# Sentry Setup
 
-## ⚙️ Configuration
+> Sentry instruments the **`apps/cms`** app. See
+> [`docs/SENTRY_SETUP.md`](../../docs/SENTRY_SETUP.md) for the full guide.
 
-- **Client**: `src/instrumentation-client.ts`
-- **Server**: `sentry.server.config.ts`
-- **Edge**: `sentry.edge.config.ts`
+## ⚙️ Configuration (`apps/cms`)
 
-## 🧪 Testing Sentry
+- **Client**: `apps/cms/src/instrumentation-client.ts`
+- **Server**: `apps/cms/sentry.server.config.ts`
+- **Edge**: `apps/cms/sentry.edge.config.ts`
 
-### 1. Access Test Page
-Navigate to: http://localhost:3000/sentry-test
+`withSentryConfig(...)` wraps the Next.js config only when `SENTRY_DSN` +
+`SENTRY_ORG`/`SENTRY_PROJECT` are set. DSNs: `SENTRY_DSN` (server),
+`NEXT_PUBLIC_SENTRY_DSN` (client).
 
-### 2. Test Scenarios
-- **Test Error**: Triggers a client-side exception.
-- **Test Span**: Creates a performance span.
-- **Test Log**: Sends a structured log.
-- **Test API Error**: Triggers a server-side API error.
+## 🧪 Verifying
 
-### 3. Verify in Sentry
-Check the Sentry dashboard to confirm that errors, spans, and logs are being captured correctly.
+1. Set the DSN env vars in `apps/cms/.env`, then `bun run dev:cms`.
+2. Trigger an error in the app (the legacy `/sentry-test` route was removed in the
+   monorepo conversion).
+3. Confirm the event appears in the Sentry dashboard for the matching environment
+   (`development` / `preview` / `production`).
 
 ## 📝 Usage Examples
 
-### Capture Exception
 ```typescript
-try {
-  // ...
-} catch (error) {
-  Sentry.captureException(error);
-}
-```
+// Capture an exception
+try { /* ... */ } catch (error) { Sentry.captureException(error); }
 
-### Start Span
-```typescript
-Sentry.startSpan({ name: 'operation-name', op: 'category' }, (span) => {
-  // ...
-});
-```
+// Performance span
+Sentry.startSpan({ name: 'operation-name', op: 'category' }, (span) => { /* ... */ });
 
-### Structured Logging
-```typescript
+// Structured logging
 Sentry.logger.info('Log message', { context: 'value' });
 ```

@@ -1,230 +1,139 @@
 # Deployment Guide
 
-This project follows a **Development → Preview → Production** workflow using Vercel and GitHub.
+Athena is a **Bun-workspaces monorepo** that deploys as **two Vercel projects
+from one repository** — `apps/cms` (Payload CMS + Next.js 16) and `apps/web`
+(Astro 6 frontend) — both backed by Neon PostgreSQL and Vercel Blob. It follows a
+**development → preview → main** branch promotion.
 
-> **📚 Related Documentation**: 
-> - [CI/CD Pipeline Details](./CI_CD.md) - Complete CI/CD documentation and flow diagrams
-> - [Development Workflow](./DEVELOPMENT_WORKFLOW.md) - Branch strategy and development flow
+> **📚 Related**:
+> - [CI/CD Pipeline](./CI_CD.md) — GitHub Actions + Vercel flow
+> - [Development Workflow](./DEVELOPMENT_WORKFLOW.md) — branch strategy
 
-## Workflow Overview
+## Two Vercel Projects, One Repo
 
-```
-Development (Local)
-        ↓
-Development Branch
-        ↓
-Preview (Staging)
-        ↓
-Production (Live)
-```
+Create **two** Vercel projects, both pointed at this repository, distinguished by
+**Root Directory**:
 
-## Environment Details
+| Vercel Project | Root Directory | Framework | Build Command | Output |
+|---|---|---|---|---|
+| **athena-cms** | `apps/cms` | Next.js | `bun run build` (`next build --webpack`) | `.next` |
+| **athena-web** | `apps/web` | Astro | `bun run build` (`astro build`) | `@astrojs/vercel` |
 
-### 1. Development Environment
-- **Branch**: `development` / feature branches
-- **URL**: `http://localhost:3000`
-- **Environment**: `development`
-- **Sentry Environment**: `development`
-- **Database**: Local/Development database
+Notes:
 
-### 2. Preview Environment
-- **Branch**: `preview`
-- **URL**: Vercel preview URL (auto-generated)
-- **Environment**: `preview`
-- **Sentry Environment**: `staging`
-- **Database**: Production database (read-only recommended)
+- Set the **Root Directory** in each project's *Settings → General*. Vercel then
+  runs install/build scoped to that workspace while still seeing the monorepo
+  lockfile.
+- **Install command**: `bun install --frozen-lockfile` (Bun is the only supported
+  package manager; a stray `package-lock.json` will be picked up before
+  `bun.lock` — keep it deleted).
+- The CMS build **must** keep the `--webpack` flag (Next 16 defaults to Turbopack,
+  which ignores the load-bearing `webpack()` alias). See
+  [Build Configuration in AGENTS.md](../AGENTS.md#build-configuration-appscmsconfignextconfigmjs).
+- Each project deploys on the same branches; a push to `preview`/`main` builds
+  **both** apps for that environment.
 
-### 3. Production Environment
-- **Branch**: `main`
-- **URL**: Production domain
-- **Environment**: `production`
-- **Sentry Environment**: `production`
-- **Database**: Production database
+## Branch → Environment Mapping
+
+| Branch | Environment | CMS | Web |
+|---|---|---|---|
+| `development` | Local only | http://localhost:3000 | http://localhost:4321 |
+| `preview` | Vercel **Preview** | auto preview URL | auto preview URL |
+| `main` | Vercel **Production** | production domain | production domain |
+
+Vercel's Git integration deploys automatically on push. GitHub Actions runs lint +
+type check (it does **not** deploy — see [CI_CD.md](./CI_CD.md)).
 
 ## Deployment Commands
 
-### Quick Commands
 ```bash
-# Deploy to preview
-bun run deploy:preview
+# Promote development -> preview (deploys both apps to Preview)
+bun run deploy:preview          # git checkout preview && git merge development && git push
 
-# Deploy to production
-bun run deploy:production
-
-# Check current environment
-bun run env:check
+# Promote preview -> main (production). main is PR-protected — prefer a PR:
+gh pr create --base main --head preview --title "release: deploy to production"
+# (bun run deploy:production exists for unprotected repos)
 ```
 
-### Manual Deployment Flow
+## CMS ⇄ Web Contract (must match across both deployments)
 
-#### 1. Feature Development
-```bash
-# Switch to development branch
-git checkout development
+The two apps talk over HTTP, so several env vars must be **byte-identical** in
+both Vercel projects:
 
-# Create feature branch
-git checkout -b feature/new-feature
+- **`WEB_URL`** (set in CMS) / **`CMS_URL`** (set in web) — how each app reaches
+  the other.
+- **`PREVIEW_SECRET`** — gates the draft-preview cookie. The admin Preview button
+  targets `${WEB_URL}/api/preview?...&previewSecret=...`.
+- **`REVALIDATE_SECRET`** — bearer token for cache invalidation. On
+  publish/unpublish the CMS POSTs `{ paths, tags }` to
+  `${WEB_URL}/api/invalidate` with `Authorization: Bearer ${REVALIDATE_SECRET}`.
+- **`PAYLOAD_API_KEY`** (web only) — the CMS `web-frontend` service-account API
+  key the web app uses to fetch **draft** content over REST.
 
-# Make changes and commit
-git add .
-git commit -m "Add new feature"
-
-# Merge back to development
-git checkout development
-git merge feature/new-feature
-git push origin development
-```
-
-#### 2. Preview Deployment
-```bash
-# Deploy development to preview
-pnpm run deploy:preview
-
-# Or manually:
-git checkout preview
-git merge development
-git push origin preview
-```
-
-#### 3. Production Deployment
-```bash
-# Switch to main branch
-git checkout main
-
-# Merge preview branch
-git merge preview
-
-# Push to trigger production deployment
-git push origin main
-```
-
-## Automated Deployments
-
-### Vercel Automatic Deployment (Primary)
-
-This project uses **Vercel's Git integration** for automatic deployments:
-
-1. **Preview Environment**: Pushing to `preview` branch automatically deploys to Preview environment
-2. **Production Environment**: Pushing to `main` branch automatically deploys to Production environment
-3. **Development Branch**: Pushing to `development` branch does not trigger deployment (disabled in configuration)
-
-Vercel is directly integrated with the GitHub repository and automatically executes builds and deployments when it detects pushes.
-
-### GitHub Actions (Supporting)
-
-GitHub Actions workflows execute the following processes:
-
-1. **Lint and Type Check**: Executed on all pushes and PRs
-2. **Deployment Jobs**: Currently disabled (using Vercel automatic deployment)
-
-> **Details**: For complete CI/CD pipeline documentation, see [CI_CD.md](./CI_CD.md).
-
-### Enabling Deployment via GitHub Actions (Optional)
-
-To manage deployments via GitHub Actions, configure the following Secrets:
-
-- `VERCEL_TOKEN`: Vercel authentication token
-- `VERCEL_ORG_ID`: Vercel organization ID
-- `VERCEL_PROJECT_ID`: Vercel project ID
-
-Then uncomment the deployment jobs in `.github/workflows/deployment.yml`.
-
-> **Note**: Currently, Vercel automatic deployment is working correctly, so deployment via GitHub Actions is not required.
+> Drift in `PREVIEW_SECRET` / `REVALIDATE_SECRET` shows up as **silent 401s** —
+> `invalidateWeb` logs the error but never throws. Full contract:
+> [AGENTS.md → CMS ⇄ Web Contract](../AGENTS.md#cms--web-contract).
 
 ## Environment Variables
 
-### Local Development (.env.local)
+Maintain env vars **per Vercel project** and per environment (Preview /
+Production). Local templates: `apps/cms/.env.example` and `apps/web/.env.example`.
+
+### CMS project (`apps/cms`)
+
 ```bash
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/zeus_dev"
-
-# Payload CMS
-PAYLOAD_SECRET="your-local-secret"
-PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
-
-# Vercel Blob Storage
-BLOB_READ_WRITE_TOKEN="your-blob-token"
-
-# Sentry
-SENTRY_DSN="your-sentry-dsn"
+POSTGRES_URL=              # Neon Postgres (required at startup)
+PAYLOAD_SECRET=            # 32+ char JWT secret
+CMS_URL=                   # this CMS origin (NEXT_PUBLIC_SERVER_URL is a legacy alias)
+WEB_URL=                   # the Astro frontend origin
+PREVIEW_SECRET=            # shared with web
+REVALIDATE_SECRET=         # shared with web
+BLOB_READ_WRITE_TOKEN=     # Vercel Blob
+DEPLOY_ENV=                # development | preview | production (VERCEL_ENV is a fallback)
+# Sentry (optional): SENTRY_DSN / SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN
 ```
 
-### Vercel Environment Variables
-Configure these in the Vercel dashboard for each environment:
+### Web project (`apps/web`)
 
-#### Preview Environment
-- `DATABASE_URL`: Production database URL (read-only user recommended)
-- `PAYLOAD_SECRET`: Staging secret
-- `BLOB_READ_WRITE_TOKEN`: Staging blob token
-- `NEXT_PUBLIC_VERCEL_ENV`: `preview`
+```bash
+CMS_URL=                   # CMS admin + REST API origin
+WEB_URL=                   # this app's own public origin
+PREVIEW_SECRET=            # shared with CMS
+REVALIDATE_SECRET=         # shared with CMS (also the ISR bypass token)
+PAYLOAD_API_KEY=           # web-frontend service-account key (draft fetches)
+```
 
-#### Production Environment
-- `DATABASE_URL`: Production database URL
-- `PAYLOAD_SECRET`: Production secret
-- `BLOB_READ_WRITE_TOKEN`: Production blob token
-- `NEXT_PUBLIC_VERCEL_ENV`: `production`
+Rotate/create the `web-frontend` service account with
+`apps/cms/src/scripts/create-web-service-account.ts`.
 
 ## Best Practices
 
-### 1. Branch Protection
-- Protect `main` branch with required PR reviews
-- Require status checks to pass before merging
-- Require branches to be up to date before merging
-
-### 2. Testing Strategy
-- Test thoroughly in development
-- Deploy to preview for stakeholder review
-- Only merge to production after preview approval
-
-### 3. Database Migrations
-- Test migrations in development first
-- Run migrations in preview environment
-- Schedule production migrations during low-traffic periods
-
-### 4. Rollback Strategy
-- Keep previous deployments available in Vercel
-- Use Git tags for important releases
-- Have a rollback plan for database migrations
-
-### 5. Monitoring
-- Monitor Sentry for errors in each environment
-- Use Vercel Analytics for performance metrics
-- Set up alerts for critical issues
+- **Branch protection** — require PR review + passing checks on `main`.
+- **Database migrations** — test on `development`, run against `preview` (which
+  points at the production DB), then promote. Use `DATABASE_URL_UNPOOLED` for
+  migrations (no pgbouncer).
+- **Rollback** — keep previous deployments available in each Vercel project; tag
+  important releases; have a DB-migration rollback plan.
+- **Monitoring** — watch Sentry per environment and Vercel Analytics.
 
 ## Troubleshooting
 
-### Common Issues
+### Build failures
 
-#### 1. Build Failures
 ```bash
-# Check build locally
-bun run build
-
-# Check for linting issues
+bun run build:cms        # reproduce the CMS build locally
+bun run build:web        # reproduce the Astro build locally
 bun run lint
-
-# Regenerate types
 bun run generate:types
 ```
 
-#### 2. Environment Variable Issues
-```bash
-# Check environment configuration
-bun run env:check
+### Wrong app deployed / both apps building together
 
-# Verify Vercel environment variables
-vercel env ls
-```
+Confirm each Vercel project's **Root Directory** (`apps/cms` vs `apps/web`) and
+that "Include source files outside of the Root Directory" is enabled so the
+monorepo lockfile and `packages/shared` resolve.
 
-#### 3. Database Connection Issues
-- Verify database URLs in each environment
-- Check database user permissions
-- Ensure network access from Vercel
+### Database connection issues
 
-## Support
-
-For deployment issues:
-1. Check GitHub Actions logs
-2. Review Vercel deployment logs
-3. Monitor Sentry for runtime errors
-4. Contact the development team 
+Verify `POSTGRES_URL` per environment, check the Neon user's permissions, and
+confirm network access from Vercel.

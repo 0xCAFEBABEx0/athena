@@ -1,14 +1,32 @@
 # Security Vulnerabilities Investigation Report
 
-**Date**: January 2025  
-**Project**: Athena (Payload CMS Website Template)  
-**Status**: ✅ **All Critical Vulnerabilities Patched**
+**Date**: January 2025 (historical snapshot)
+**Project**: Athena (Payload CMS Website Template)
+**Status**: ✅ **All Critical Vulnerabilities Patched (as of the snapshot)**
 
-## Executive Summary
+> ⚠️ **Historical document.** This report captures a point-in-time audit from the
+> pre-monorepo single-app era (Next.js 15). The project has since moved to a
+> Bun-workspaces monorepo on **Next.js 16** (`apps/cms`) plus an **Astro 6**
+> frontend (`apps/web`). The CVE analysis below remains a useful record, but the
+> version numbers it cites are superseded — see **Current State** for what ships
+> today, and re-audit rather than relying on these figures.
 
-This report documents the security vulnerability investigation for Next.js and React dependencies in this project. All critical vulnerabilities have been patched in the current versions.
+## Current State (post-conversion)
 
-## Current Dependency Versions
+Run a fresh audit against today's versions; do not trust the figures in the
+historical sections below.
+
+- **`apps/cms`** — Next.js **16.x**, React / React DOM **19.2.x**
+  (`@sentry/nextjs` 10.x).
+- **`apps/web`** — Astro **6.x** (`@astrojs/vercel`), no Next.js/React.
+
+```bash
+bun audit                 # check the monorepo lockfile
+bun run build:cms         # surfaces build-time issues for the CMS
+bun run build:web         # surfaces build-time issues for the web app
+```
+
+## Historical Snapshot — Dependency Versions (January 2025)
 
 - **Next.js**: `15.2.6` ✅
 - **React**: `19.2.3` ✅

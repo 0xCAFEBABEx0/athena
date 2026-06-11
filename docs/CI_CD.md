@@ -1,313 +1,137 @@
 # CI/CD Pipeline
 
-This project uses a CI/CD pipeline integrated with GitHub and Vercel.
+Athena ships through two cooperating mechanisms across **two Vercel projects**
+(`apps/cms` and `apps/web`) built from one monorepo:
 
-## Overview
+1. **Vercel Git integration** (deploys) — each project auto-builds and deploys its
+   workspace on pushes to `preview` and `main`.
+2. **GitHub Actions** (quality gate) — runs lint + type check. It does **not**
+   deploy.
 
-The current CI/CD operates through two mechanisms:
+## Trigger Matrix
 
-1. **Vercel Automatic Deployment** (Primary): Directly integrated with GitHub repository, automatically detects pushes and deploys
-2. **GitHub Actions** (Supporting): Executes Lint and Type Check (deployment jobs are currently disabled)
+GitHub Actions (`.github/workflows/deployment.yml`) triggers on:
 
-## CI/CD Flow Diagram
+| Event | Runs Lint & Type Check? | Vercel deploy? |
+|---|---|---|
+| Push to `development` | ❌ (no GH Actions trigger) | ❌ None |
+| Push to `preview` | ✅ | ✅ Preview (both apps) |
+| Push to `main` | ✅ | ✅ Production (both apps) |
+| PR targeting `main` | ✅ | Vercel preview deployment per PR |
+
+> The workflow listens on `push: [main, preview]` and `pull_request: [main]`.
+> Plain pushes to `development` do not start the GH Actions job; promote to
+> `preview` (e.g. `bun run deploy:preview`) to exercise CI.
+
+## CI/CD Flow
 
 ```mermaid
 graph TB
-    subgraph "Development Phase"
-        Dev[Developer]
-        DevBranch[development branch]
-        Dev -->|git push| DevBranch
-    end
-    
-    subgraph "GitHub"
-        DevBranch -->|push| GitHub[GitHub Repository]
-        PreviewBranch[preview branch]
-        MainBranch[main branch]
-        GitHub -->|merge| PreviewBranch
-        PreviewBranch -->|merge| MainBranch
-    end
-    
-    subgraph "GitHub Actions"
-        GitHub -->|trigger| GHA[GitHub Actions Workflow]
-        GHA -->|execute| Lint[Lint & Type Check]
-        Lint -->|result| Status[Status Check]
-    end
-    
-    subgraph "Vercel Automatic Deployment"
-        PreviewBranch -->|detect push| VercelPreview[Vercel Preview Environment]
-        MainBranch -->|detect push| VercelProd[Vercel Production Environment]
-        
-        VercelPreview -->|build| BuildPreview[Preview Build]
-        VercelProd -->|build| BuildProd[Production Build]
-        
-        BuildPreview -->|deploy| PreviewURL[Preview URL]
-        BuildProd -->|deploy| ProdURL[Production URL]
-    end
-    
-    subgraph "Environment Configuration"
-        PreviewURL -->|env vars| PreviewEnv[Preview Environment Variables]
-        ProdURL -->|env vars| ProdEnv[Production Environment Variables]
-    end
-    
-    style DevBranch fill:#e1f5ff
+    Dev[Developer] -->|git push| DevBranch[development branch]
+    DevBranch -->|merge / deploy:preview| PreviewBranch[preview branch]
+    PreviewBranch -->|PR + merge| MainBranch[main branch]
+
+    PreviewBranch -->|push| GHA[GitHub Actions: Lint & Type Check]
+    MainBranch -->|push / PR| GHA
+
+    PreviewBranch -->|Vercel Git integration| VercelPreview[Vercel Preview]
+    MainBranch -->|Vercel Git integration| VercelProd[Vercel Production]
+
+    VercelPreview --> CMSPrev[athena-cms preview]
+    VercelPreview --> WebPrev[athena-web preview]
+    VercelProd --> CMSProd[athena-cms production]
+    VercelProd --> WebProd[athena-web production]
+
     style PreviewBranch fill:#fff4e1
     style MainBranch fill:#ffe1e1
     style VercelPreview fill:#e1ffe1
     style VercelProd fill:#ffe1e1
-    style PreviewURL fill:#fff4e1
-    style ProdURL fill:#ffe1e1
 ```
 
-## Detailed Deployment Flow
+## GitHub Actions Job
 
-```mermaid
-sequenceDiagram
-    participant Dev as Developer
-    participant GH as GitHub
-    participant GHA as GitHub Actions
-    participant Vercel as Vercel
-    participant Preview as Preview Environment
-    participant Prod as Production Environment
-    
-    Note over Dev,Prod: 1. Development Phase
-    Dev->>GH: git push origin development
-    GH->>GHA: Trigger workflow
-    GHA->>GHA: Execute Lint & Type Check
-    
-    Note over Dev,Prod: 2. Preview Deployment
-    Dev->>GH: git push origin preview
-    GH->>GHA: Trigger workflow
-    GHA->>GHA: Execute Lint & Type Check
-    GH->>Vercel: Detect push (automatic)
-    Vercel->>Vercel: Start build
-    Vercel->>Preview: Execute deployment
-    Preview->>Dev: Notify preview URL
-    
-    Note over Dev,Prod: 3. Production Deployment
-    Dev->>GH: git push origin main
-    GH->>GHA: Trigger workflow
-    GHA->>GHA: Execute Lint & Type Check
-    GH->>Vercel: Detect push (automatic)
-    Vercel->>Vercel: Start build
-    Vercel->>Prod: Execute deployment
-    Prod->>Dev: Notify production URL
+`.github/workflows/deployment.yml` defines a single **`lint`** job:
+
+```yaml
+on:
+  push:
+    branches: [main, preview]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:                              # "Lint and Type Check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4   # node-version: 22.22.0
+      - uses: oven-sh/setup-bun@v2    # bun-version: 1.3.5
+      - run: bun install --frozen-lockfile
+      - run: bun run lint             # ESLint (cms) + astro check (web)
+      - run: bun run generate:types   # type generation acts as the type check
 ```
 
-## Branch Strategy
+- **`bun run lint`** fans out across workspaces: ESLint in `apps/cms`, `astro
+  check` in `apps/web`.
+- **`bun run generate:types`** regenerates `packages/shared/src/payload-types.ts`;
+  it doubles as the type check (a build error here fails CI).
+- Deployment jobs (`deploy-preview` / `deploy-production`) remain **commented
+  out** — deploys are handled by Vercel's Git integration, so the
+  `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` secrets are not required.
 
-```mermaid
-gitgraph
-    commit id: "Initial commit"
-    branch development
-    checkout development
-    commit id: "Feature development"
-    commit id: "Bug fix"
-    branch preview
-    checkout preview
-    merge development
-    commit id: "Preview preparation"
-    branch main
-    checkout main
-    merge preview
-    commit id: "Production release"
-    checkout development
-    commit id: "Next feature development"
-```
+## Build Configuration (Vercel)
 
-## Current Configuration Status
+There is **no `vercel.json`** in this repo — branch/deploy behavior is configured
+in each Vercel project's dashboard. Two projects, one repo, split by **Root
+Directory**:
 
-### ✅ Enabled Features
+| Project | Root Directory | Build Command | Install Command |
+|---|---|---|---|
+| `athena-cms` | `apps/cms` | `bun run build` → `next build --webpack` | `bun install --frozen-lockfile` |
+| `athena-web` | `apps/web` | `bun run build` → `astro build` | `bun install --frozen-lockfile` |
 
-1. **Vercel Automatic Deployment**
-   - Push to `main` branch → Automatic deployment to Production environment
-   - Push to `preview` branch → Automatic deployment to Preview environment
-   - Push to `development` branch → No deployment (disabled in configuration)
+- **Node.js**: 22 (pinned to `22.22.0` via `.nvmrc`)
+- **Package manager**: Bun `1.3.5`
+- Keep the CMS `--webpack` flag (Next 16 defaults to Turbopack, which ignores the
+  load-bearing webpack alias). See
+  [AGENTS.md → Build Configuration](../AGENTS.md#build-configuration-appscmsconfignextconfigmjs).
 
-2. **GitHub Actions**
-   - Executes Lint & Type Check on all pushes and PRs
-   - Uses Node.js 22 and Bun 1.2.19
-
-### ⚠️ Disabled Features
-
-1. **Deployment via GitHub Actions**
-   - Deployment jobs are commented out
-   - Reason: GitHub Secrets (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`) are not configured
-   - Not required since Vercel automatic deployment is currently functioning
-
-## Configuration Files
-
-### 1. Vercel Configuration (`vercel.json`)
-
-```json
-{
-  "git": {
-    "deploymentEnabled": {
-      "main": true,        // ✅ Production deployment enabled
-      "preview": true,     // ✅ Preview deployment enabled
-      "development": false // ❌ Development branch disabled
-    }
-  }
-}
-```
-
-### 2. GitHub Actions (`.github/workflows/deployment.yml`)
-
-- **Enabled**: Lint & Type Check job
-- **Disabled**: Deployment jobs (commented out)
-
-### 3. Build Configuration
-
-- **Node.js**: 22
-- **Package Manager**: Bun 1.2.19
-- **Build Command**: `bun run build`
-- **Install Command**: `bun install --frozen-lockfile`
-
-## Deployment Triggers
-
-| Branch | Trigger | Deployment Target | Status |
-|--------|---------|-------------------|--------|
-| `development` | push | None | ❌ Disabled |
-| `preview` | push | Preview Environment | ✅ Enabled |
-| `main` | push | Production Environment | ✅ Enabled |
-| All | push/PR | GitHub Actions (Lint/Type Check) | ✅ Enabled |
+Full project setup: [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## Environment Variables
 
-The following environment variables must be configured for each environment:
+Set per Vercel project (CMS vs web) and per environment (Preview / Production).
+The CMS↔web shared secrets (`PREVIEW_SECRET`, `REVALIDATE_SECRET`) must be
+identical across both projects. See
+[DEPLOYMENT.md → Environment Variables](./DEPLOYMENT.md#environment-variables).
 
-### Preview Environment
-- `DATABASE_URL`
-- `PAYLOAD_SECRET`
-- `BLOB_READ_WRITE_TOKEN`
-- `NEXT_PUBLIC_VERCEL_ENV=preview`
-- `SENTRY_DSN`
-- Other required environment variables
+## Monitoring Deployment Status
 
-### Production Environment
-- `DATABASE_URL`
-- `PAYLOAD_SECRET`
-- `BLOB_READ_WRITE_TOKEN`
-- `NEXT_PUBLIC_VERCEL_ENV=production`
-- `SENTRY_DSN`
-- Other required environment variables
-
-## Deployment Process
-
-### 1. Deploy to Preview Environment
-
-```bash
-# Merge from development branch to preview branch
-git checkout preview
-git merge development
-git push origin preview
-```
-
-**Process executed**:
-1. GitHub Actions runs Lint & Type Check
-2. Vercel detects the push
-3. Vercel starts the build
-4. Deploys to Preview environment
-5. Preview URL is generated
-
-### 2. Deploy to Production Environment
-
-```bash
-# Merge from preview branch to main branch
-git checkout main
-git merge preview
-git push origin main
-```
-
-**Process executed**:
-1. GitHub Actions runs Lint & Type Check
-2. Vercel detects the push
-3. Vercel starts the build
-4. Deploys to Production environment
-5. Published to production URL
-
-## Monitoring
-
-### Checking Deployment Status
-
-1. **GitHub Actions**
-   - Check in the repository's "Actions" tab
-   - Review Lint & Type Check results
-
-2. **Vercel Dashboard**
-   - Check deployment history in Vercel dashboard
-   - Review build logs and deployment logs
-
-3. **Sentry**
-   - Error tracking
-   - Performance monitoring
+1. **GitHub Actions** — repo "Actions" tab → "Lint and Type Check".
+2. **Vercel** — each project's dashboard for build/deploy logs.
+3. **Sentry** — runtime errors and performance.
 
 ## Troubleshooting
 
-### Deployment Not Executing
+### Deployment not executing
 
-1. **Check Vercel Git Integration**
-   - Vercel Dashboard → Settings → Git
-   - Verify repository is correctly connected
+- Check each Vercel project's *Settings → Git* connection and **Root Directory**.
+- Confirm the branch is one Vercel deploys (`preview` / `main`).
 
-2. **Check Branch Configuration**
-   - Verify `deploymentEnabled` settings in `vercel.json`
-   - Confirm target branch is enabled
+### Build errors
 
-3. **Check Environment Variables**
-   - Verify all required environment variables are set
-   - Check environment variables in Vercel dashboard
+```bash
+bun run build:cms        # reproduce the CMS build
+bun run build:web        # reproduce the Astro build
+bun install --frozen-lockfile
+```
 
-### Build Errors
-
-1. **Test Build Locally**
-   ```bash
-   bun run build
-   ```
-
-2. **Check Dependencies**
-   ```bash
-   bun install --frozen-lockfile
-   ```
-
-3. **Check Vercel Build Logs**
-   - Review detailed error logs in Vercel dashboard
-
-## Future Improvement Options
-
-### Option 1: Enable GitHub Actions Deployment
-
-To enable deployment via GitHub Actions:
-
-1. Configure GitHub Secrets:
-   - `VERCEL_TOKEN`
-   - `VERCEL_ORG_ID`
-   - `VERCEL_PROJECT_ID`
-
-2. Uncomment deployment jobs in `.github/workflows/deployment.yml`
-
-**Benefits**:
-- Centralized deployment process management in GitHub Actions
-- Ability to implement additional checks before deployment
-
-**Drawbacks**:
-- May overlap with current Vercel automatic deployment
-- More complex configuration
-
-### Option 2: Maintain Current Configuration
-
-Continue using Vercel automatic deployment:
-
-- Current configuration works without issues
-- Simple and easy to manage
-- GitHub Actions focuses only on Lint/Type Check
+Then review the failing project's Vercel build logs.
 
 ## Summary
 
-The current CI/CD pipeline operates as follows:
-
-1. **Development**: Develop on `development` branch → No deployment
-2. **Preview**: Push to `preview` branch → Vercel automatically deploys to Preview environment
-3. **Production**: Push to `main` branch → Vercel automatically deploys to Production environment
-4. **Quality Checks**: GitHub Actions executes Lint & Type Check on all pushes/PRs
-
-This configuration achieves a simple and efficient CI/CD pipeline.
+1. **Development** — work on `development`; no deploy, no GH Actions run.
+2. **Preview** — push `preview` (e.g. `bun run deploy:preview`); GH Actions
+   lint/type-check + Vercel deploys both apps to Preview.
+3. **Production** — PR `preview → main`; on merge Vercel deploys both apps to
+   Production.
