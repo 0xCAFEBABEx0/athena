@@ -12,20 +12,60 @@
         "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint",
         "bradlc.vscode-tailwindcss",
-        "google.antigravity"
+        "ms-vscode.vscode-typescript-next",
+        "formulahendry.auto-rename-tag",
+        "christian-kohler.path-intellisense",
+        "ms-vscode.vscode-json",
+        "usernamehw.errorlens",
+        "streetsidesoftware.code-spell-checker",
+        "ms-vscode.vscode-color",
+        "prisma.prisma",
+        "graphql.vscode-graphql",
+        "ms-vscode.vscode-thunder-client",
+        "anthropic.claude-code"
       ]
     },
     "cursor": {
       "extensions": [
         "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint",
-        "bradlc.vscode-tailwindcss"
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-typescript-next",
+        "formulahendry.auto-rename-tag",
+        "christian-kohler.path-intellisense",
+        "ms-vscode.vscode-json",
+        "usernamehw.errorlens",
+        "streetsidesoftware.code-spell-checker",
+        "ms-vscode.vscode-color",
+        "prisma.prisma",
+        "graphql.vscode-graphql",
+        "ms-vscode.vscode-thunder-client",
+        "anthropic.claude-code"
+      ]
+    },
+    "antigravity": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-typescript-next",
+        "formulahendry.auto-rename-tag",
+        "christian-kohler.path-intellisense",
+        "ms-vscode.vscode-json",
+        "usernamehw.errorlens",
+        "streetsidesoftware.code-spell-checker",
+        "ms-vscode.vscode-color",
+        "prisma.prisma",
+        "graphql.vscode-graphql",
+        "ms-vscode.vscode-thunder-client",
+        "anthropic.claude-code",
+        "google.antigravity"
       ]
     }
   },
   "remoteUser": "vscode",
   "remoteEnv": {
     "PATH": "${containerEnv:PATH}:/home/vscode/.bun/bin"
-  }
-  // "postCreateCommand": "bun install"
+  },
+  "postCreateCommand": "bash .devcontainer/antigravity-workaround.sh"
 }
