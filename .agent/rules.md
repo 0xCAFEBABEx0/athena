@@ -5,10 +5,13 @@
 
 ## 🏗️ Project Structure
 
-- **Backend**: Payload CMS 3 + PostgreSQL
-- **Frontend**: Next.js 15 (App Router)
-- **Database**: PostgreSQL (Neon cloud, via `@payloadcms/db-vercel-postgres`)
-- **Styling**: Tailwind CSS v3 + daisyUI v4 + shadcn/ui pattern
+Bun-workspaces monorepo:
+
+- **`apps/cms`**: Payload CMS 3 + Next.js 16 (App Router) — admin, REST/GraphQL API, legacy bridge frontend
+- **`apps/web`**: Astro 6 public frontend (Vercel adapter, consumes the CMS REST API)
+- **`packages/shared`**: generated Payload types + cross-app constants
+- **Database**: PostgreSQL (Neon cloud, via `@payloadcms/db-postgres`)
+- **Styling**: Tailwind CSS v3 + daisyUI v4 (cms), Tailwind CSS v4 (web)
 - **Package Manager**: Bun (never `npm` or `pnpm`)
 
 ## 📝 Code Style
@@ -19,8 +22,8 @@
     - Components: `PascalCase` (e.g., `UserProfile.tsx`)
     - Utilities: `camelCase` (e.g., `formatDate.ts`)
     - Types: `PascalCase`
-- **Imports**: Use the `@/*` path alias for `src/*`. Use type-only imports for
-  Payload generated types.
+- **Imports**: Use the `@/*` path alias for `src/*` (both apps). Use type-only
+  imports for Payload generated types.
 
 ## ⚛️ Component Guidelines
 
@@ -31,8 +34,8 @@
 ## 🗄️ Database
 
 - Model data with Payload CMS collections.
-- Run migrations with `bun payload migrate` for schema changes.
-- Never hand-edit `src/payload-types.ts`; regenerate with `bun run generate:types`.
+- Run migrations with `bun run payload migrate` (from `apps/cms`) for schema changes.
+- Never hand-edit `packages/shared/src/payload-types.ts`; regenerate with `bun run generate:types`.
 
 ## 🔒 Security
 

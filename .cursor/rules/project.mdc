@@ -1,20 +1,21 @@
 ---
-description: Athena Project Rules - Payload CMS + Next.js development guidelines
-globs: 
+description: Athena Project Rules - Payload CMS + Astro monorepo development guidelines
+globs:
 alwaysApply: true
 ---
 
 # Athena Project Rules
 
-This is a Payload CMS + Next.js project with PostgreSQL backend.
+Bun-workspaces monorepo. Full guidance lives in `AGENTS.md` (single source of truth).
 
 ## Project Structure
 
-- **Backend**: Payload CMS with PostgreSQL
-- **Frontend**: Next.js App Router
+- **`apps/cms`**: Payload CMS 3 + Next.js 16 (admin + REST/GraphQL API)
+- **`apps/web`**: Astro 6 public frontend (consumes the CMS REST API)
+- **`packages/shared`**: generated Payload types + cross-app constants
 - **Database**: PostgreSQL (Neon cloud)
 - **Package Manager**: Bun
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS (v3 in cms, v4 in web)
 
 ## Development Guidelines
 
