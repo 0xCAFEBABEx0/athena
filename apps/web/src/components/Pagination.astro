@@ -1,0 +1,68 @@
+---
+type Props = {
+  page: number
+  totalPages: number
+  class?: string
+}
+
+const { page, totalPages, class: className } = Astro.props
+
+const hasNextPage = page < totalPages
+const hasPrevPage = page > 1
+const hasExtraPrevPages = page - 1 > 1
+const hasExtraNextPages = page + 1 < totalPages
+
+const pageHref = (n: number) => `/posts/page/${n}`
+
+const itemClasses =
+  'inline-flex h-10 min-w-10 items-center justify-center rounded border border-border px-3 text-sm hover:bg-card'
+const activeClasses = 'inline-flex h-10 min-w-10 items-center justify-center rounded bg-primary px-3 text-sm text-primary-foreground'
+const disabledClasses =
+  'inline-flex h-10 min-w-10 items-center justify-center rounded border border-border px-3 text-sm opacity-50 pointer-events-none'
+---
+
+<nav class:list={['my-12', className]} aria-label="Pagination">
+  <ul class="flex items-center gap-2">
+    <li>
+      <a class={hasPrevPage ? itemClasses : disabledClasses} href={hasPrevPage ? pageHref(page - 1) : undefined}>
+        Previous
+      </a>
+    </li>
+
+    {hasExtraPrevPages && <li class="px-2">…</li>}
+
+    {
+      hasPrevPage && (
+        <li>
+          <a class={itemClasses} href={pageHref(page - 1)}>
+            {page - 1}
+          </a>
+        </li>
+      )
+    }
+
+    <li>
+      <a class={activeClasses} href={pageHref(page)} aria-current="page">
+        {page}
+      </a>
+    </li>
+
+    {
+      hasNextPage && (
+        <li>
+          <a class={itemClasses} href={pageHref(page + 1)}>
+            {page + 1}
+          </a>
+        </li>
+      )
+    }
+
+    {hasExtraNextPages && <li class="px-2">…</li>}
+
+    <li>
+      <a class={hasNextPage ? itemClasses : disabledClasses} href={hasNextPage ? pageHref(page + 1) : undefined}>
+        Next
+      </a>
+    </li>
+  </ul>
+</nav>

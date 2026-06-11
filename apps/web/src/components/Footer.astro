@@ -1,0 +1,26 @@
+---
+import type { Footer } from '@athena/shared/payload-types'
+
+import CMSLink from '@/components/CMSLink.astro'
+import Logo from '@/components/Logo.astro'
+import ThemeSelector from '@/components/ThemeSelector.astro'
+import { getGlobal } from '@/lib/cms'
+
+const footer = await getGlobal<Footer>('footer')
+const navItems = footer?.navItems || []
+---
+
+<footer class="mt-auto border-t border-border bg-black dark:bg-card text-white">
+  <div class="container py-8 gap-8 flex flex-col md:flex-row md:justify-between">
+    <a class="flex items-center" href="/">
+      <Logo />
+    </a>
+
+    <div class="flex flex-col-reverse items-start md:flex-row gap-4 md:items-center">
+      <ThemeSelector />
+      <nav class="flex flex-col md:flex-row gap-4">
+        {navItems.map(({ link }) => <CMSLink class="text-white" {...link} />)}
+      </nav>
+    </div>
+  </div>
+</footer>

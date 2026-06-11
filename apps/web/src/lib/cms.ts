@@ -89,6 +89,22 @@ export const getPosts = async (
     opts,
   )
 
+/** Posts for the Archive block (populateBy=collection), optionally category-filtered. */
+export const getArchivePosts = async ({
+  categoryIds = [],
+  limit = 3,
+}: {
+  categoryIds?: (number | string)[]
+  limit?: number
+}): Promise<Post[]> => {
+  const result = await cmsFetch<PaginatedDocs<Post>>('/posts', {
+    depth: 1,
+    limit,
+    ...(categoryIds.length > 0 ? { where: { categories: { in: categoryIds } } } : {}),
+  })
+  return result.docs
+}
+
 export const getGlobal = async <T extends Header | Footer>(
   slug: 'header' | 'footer',
   opts: FetchOptions = {},

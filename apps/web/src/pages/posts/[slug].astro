@@ -1,0 +1,50 @@
+---
+import type { Post } from '@athena/shared/payload-types'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import Layout from '@/layouts/Layout.astro'
+import PostHero from '@/components/heros/PostHero.astro'
+import RelatedPosts from '@/components/blocks/RelatedPosts.astro'
+import RichText from '@/components/RichText.astro'
+import { getPost } from '@/lib/cms'
+import { isDraft } from '@/lib/draft'
+import { buildMeta } from '@/lib/seo'
+
+const draft = isDraft(Astro.cookies)
+const slug = Astro.params.slug ?? ''
+const post = await getPost(slug, { draft })
+
+if (!post) {
+  return Astro.rewrite('/404')
+}
+
+const relatedPosts = (post.relatedPosts ?? []).filter(
+  (related): related is Post => typeof related === 'object' && related !== null,
+)
+
+const meta = buildMeta(post, `/posts/${slug}`)
+---
+
+<Layout meta={meta}>
+  <article class="pb-16 pt-16">
+    <PostHero post={post} />
+
+    <div class="flex flex-col items-center gap-4 pt-8">
+      <div class="container">
+        <RichText
+          class="max-w-[48rem] mx-auto"
+          data={post.content as unknown as SerializedEditorState}
+          enableGutter={false}
+        />
+        {
+          relatedPosts.length > 0 && (
+            <RelatedPosts
+              class="mt-12 max-w-[52rem] lg:grid lg:grid-cols-subgrid col-start-1 col-span-3 grid-rows-[2fr]"
+              docs={relatedPosts}
+            />
+          )
+        }
+      </div>
+    </div>
+  </article>
+</Layout>

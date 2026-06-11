@@ -1,0 +1,41 @@
+---
+/**
+ * Light/dark/auto selector, persisted in localStorage under the same
+ * 'payload-theme' key the cms frontend uses (see InitTheme in Layout).
+ */
+---
+
+<select
+  id="theme-selector"
+  aria-label="Select a theme"
+  class="w-auto bg-transparent gap-2 pl-0 md:pl-3 border-none text-white text-sm"
+>
+  <option value="auto">Auto</option>
+  <option value="light">Light</option>
+  <option value="dark">Dark</option>
+</select>
+
+<script is:inline>
+  ;(function () {
+    var key = 'payload-theme'
+    var select = document.getElementById('theme-selector')
+    if (!select) return
+
+    var stored = window.localStorage.getItem(key)
+    select.value = stored === 'light' || stored === 'dark' ? stored : 'auto'
+
+    select.addEventListener('change', function () {
+      var value = select.value
+      if (value === 'light' || value === 'dark') {
+        window.localStorage.setItem(key, value)
+        document.documentElement.setAttribute('data-theme', value)
+      } else {
+        window.localStorage.removeItem(key)
+        var implicit = window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        document.documentElement.setAttribute('data-theme', implicit)
+      }
+    })
+  })()
+</script>

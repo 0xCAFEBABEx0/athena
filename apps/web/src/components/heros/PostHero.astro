@@ -1,0 +1,80 @@
+---
+import type { Post } from '@athena/shared/payload-types'
+
+import Media from '@/components/Media.astro'
+import { formatAuthors, formatDateTime } from '@/lib/format'
+
+type Props = {
+  post: Post
+}
+
+const { post } = Astro.props
+const { categories, heroImage, populatedAuthors, publishedAt, title } = post
+
+const authors = (populatedAuthors ?? []).filter(
+  (author): author is NonNullable<typeof author> => author !== null,
+)
+const authorText = formatAuthors(authors)
+const hasAuthors = authorText !== ''
+
+const hasImage =
+  heroImage &&
+  typeof heroImage === 'object' &&
+  'url' in heroImage &&
+  heroImage.url &&
+  (heroImage.url.startsWith('http') || heroImage.url.startsWith('/'))
+
+const categoryTitles = (categories ?? [])
+  .filter((category) => typeof category === 'object' && category !== null)
+  .map((category) => (typeof category === 'object' ? category.title || 'Untitled category' : ''))
+---
+
+<div class:list={['relative', hasImage ? '-mt-[10.4rem] flex items-end' : 'pt-8']} data-theme="dark">
+  <div
+    class:list={[
+      'container z-10 relative',
+      hasImage && 'lg:grid lg:grid-cols-[1fr_48rem_1fr] text-white pb-8',
+    ]}
+  >
+    <div class:list={[hasImage && 'col-start-1 col-span-1 md:col-start-2 md:col-span-2']}>
+      {
+        categoryTitles.length > 0 && (
+          <div class="uppercase text-sm mb-6">{categoryTitles.join(', ')}</div>
+        )
+      }
+
+      <div>
+        <h1 class="mb-6 text-3xl md:text-5xl lg:text-6xl">{title}</h1>
+      </div>
+
+      <div class="flex flex-col md:flex-row gap-4 md:gap-16">
+        {
+          hasAuthors && (
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-col gap-1">
+                <p class="text-sm">Author</p>
+                <p>{authorText}</p>
+              </div>
+            </div>
+          )
+        }
+        {
+          publishedAt && (
+            <div class="flex flex-col gap-1">
+              <p class="text-sm">Date Published</p>
+              <time datetime={publishedAt}>{formatDateTime(publishedAt)}</time>
+            </div>
+          )
+        }
+      </div>
+    </div>
+  </div>
+  {
+    hasImage && (
+      <div class="min-h-[80vh] select-none relative w-full">
+        <Media fill loading="eager" imgClass="-z-10 object-cover" resource={heroImage} />
+        <div class="absolute pointer-events-none left-0 bottom-0 w-full h-1/2 bg-gradient-to-t from-black to-transparent" />
+      </div>
+    )
+  }
+</div>

@@ -1,0 +1,46 @@
+---
+import type { Media } from '@athena/shared/payload-types'
+
+import { imgAttrs } from '@/lib/media'
+
+type Props = {
+  resource: Media | string | number | null | undefined
+  /** Image fills its positioned parent (port of next/image fill). */
+  fill?: boolean
+  imgClass?: string
+  pictureClass?: string
+  loading?: 'lazy' | 'eager'
+  sizes?: string
+}
+
+const {
+  resource,
+  fill = false,
+  imgClass,
+  pictureClass,
+  loading = 'lazy',
+  sizes = '(max-width: 640px) 1280px, (max-width: 768px) 1536px, (max-width: 1024px) 2048px, (max-width: 1536px) 3072px, 100vw',
+} = Astro.props
+
+const attrs = resource && typeof resource === 'object' ? imgAttrs(resource) : null
+
+const fillClasses = fill ? 'absolute inset-0 h-full w-full object-cover' : ''
+---
+
+{
+  attrs && (
+    <picture class={pictureClass}>
+      <img
+        src={attrs.src}
+        srcset={attrs.srcset}
+        sizes={attrs.srcset ? sizes : undefined}
+        width={!fill ? attrs.width : undefined}
+        height={!fill ? attrs.height : undefined}
+        alt={attrs.alt}
+        loading={loading}
+        decoding="async"
+        class:list={[fillClasses, imgClass]}
+      />
+    </picture>
+  )
+}

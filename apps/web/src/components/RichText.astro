@@ -1,0 +1,27 @@
+---
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import { richTextToHTML } from '@/lib/richtext'
+
+type Props = {
+  data: SerializedEditorState | null | undefined
+  enableGutter?: boolean
+  enableProse?: boolean
+  class?: string
+}
+
+const { data, enableGutter = true, enableProse = true, class: className } = Astro.props
+
+const html = data ? richTextToHTML(data) : ''
+
+const classes = [
+  'payload-richtext',
+  enableGutter ? 'container' : 'max-w-none',
+  enableProse ? 'mx-auto prose md:prose-md dark:prose-invert' : '',
+  className,
+]
+  .filter(Boolean)
+  .join(' ')
+---
+
+{html && <div class={classes} set:html={html} />}

@@ -1,0 +1,62 @@
+---
+import type { Post } from '@athena/shared/payload-types'
+
+import Media from '@/components/Media.astro'
+
+export type CardPostData = Pick<Post, 'slug' | 'categories' | 'meta' | 'title'>
+
+type Props = {
+  doc?: CardPostData
+  relationTo?: 'posts'
+  showCategories?: boolean
+  title?: string
+  class?: string
+}
+
+const { doc, relationTo = 'posts', showCategories, title: titleFromProps, class: className } = Astro.props
+
+const { slug, categories, meta, title } = doc || {}
+const { description, image: metaImage } = meta || {}
+
+const hasCategories = categories && Array.isArray(categories) && categories.length > 0
+const titleToUse = titleFromProps || title
+const sanitizedDescription = description?.replace(/\s/g, ' ')
+const href = `/${relationTo}/${slug}`
+
+const categoryTitles = hasCategories
+  ? categories
+      .filter((category) => typeof category === 'object' && category !== null)
+      .map((category) => (typeof category === 'object' ? category.title || 'Untitled category' : ''))
+  : []
+---
+
+<article
+  class:list={[
+    'border border-border rounded-lg overflow-hidden bg-card hover:cursor-pointer',
+    className,
+  ]}
+>
+  <a class="block no-underline" href={href}>
+    <div class="relative w-full">
+      {!metaImage && <div class="" />}
+      {metaImage && typeof metaImage !== 'string' && typeof metaImage !== 'number' && (
+        <Media resource={metaImage} sizes="33vw" />
+      )}
+    </div>
+    <div class="p-4">
+      {
+        showCategories && categoryTitles.length > 0 && (
+          <div class="uppercase text-sm mb-4">{categoryTitles.join(', ')}</div>
+        )
+      }
+      {
+        titleToUse && (
+          <div class="prose dark:prose-invert">
+            <h3 class="not-prose">{titleToUse}</h3>
+          </div>
+        )
+      }
+      {description && <div class="mt-2"><p>{sanitizedDescription}</p></div>}
+    </div>
+  </a>
+</article>

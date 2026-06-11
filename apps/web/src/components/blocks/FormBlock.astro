@@ -1,0 +1,224 @@
+---
+import type { Form } from '@athena/shared/payload-types'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import RichText from '@/components/RichText.astro'
+import { cmsURL } from '@/lib/env'
+
+type Props = {
+  enableIntro?: boolean | null
+  form: Form | string | number
+  introContent?: unknown
+}
+
+const { enableIntro, form: formFromProps, introContent } = Astro.props
+
+// depth>=2 page fetches populate the form relation; bail out if not populated.
+const form = typeof formFromProps === 'object' ? formFromProps : null
+
+type SelectOption = { label: string; value: string }
+type NormalizedField = {
+  blockType: string
+  name: string
+  label: string
+  required: boolean
+  width: number | null
+  options: SelectOption[]
+  defaultValue: string | boolean | undefined
+  message: SerializedEditorState | null
+}
+
+const fields: NormalizedField[] = (form?.fields ?? []).map((field) => {
+  const f = field as Record<string, unknown> & { blockType: string }
+  return {
+    blockType: f.blockType,
+    name: typeof f.name === 'string' ? f.name : '',
+    label: typeof f.label === 'string' ? f.label : typeof f.name === 'string' ? f.name : '',
+    required: Boolean(f.required),
+    width: typeof f.width === 'number' ? f.width : null,
+    options: Array.isArray(f.options) ? (f.options as SelectOption[]) : [],
+    defaultValue:
+      typeof f.defaultValue === 'string' || typeof f.defaultValue === 'boolean'
+        ? f.defaultValue
+        : undefined,
+    message: (f.message as SerializedEditorState | undefined) ?? null,
+  }
+})
+
+const inputClasses =
+  'w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+const labelClasses = 'mb-2 block text-sm font-medium'
+
+const widthStyle = (width: number | null) =>
+  width && width < 100 ? `flex-basis: calc(${width}% - 0.75rem)` : 'flex-basis: 100%'
+---
+
+{
+  form && (
+    <div class="container max-w-[48rem]">
+      {enableIntro && introContent && (
+        <RichText
+          class="mb-8 lg:mb-12"
+          data={introContent as SerializedEditorState}
+          enableGutter={false}
+        />
+      )}
+
+      <div class="p-4 lg:p-6 border border-border rounded-[0.8rem]">
+        <form
+          method="post"
+          data-cms-form={String(form.id)}
+          data-cms-url={cmsURL()}
+          data-confirmation-type={form.confirmationType ?? 'message'}
+          data-redirect-url={
+            form.confirmationType === 'redirect' && form.redirect?.url ? form.redirect.url : ''
+          }
+          class="flex flex-wrap gap-x-3 gap-y-6"
+        >
+          {fields.map((f) => (
+            <Fragment>
+              {f.blockType === 'message' && (
+                <div class="w-full">
+                  {f.message && <RichText data={f.message} enableGutter={false} />}
+                </div>
+              )}
+
+              {f.blockType === 'checkbox' && (
+                <div style={widthStyle(f.width)}>
+                  <label class="flex items-center gap-2 text-sm font-medium">
+                    <input
+                      class="h-4 w-4 rounded border-border"
+                      type="checkbox"
+                      name={f.name}
+                      required={f.required}
+                      checked={f.defaultValue === true}
+                    />
+                    {f.label}
+                  </label>
+                </div>
+              )}
+
+              {f.blockType === 'textarea' && (
+                <div style={widthStyle(f.width)}>
+                  <label class={labelClasses} for={f.name}>
+                    {f.label}
+                    {f.required && <span class="text-error"> *</span>}
+                  </label>
+                  <textarea
+                    class={inputClasses}
+                    id={f.name}
+                    name={f.name}
+                    rows={5}
+                    required={f.required}
+                  />
+                </div>
+              )}
+
+              {f.blockType === 'select' && (
+                <div style={widthStyle(f.width)}>
+                  <label class={labelClasses} for={f.name}>
+                    {f.label}
+                    {f.required && <span class="text-error"> *</span>}
+                  </label>
+                  <select class={inputClasses} id={f.name} name={f.name} required={f.required}>
+                    <option value="">Select...</option>
+                    {f.options.map((option) => (
+                      <option value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {['text', 'email', 'number', 'country', 'state'].includes(f.blockType) && (
+                <div style={widthStyle(f.width)}>
+                  <label class={labelClasses} for={f.name}>
+                    {f.label}
+                    {f.required && <span class="text-error"> *</span>}
+                  </label>
+                  <input
+                    class={inputClasses}
+                    id={f.name}
+                    name={f.name}
+                    type={f.blockType === 'email' ? 'email' : f.blockType === 'number' ? 'number' : 'text'}
+                    required={f.required}
+                    value={typeof f.defaultValue === 'string' ? f.defaultValue : undefined}
+                  />
+                </div>
+              )}
+            </Fragment>
+          ))}
+
+          <div class="w-full">
+            <button
+              class="inline-flex items-center justify-center rounded bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:opacity-90"
+              type="submit"
+            >
+              {form.submitButtonLabel || 'Submit'}
+            </button>
+          </div>
+
+          <p class="form-error hidden w-full text-sm text-red-500" role="alert" />
+        </form>
+
+        <div class="form-confirmation hidden">
+          {form.confirmationType === 'message' && form.confirmationMessage && (
+            <RichText
+              data={form.confirmationMessage as unknown as SerializedEditorState}
+              enableGutter={false}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+<script>
+  // Submit form-builder forms as JSON to the CMS (port of apps/cms Form/Component.tsx).
+  document.querySelectorAll<HTMLFormElement>('form[data-cms-form]').forEach((formEl) => {
+    formEl.addEventListener('submit', async (event) => {
+      event.preventDefault()
+
+      const errorEl = formEl.querySelector<HTMLElement>('.form-error')
+      const confirmationEl = formEl.parentElement?.querySelector<HTMLElement>('.form-confirmation')
+      errorEl?.classList.add('hidden')
+
+      const data = new FormData(formEl)
+      const submissionData: { field: string; value: string }[] = []
+      for (const [field, value] of data.entries()) {
+        submissionData.push({ field, value: String(value) })
+      }
+
+      try {
+        const req = await fetch(`${formEl.dataset.cmsUrl}/api/form-submissions`, {
+          body: JSON.stringify({ form: formEl.dataset.cmsForm, submissionData }),
+          headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+        })
+
+        const res = (await req.json()) as { errors?: { message: string }[] }
+
+        if (req.status >= 400) {
+          if (errorEl) {
+            errorEl.textContent = res.errors?.[0]?.message || 'Internal Server Error'
+            errorEl.classList.remove('hidden')
+          }
+          return
+        }
+
+        if (formEl.dataset.confirmationType === 'redirect' && formEl.dataset.redirectUrl) {
+          window.location.assign(formEl.dataset.redirectUrl)
+          return
+        }
+
+        formEl.classList.add('hidden')
+        confirmationEl?.classList.remove('hidden')
+      } catch {
+        if (errorEl) {
+          errorEl.textContent = 'Something went wrong.'
+          errorEl.classList.remove('hidden')
+        }
+      }
+    })
+  })
+</script>

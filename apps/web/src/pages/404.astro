@@ -1,0 +1,29 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import { SITE_NAME } from '@/lib/seo'
+import { webURL } from '@/lib/env'
+
+const meta = {
+  title: `404 | ${SITE_NAME}`,
+  description: undefined,
+  ogImage: `${webURL()}/website-template-OG.webp`,
+  url: `${webURL()}/404`,
+}
+
+Astro.response.status = 404
+---
+
+<Layout meta={meta}>
+  <div class="container py-28">
+    <div class="prose dark:prose-invert max-w-none">
+      <h1 style="margin-bottom: 0;">404</h1>
+      <p class="mb-4">This page could not be found.</p>
+    </div>
+    <a
+      class="inline-flex items-center justify-center rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+      href="/"
+    >
+      Go home
+    </a>
+  </div>
+</Layout>
