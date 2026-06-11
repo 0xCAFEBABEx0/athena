@@ -17,6 +17,7 @@
     "@fontsource/geist-mono": "^5.2.8",
     "@fontsource/geist-sans": "^5.2.5",
     "@payloadcms/richtext-lexical": "3.85.1",
+    "@vercel/speed-insights": "^2.0.0",
     "astro": "^6.4.6",
     "qs-esm": "^8.0.1"
   },
