@@ -1,0 +1,32 @@
+---
+type Props = {
+  collection?: 'posts'
+  currentPage?: number
+  limit?: number
+  totalDocs?: number
+  class?: string
+}
+
+const { collection = 'posts', currentPage, limit, totalDocs, class: className } = Astro.props
+
+const labels: Record<string, { plural: string; singular: string }> = {
+  posts: { plural: 'Posts', singular: 'Post' },
+}
+
+let indexStart = (currentPage ? currentPage - 1 : 1) * (limit || 1) + 1
+if (totalDocs && indexStart > totalDocs) indexStart = 0
+
+let indexEnd = (currentPage || 1) * (limit || 1)
+if (totalDocs && indexEnd > totalDocs) indexEnd = totalDocs
+
+const { plural, singular } = labels[collection] ?? { plural: 'Docs', singular: 'Doc' }
+---
+
+<div class:list={[className, 'font-semibold']}>
+  {(typeof totalDocs === 'undefined' || totalDocs === 0) && 'Search produced no results.'}
+  {
+    typeof totalDocs !== 'undefined' &&
+      totalDocs > 0 &&
+      `Showing ${indexStart}${indexStart > 0 ? ` - ${indexEnd}` : ''} of ${totalDocs} ${totalDocs > 1 ? plural : singular}`
+  }
+</div>

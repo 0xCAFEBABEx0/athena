@@ -1,0 +1,34 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import RenderBlocks from '@/components/blocks/RenderBlocks.astro'
+import RenderHero from '@/components/heros/RenderHero.astro'
+import { getPage } from '@/lib/cms'
+import { isDraft } from '@/lib/draft'
+import { buildMeta } from '@/lib/seo'
+
+const draft = isDraft(Astro.cookies)
+const slugParam = Astro.params.slug
+
+// Page slugs are single-segment; deeper paths are handled by the redirects
+// middleware before reaching this route.
+if (slugParam && slugParam.includes('/')) {
+  return Astro.rewrite('/404')
+}
+
+const slug = slugParam || 'home'
+const page = await getPage(slug, { draft })
+
+if (!page) {
+  return Astro.rewrite('/404')
+}
+
+const { hero, layout } = page
+const meta = buildMeta(page, slug === 'home' ? '/' : `/${slug}`)
+---
+
+<Layout meta={meta}>
+  <article class="pb-24 pt-16">
+    <RenderHero hero={hero} />
+    <RenderBlocks blocks={layout} />
+  </article>
+</Layout>

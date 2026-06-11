@@ -1,0 +1,55 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import CollectionArchive from '@/components/CollectionArchive.astro'
+import PageRange from '@/components/PageRange.astro'
+import Pagination from '@/components/Pagination.astro'
+import { getPosts, POSTS_PER_PAGE } from '@/lib/cms'
+import { SITE_NAME } from '@/lib/seo'
+import { webURL } from '@/lib/env'
+
+const pageNumber = Number(Astro.params.pageNumber)
+
+if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+  return Astro.rewrite('/404')
+}
+
+const posts = await getPosts({ page: pageNumber })
+
+if (posts.totalPages > 0 && pageNumber > posts.totalPages) {
+  return Astro.rewrite('/404')
+}
+
+const meta = {
+  title: `Posts (page ${pageNumber}) | ${SITE_NAME}`,
+  description: undefined,
+  ogImage: `${webURL()}/website-template-OG.webp`,
+  url: `${webURL()}/posts/page/${pageNumber}`,
+}
+---
+
+<Layout meta={meta}>
+  <div class="pt-24 pb-24">
+    <div class="container mb-16">
+      <div class="prose dark:prose-invert max-w-none">
+        <h1>Posts</h1>
+      </div>
+    </div>
+
+    <div class="container mb-8">
+      <PageRange
+        collection="posts"
+        currentPage={posts.page}
+        limit={POSTS_PER_PAGE}
+        totalDocs={posts.totalDocs}
+      />
+    </div>
+
+    <CollectionArchive posts={posts.docs} />
+
+    <div class="container">
+      {posts.totalPages > 1 && posts.page && (
+        <Pagination page={posts.page} totalPages={posts.totalPages} />
+      )}
+    </div>
+  </div>
+</Layout>

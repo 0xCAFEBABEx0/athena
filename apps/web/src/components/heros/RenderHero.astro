@@ -1,0 +1,18 @@
+---
+import type { Page } from '@athena/shared/payload-types'
+
+import HighImpact from './HighImpact.astro'
+import LowImpact from './LowImpact.astro'
+import MediumImpact from './MediumImpact.astro'
+
+type Props = {
+  hero: Page['hero']
+}
+
+const { hero } = Astro.props
+const { type } = hero || {}
+---
+
+{type === 'highImpact' && <HighImpact {...hero} />}
+{type === 'mediumImpact' && <MediumImpact {...hero} />}
+{type === 'lowImpact' && <LowImpact {...hero} />}

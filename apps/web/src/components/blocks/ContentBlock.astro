@@ -1,0 +1,42 @@
+---
+import type { ContentBlock as ContentBlockProps } from '@athena/shared/payload-types'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import CMSLink from '@/components/CMSLink.astro'
+import RichText from '@/components/RichText.astro'
+
+type Props = ContentBlockProps
+
+const { columns } = Astro.props
+
+const colsSpanClasses: Record<string, string> = {
+  full: 'lg:col-span-12',
+  half: 'lg:col-span-6',
+  oneThird: 'lg:col-span-4',
+  twoThirds: 'lg:col-span-8',
+}
+---
+
+<div class="container my-16">
+  <div class="grid grid-cols-4 lg:grid-cols-12 gap-y-8 gap-x-16">
+    {
+      (columns ?? []).map((col) => {
+        const { enableLink, link, richText, size } = col
+        return (
+          <div
+            class:list={[
+              'col-span-4',
+              colsSpanClasses[size ?? 'full'],
+              size !== 'full' && 'md:col-span-2',
+            ]}
+          >
+            {richText && (
+              <RichText data={richText as unknown as SerializedEditorState} enableGutter={false} />
+            )}
+            {enableLink && <CMSLink {...link} />}
+          </div>
+        )
+      })
+    }
+  </div>
+</div>

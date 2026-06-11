@@ -1,0 +1,42 @@
+---
+import type { ArchiveBlock as ArchiveBlockProps, Post } from '@athena/shared/payload-types'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import CollectionArchive from '@/components/CollectionArchive.astro'
+import RichText from '@/components/RichText.astro'
+import { getArchivePosts } from '@/lib/cms'
+
+type Props = ArchiveBlockProps & { id?: string | null }
+
+const { id, categories, introContent, limit: limitFromProps, populateBy, selectedDocs } = Astro.props
+
+const limit = limitFromProps || 3
+
+let posts: Post[] = []
+
+if (populateBy === 'collection') {
+  const categoryIds = (categories ?? []).map((category) =>
+    typeof category === 'object' ? category.id : category,
+  )
+  posts = await getArchivePosts({ categoryIds, limit })
+} else if (selectedDocs?.length) {
+  posts = selectedDocs
+    .map((post) => (typeof post.value === 'object' ? post.value : null))
+    .filter((post): post is Post => post !== null)
+}
+---
+
+<div class="my-16" id={`block-${id}`}>
+  {
+    introContent && (
+      <div class="container mb-16">
+        <RichText
+          class="ms-0 max-w-[48rem]"
+          data={introContent as unknown as SerializedEditorState}
+          enableGutter={false}
+        />
+      </div>
+    )
+  }
+  <CollectionArchive posts={posts} />
+</div>

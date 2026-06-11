@@ -12,7 +12,10 @@
     "ms-vscode.vscode-color",
     "prisma.prisma",
     "graphql.vscode-graphql",
-    "ms-vscode.vscode-thunder-client"
+    "ms-vscode.vscode-thunder-client",
+    "anthropic.claude-code"
   ],
-  "unwantedRecommendations": ["ms-vscode.vscode-typescript"]
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript"
+  ]
 }

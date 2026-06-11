@@ -4,7 +4,7 @@ This is a [Payload](https://github.com/payloadcms/payload) website template perf
 
 ## Features
 
-- **Payload CMS 3.69.0** - Headless CMS with admin panel
+- **Payload CMS 3.85** - Headless CMS with admin panel
 - **Next.js 15.4.10** - React framework with App Router and Turbopack
 - **TypeScript** - Type-safe development
 - **Bun** - Fast package manager and runtime (17x faster than pnpm)
@@ -30,8 +30,8 @@ cd athena
 bun install
 
 # Set up environment variables
-cp env.example .env.local
-# Edit .env.local with your local configuration
+cp .env.example .env
+# Edit .env with your local configuration
 
 # Start development server
 bun dev
@@ -85,6 +85,7 @@ This project is configured for deployment on Vercel with automatic deployments t
   - [Development Workflow](./docs/DEVELOPMENT_WORKFLOW.md) - Branch strategy and development flow
   - [Development Guide](./docs/DEVELOPMENT.md) - Development environment setup
   - [Sentry Setup](./docs/SENTRY_SETUP.md) - Error tracking configuration
+  - [Upgrade Notes](./docs/UPGRADE_NOTES.md) - Dependency upgrade log
 
 ## Sentry Integration
 

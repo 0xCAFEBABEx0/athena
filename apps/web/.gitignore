@@ -1,0 +1,6 @@
+# build output
+dist/
+.vercel/
+
+# generated types
+.astro/

@@ -1,0 +1,32 @@
+---
+import type { Page } from '@athena/shared/payload-types'
+
+import ArchiveBlock from './ArchiveBlock.astro'
+import CallToActionBlock from './CallToActionBlock.astro'
+import ContentBlock from './ContentBlock.astro'
+import FormBlock from './FormBlock.astro'
+import MediaBlock from './MediaBlock.astro'
+
+type Props = {
+  blocks: Page['layout']
+}
+
+const { blocks } = Astro.props
+const hasBlocks = blocks && Array.isArray(blocks) && blocks.length > 0
+---
+
+{
+  hasBlocks &&
+    blocks.map((block) => {
+      const { blockType } = block
+      return (
+        <div class="my-16">
+          {blockType === 'archive' && <ArchiveBlock {...block} />}
+          {blockType === 'content' && <ContentBlock {...block} />}
+          {blockType === 'cta' && <CallToActionBlock {...block} />}
+          {blockType === 'formBlock' && <FormBlock {...block} />}
+          {blockType === 'mediaBlock' && <MediaBlock {...block} disableInnerContainer />}
+        </div>
+      )
+    })
+}

@@ -1,28 +1,24 @@
 # To use this Dockerfile, you have to set `output: 'standalone'` in your next.config.js file.
 # From https://github.com/vercel/next.js/blob/canary/examples/with-docker/Dockerfile
+# Using Docker Hardened Images (DHI) for enhanced security
 
-FROM node:22.22.0-bookworm AS base
+# Base image for deps/builder (includes Bun)
+FROM dhi.io/bun:1-debian13-dev AS base-bun
+
+# Base image for development (includes both Node.js and Bun)
+FROM dhi.io/node:22-debian13-sfw-dev AS base-node
 
 # Install dependencies only when needed
-FROM base AS deps
-# Install dependencies needed for node-gyp or other native modules if necessary
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libc6 \
-    curl \
-    bash \
-    && rm -rf /var/lib/apt/lists/*
+FROM base-bun AS deps
 
 WORKDIR /app
-
-# Install Bun
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:${PATH}"
 
 # Toggle reproducible installs when desired
 ARG BUN_FROZEN_LOCKFILE=false
 
 # Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* bun.lock* ./
+
 RUN \
   if [ -f bun.lock ]; then if [ "$BUN_FROZEN_LOCKFILE" = "true" ]; then bun install --frozen-lockfile; else bun install --no-save; fi; \
   elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
@@ -32,21 +28,19 @@ RUN \
   fi
 
 # Development stage for Dev Container
-FROM base AS development
+FROM base-node AS development
+# Install packages needed for vscode user, Bun installation, and Cursor/VS Code Server
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    bash \
-    sudo \
-    curl \
-    procps \
-    && rm -rf /var/lib/apt/lists/*
+  sudo curl unzip git procps libatomic1 ca-certificates tar gzip which wget passwd \
+  && rm -rf /var/lib/apt/lists/*
 
-# Use existing node user and make it compatible with vscode
-RUN usermod -l vscode node && \
-  groupmod -n vscode node && \
-  usermod -d /home/vscode -m vscode && \
-  usermod -s /bin/bash vscode && \
+# Create vscode user for devcontainer (handle existing UID/GID)
+RUN (getent group 1000 || groupadd --gid 1000 vscode) && \
+  (id -u 1000 > /dev/null 2>&1 && usermod -l vscode -d /home/vscode -m $(id -nu 1000) || useradd --uid 1000 --gid 1000 -m -s /bin/bash vscode) && \
   echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Install claude-code globally
+RUN npm install -g @anthropic-ai/claude-code
 
 # Install Bun for development
 USER vscode
@@ -56,29 +50,21 @@ ENV PATH="/home/vscode/.bun/bin:${PATH}"
 
 # Set up workspace
 USER root
-RUN mkdir -p /workspace && chown vscode:vscode /workspace
+RUN mkdir -p /workspace && chown 1000:1000 /workspace
 USER vscode
 WORKDIR /workspace
 
 # Copy dependencies from deps stage
-COPY --from=deps --chown=vscode:vscode /app/node_modules ./node_modules
-COPY --chown=vscode:vscode . .
+COPY --from=deps --chown=1000:1000 /app/node_modules ./node_modules
+COPY --chown=1000:1000 . .
 
 ENV NODE_ENV=development
 EXPOSE 3000
 CMD ["sleep", "infinity"]
 
 # Rebuild the source code only when needed
-FROM base AS builder
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    bash \
-    && rm -rf /var/lib/apt/lists/*
+FROM base-bun AS builder
 WORKDIR /app
-
-# Install Bun
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:${PATH}"
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -97,7 +83,8 @@ RUN \
   fi
 
 # Production image, copy all the files and run next
-FROM base AS runner
+# Use DHI Node.js runtime image (minimal, hardened) for production
+FROM dhi.io/node:22-debian13-sfw-dev AS runner
 WORKDIR /app
 
 ENV NODE_ENV production

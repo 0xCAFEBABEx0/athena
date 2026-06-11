@@ -1,0 +1,53 @@
+---
+import { linkHref, type CMSLinkData } from '@/lib/links'
+
+type Props = CMSLinkData & {
+  appearance?: 'inline' | 'link' | 'default' | 'outline' | null
+  size?: 'sm' | 'default' | 'lg' | 'clear' | null
+  class?: string
+}
+
+const { appearance: appearanceProp, size, label, newTab, class: className, ...link } = Astro.props
+const appearance = appearanceProp ?? 'inline'
+
+const href = linkHref({ ...link, label, newTab })
+
+const sizeClasses: Record<string, string> = {
+  sm: 'px-3 py-1.5 text-sm',
+  default: 'px-4 py-2 text-sm',
+  lg: 'px-6 py-3 text-sm',
+  clear: '',
+}
+
+const appearanceClasses: Record<string, string> = {
+  inline: '',
+  link: 'text-primary underline underline-offset-4 hover:no-underline',
+  default:
+    'inline-flex items-center justify-center rounded bg-primary font-medium text-primary-foreground hover:opacity-90',
+  outline:
+    'inline-flex items-center justify-center rounded border border-border bg-background font-medium hover:bg-card',
+}
+
+const isButton = appearance === 'default' || appearance === 'outline'
+const classes = [
+  appearanceClasses[appearance],
+  isButton ? sizeClasses[size ?? 'default'] : '',
+  className,
+]
+  .filter(Boolean)
+  .join(' ')
+---
+
+{
+  href && (
+    <a
+      href={href}
+      class={classes || undefined}
+      target={newTab ? '_blank' : undefined}
+      rel={newTab ? 'noopener noreferrer' : undefined}
+    >
+      {label}
+      <slot />
+    </a>
+  )
+}

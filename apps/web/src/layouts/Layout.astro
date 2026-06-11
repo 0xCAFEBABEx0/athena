@@ -1,0 +1,90 @@
+---
+import '@fontsource/geist-sans/400.css'
+import '@fontsource/geist-sans/600.css'
+import '@fontsource/geist-sans/700.css'
+import '@fontsource/geist-mono/400.css'
+import '@/styles/global.css'
+
+import Footer from '@/components/Footer.astro'
+import Header from '@/components/Header.astro'
+import { isDraft } from '@/lib/draft'
+import { SITE_NAME, type PageMeta } from '@/lib/seo'
+import { webURL } from '@/lib/env'
+
+type Props = {
+  meta?: PageMeta
+}
+
+const { meta } = Astro.props
+
+const title = meta?.title ?? SITE_NAME
+const description = meta?.description
+const ogImage = meta?.ogImage ?? `${webURL()}/website-template-OG.webp`
+const url = meta?.url ?? `${webURL()}${Astro.url.pathname}`
+
+const draft = isDraft(Astro.cookies)
+if (draft) {
+  // Keep draft renders out of the shared ISR/edge cache.
+  Astro.response.headers.set('Cache-Control', 'private, no-store')
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:url" content={url} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link href="/favicon.ico" rel="icon" sizes="32x32" />
+    <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
+    <slot name="head" />
+    <script is:inline>
+      ;(function () {
+        function getImplicitPreference() {
+          var mql = window.matchMedia('(prefers-color-scheme: dark)')
+          if (typeof mql.matches === 'boolean') return mql.matches ? 'dark' : 'light'
+          return null
+        }
+
+        function themeIsValid(theme) {
+          return theme === 'light' || theme === 'dark'
+        }
+
+        var themeToSet = 'light'
+        var preference = window.localStorage.getItem('payload-theme')
+
+        if (themeIsValid(preference)) {
+          themeToSet = preference
+        } else {
+          var implicitPreference = getImplicitPreference()
+          if (implicitPreference) themeToSet = implicitPreference
+        }
+
+        document.documentElement.setAttribute('data-theme', themeToSet)
+      })()
+    </script>
+  </head>
+  <body>
+    {
+      draft && (
+        <div class="relative z-30 flex items-center justify-center gap-3 bg-warning px-4 py-2 text-sm font-medium">
+          Draft preview
+          <a class="underline" href={`/api/exit-preview?path=${Astro.url.pathname}`}>
+            Exit
+          </a>
+        </div>
+      )
+    }
+    <Header />
+    <slot />
+    <Footer />
+  </body>
+</html>

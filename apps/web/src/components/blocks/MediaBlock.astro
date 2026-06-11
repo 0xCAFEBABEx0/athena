@@ -1,0 +1,40 @@
+---
+import type { MediaBlock as MediaBlockProps } from '@athena/shared/payload-types'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+
+import Media from '@/components/Media.astro'
+import RichText from '@/components/RichText.astro'
+
+type Props = MediaBlockProps & {
+  enableGutter?: boolean
+  disableInnerContainer?: boolean
+  imgClass?: string
+  class?: string
+}
+
+const {
+  media,
+  enableGutter = true,
+  disableInnerContainer = false,
+  imgClass,
+  class: className,
+} = Astro.props
+
+const caption = media && typeof media === 'object' ? media.caption : null
+---
+
+<div class:list={[enableGutter && 'container', className]}>
+  {media && (
+    <Media
+      imgClass={['border border-border rounded-[0.8rem]', imgClass].filter(Boolean).join(' ')}
+      resource={media}
+    />
+  )}
+  {
+    caption && (
+      <div class:list={['mt-6', !disableInnerContainer && 'container']}>
+        <RichText data={caption as unknown as SerializedEditorState} enableGutter={false} />
+      </div>
+    )
+  }
+</div>
