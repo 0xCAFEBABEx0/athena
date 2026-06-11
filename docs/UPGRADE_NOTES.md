@@ -2,6 +2,51 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## Monorepo conversion + Next.js 16 + Astro 6 frontend
+
+The single-app project was restructured into a **Bun-workspaces monorepo** and the
+public frontend was ported off Next.js. This landed several of the majors that
+earlier entries deliberately held back. See [`AGENTS.md`](../AGENTS.md) for the
+current architecture.
+
+### Structure
+
+- **`apps/cms`** — the former root app: Payload CMS 3 + Next.js 16 (admin +
+  REST/GraphQL API, plus a legacy in-app frontend kept only for the bridge period).
+- **`apps/web`** — new Astro 6 public frontend on `@astrojs/vercel` (SSR + ISR),
+  consuming the CMS over REST. Tailwind CSS **v4** via `@tailwindcss/vite`.
+- **`packages/shared`** — generated Payload types + cross-app constants
+  (`CACHE_TAGS`, `DRAFT_COOKIE`, `COLLECTION_SLUGS`, `IMAGE_SIZES`).
+
+### Landed majors (previously "held back")
+
+| Package | From | To | Notes |
+|---|---|---|---|
+| `next` / `eslint-config-next` | 15.4.x | **16.x** | Payload 3 now supports Next 16. Build keeps `next build --webpack` (Next 16 defaults to Turbopack, which ignores the load-bearing webpack alias). |
+| `tailwindcss` (web) | — | **4.x** | Only in `apps/web` (via `@tailwindcss/vite`). `apps/cms` stays on Tailwind **v3 + daisyUI v4**. |
+
+`next lint` was removed in Next 16; the CMS lint script now calls `eslint .`
+directly (flat config using `eslint-config-next`'s native flat exports). Re-run
+`bun run generate:importmap` after upgrading any `@payloadcms/*` package.
+
+### Database adapter
+
+The CMS uses `@payloadcms/db-postgres` against **Neon** PostgreSQL (the earlier
+`@payloadcms/db-vercel-postgres` adapter and `payloadCloudPlugin` are gone).
+
+### Commands & deploy
+
+All scripts moved to the repo root with workspace filters (`bun run dev:cms`,
+`dev:web`, `build:cms`, `build:web`, `generate:types`, `generate:importmap`).
+Deployment is now **two Vercel projects** (Root Directory `apps/cms` and
+`apps/web`) from one repo — see [`DEPLOYMENT.md`](./DEPLOYMENT.md).
+
+---
+
+> **Note:** the "held back (breaking majors)" table in the entry below is
+> historical — `next` (→16) and `tailwindcss` (→4, web only) have since landed as
+> described above.
+
 ## Payload CMS 3.69 → 3.85 + dependency refresh
 
 Brought all dependencies to their latest versions that stay compatible with the

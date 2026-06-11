@@ -1,68 +1,58 @@
 ---
-description: Development workflow including server startup, testing, linting, and git operations
+description: Development workflow for the Bun-workspaces monorepo — server startup, linting, types, and git
 ---
 
 # Development Workflow
 
+> Monorepo: `apps/cms` (Payload + Next.js 16), `apps/web` (Astro 6),
+> `packages/shared`. Run everything from the repo root. See
+> [`AGENTS.md`](../../AGENTS.md).
+
 ## 🚀 Getting Started
 
-### Start Development Server
 ```bash
-bun dev
+bun run dev:cms      # CMS admin + API at http://localhost:3000
+bun run dev:web      # Astro frontend at http://localhost:4321
+bun run dev          # both at once
 ```
-- Frontend: http://localhost:3000
+
 - Admin Panel: http://localhost:3000/admin
+- Public frontend (Astro): http://localhost:4321
 
-## 🛠️ Common Commands
+## 🛠️ Common Commands (repo root)
 
-### Type Checking
 ```bash
-bun run generate:types
-```
+bun run lint                  # ESLint (cms) + astro check (web)
+bun run generate:types        # regenerate Payload types -> packages/shared
+bun run generate:importmap    # regenerate the admin import map
+bun run build                 # build all workspaces
 
-### Linting
-```bash
-bun run lint
-bun run lint:fix
-```
-
-### Environment Check
-```bash
-bun run env:check
+# CMS-only helpers (workspace filter)
+bun run --filter @athena/cms lint:fix
+bun run --filter @athena/cms env:check
 ```
 
 ### Database & Migrations
-```bash
-# Run migrations
-bun payload migrate
 
-# Seed database
-curl http://localhost:3000/next/seed
+```bash
+bun run --filter @athena/cms payload migrate     # run migrations
+curl http://localhost:3000/next/seed             # seed (CMS dev server running)
 ```
 
 ## 🔄 Git Workflow
 
-### Feature Development
-1. Checkout `development` branch: `git checkout development`
-2. Create feature branch: `git checkout -b feature/your-feature-name`
-3. Make changes and commit.
-4. Push to origin: `git push origin feature/your-feature-name`
+Three-branch promotion: `development` → `preview` → `main`.
 
-### Pull Requests
-- **Development**: Create PR to `development` for new features.
-- **Staging**: Create PR from `development` to `preview` for staging.
-- **Production**: Create PR from `preview` to `main` for production release.
+1. Work on `development` (feature branches off it are fine).
+2. Promote to staging: `bun run deploy:preview` (merge + push `preview`).
+3. Release: open a PR `preview → main` (main is protected).
 
 ## 🐛 Troubleshooting
 
-### Port Already in Use
 ```bash
-lsof -ti:3000 | xargs kill -9
-```
+lsof -ti:3000 | xargs kill -9      # CMS port
+lsof -ti:4321 | xargs kill -9      # Astro port
 
-### TypeScript/Cache Issues
-```bash
-rm -rf .next
-bun run generate:types
-bun dev
+rm -rf apps/cms/.next              # clear Next.js cache
+bun run generate:types             # refresh generated types
 ```

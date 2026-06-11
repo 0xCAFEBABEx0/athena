@@ -1,102 +1,79 @@
 # Sentry Integration Setup
 
-This project has been configured with Sentry for error tracking, performance monitoring, and logging.
+Sentry provides error tracking, performance monitoring, and logging for the
+**`apps/cms`** app (Payload CMS + Next.js 16). The Astro frontend (`apps/web`)
+uses Sentry separately only if configured there.
 
-## Configuration Files
+## Configuration Files (`apps/cms`)
 
-- `src/instrumentation-client.ts` - Client-side Sentry configuration
-- `sentry.server.config.ts` - Server-side Sentry configuration  
-- `sentry.edge.config.ts` - Edge runtime Sentry configuration
+- `apps/cms/src/instrumentation-client.ts` — client-side Sentry config
+- `apps/cms/sentry.server.config.ts` — server-side config
+- `apps/cms/sentry.edge.config.ts` — edge runtime config
 
-## Test Implementation
+`@sentry/nextjs` wraps the Next.js config via `withSentryConfig(...)` in
+`apps/cms/config/next.config.mjs`, and **only when** `SENTRY_DSN` plus
+`SENTRY_ORG`/`SENTRY_PROJECT` are set — otherwise it is skipped (see
+[AGENTS.md → Build Configuration](../AGENTS.md#build-configuration-appscmsconfignextconfigmjs)).
 
-### Test Component
-Located at: `src/components/SentryTest/index.tsx`
+## DSN & Environment Variables
 
-This component includes the `myUndefinedFunction()` that you requested to test. It provides several test buttons:
+Set these in `apps/cms/.env` (locally) and in the **athena-cms** Vercel project
+per environment:
 
-1. **Test Error (myUndefinedFunction)** - Calls a function that intentionally throws a ReferenceError
-2. **Test Span** - Creates a performance span for monitoring
-3. **Test Log** - Sends structured log messages to Sentry
-4. **Test API Error** - Tests server-side error tracking via API route
+```bash
+SENTRY_DSN=                 # server-side DSN
+NEXT_PUBLIC_SENTRY_DSN=     # client-side DSN
+SENTRY_ORG=                 # required for source-map upload at build time
+SENTRY_PROJECT=             # required for source-map upload at build time
+SENTRY_AUTH_TOKEN=          # build-time auth token for releases/source maps
+```
 
-### Test Page
-Access the test page at: `/sentry-test`
+> The deploy stage maps to a Sentry environment: `development` / `preview`
+> (staging) / `production`. Athena resolves the stage from `DEPLOY_ENV`
+> (falling back to `VERCEL_ENV`).
 
-### API Test Route
-Located at: `src/app/(payload)/api/sentry-test/route.ts`
+## Features
 
-- `GET` - Tests logging functionality
-- `POST` - Tests error capture functionality
-
-## Features Implemented
-
-### Error Tracking
-- Automatic error capture with `Sentry.captureException()`
-- Client-side and server-side error tracking
-- Structured error context
-
-### Performance Monitoring
-- Custom spans with `Sentry.startSpan()`
-- Performance metrics and attributes
-- Transaction tracking
-
-### Logging
-- Structured logging with `Sentry.logger`
-- Console integration for automatic log capture
-- Custom log levels and context
-
-### Session Replay
-- Automatic session recording
-- Error-focused replay capture
+- **Error tracking** — automatic capture via `Sentry.captureException()`, client
+  and server.
+- **Performance monitoring** — custom spans via `Sentry.startSpan()`.
+- **Logging** — structured logs via `Sentry.logger`.
+- **Session replay** — error-focused replay capture (client).
 
 ## Usage Examples
 
-### Capturing Exceptions
+### Capturing exceptions
+
 ```typescript
 try {
-  // Your code that might throw
+  // code that might throw
 } catch (error) {
   Sentry.captureException(error);
 }
 ```
 
-### Creating Performance Spans
-```typescript
-Sentry.startSpan(
-  {
-    op: "ui.click",
-    name: "Button Click",
-  },
-  (span) => {
-    // Your code here
-    span.setAttribute("custom.attribute", "value");
-  },
-);
-```
+### Performance spans
 
-### Structured Logging
 ```typescript
-const { logger } = Sentry;
-logger.info("User action", {
-  userId: "123",
-  action: "button_click",
-  timestamp: new Date().toISOString(),
+Sentry.startSpan({ op: "ui.click", name: "Button Click" }, (span) => {
+  span.setAttribute("custom.attribute", "value");
+  // ...
 });
 ```
 
-## Testing
+### Structured logging
 
-1. Start your development server: `bun dev`
-2. Navigate to `/sentry-test`
-3. Click the test buttons to verify Sentry functionality
-4. Check your Sentry dashboard for captured events
+```typescript
+const { logger } = Sentry;
+logger.info("User action", { userId: "123", action: "button_click" });
+```
 
-## DSN Configuration
+## Verifying It Works
 
-The Sentry DSN is configured via environment variables:
+1. Set the DSN env vars and start the CMS: `bun run dev:cms`.
+2. Trigger an error in the app (or temporarily add a `Sentry.captureException`
+   call) and confirm the event lands in the Sentry dashboard for the matching
+   environment.
 
-- **Client-side**: `NEXT_PUBLIC_SENTRY_DSN`
-- **Server-side**: `SENTRY_DSN`
-
-Make sure these environment variables are set correctly for each environment (development, preview, production). 
+> The legacy single-app `/sentry-test` page and `SentryTest` component were
+> removed in the monorepo conversion — there is no built-in test route anymore.
