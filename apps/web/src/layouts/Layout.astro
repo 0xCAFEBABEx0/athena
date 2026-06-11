@@ -1,0 +1,42 @@
+---
+import '@/styles/global.css'
+
+import { isDraft } from '@/lib/draft'
+
+type Props = {
+  title?: string
+  description?: string
+}
+
+const { title = 'Athena', description } = Astro.props
+
+const draft = isDraft(Astro.cookies)
+if (draft) {
+  // Keep draft renders out of any shared cache.
+  Astro.response.headers.set('Cache-Control', 'private, no-store')
+}
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <slot name="head" />
+  </head>
+  <body class="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
+    {
+      draft && (
+        <div class="flex items-center justify-center gap-3 bg-amber-500 px-4 py-2 text-sm font-medium text-black">
+          Draft preview
+          <a class="underline" href={`/api/exit-preview?path=${Astro.url.pathname}`}>
+            Exit
+          </a>
+        </div>
+      )
+    }
+    <slot />
+  </body>
+</html>

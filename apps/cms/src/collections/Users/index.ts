@@ -15,7 +15,11 @@ export const Users: CollectionConfig = {
     defaultColumns: ['name', 'email'],
     useAsTitle: 'name',
   },
-  auth: true,
+  // API keys enable the Astro web app's service account ("web-frontend"
+  // user) to fetch draft content over REST for preview rendering.
+  auth: {
+    useAPIKey: true,
+  },
   fields: [
     {
       name: 'name',

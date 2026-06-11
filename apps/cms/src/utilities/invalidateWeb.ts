@@ -27,8 +27,8 @@ const LEGACY_TAG_MAP: Record<string, string[]> = {
  *
  * 1. Bridge: revalidate the legacy in-app Next frontend (no-op once the
  *    (frontend) route group is removed).
- * 2. Webhook: POST `{ paths, tags }` to the Astro web app's /api/_invalidate
- *    endpoint, which bumps KV version stamps and purges edge-cached HTML.
+ * 2. Webhook: POST `{ paths, tags }` to the Astro web app's /api/invalidate
+ *    endpoint, which re-renders the affected ISR-cached paths.
  *    Skipped when WEB_URL is unset.
  *
  * Never throws — cache invalidation must not break a publish.
@@ -50,7 +50,7 @@ export const invalidateWeb = async ({ paths = [], tags = [], payload }: Invalida
   if (!webURL || !process.env.REVALIDATE_SECRET) return
 
   try {
-    const res = await fetch(`${webURL}/api/_invalidate`, {
+    const res = await fetch(`${webURL}/api/invalidate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

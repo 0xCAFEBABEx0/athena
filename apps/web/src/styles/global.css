@@ -1,0 +1,4 @@
+@import 'tailwindcss';
+
+/* Dark mode is driven by the data-theme attribute, not the OS media query. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
