@@ -34,10 +34,8 @@
   },
   "trustedDependencies": [
     "@sentry/cli",
-    "@vercel/speed-insights",
     "sharp",
     "esbuild",
-    "unrs-resolver",
-    "workerd"
+    "unrs-resolver"
   ]
 }

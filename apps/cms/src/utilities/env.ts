@@ -2,9 +2,8 @@
  * Environment configuration utility.
  *
  * Platform-neutral: deployment stage comes from DEPLOY_ENV
- * ('development' | 'preview' | 'production'), set per environment in
- * wrangler.jsonc vars (Cloudflare) or the host's env settings. VERCEL_ENV is
- * honored as a fallback while the Vercel bridge deployment is still alive.
+ * ('development' | 'preview' | 'production'), set in the host's env settings.
+ * VERCEL_ENV is honored as a fallback (set automatically on Vercel).
  */
 
 export type DeployEnv = 'development' | 'preview' | 'production'
