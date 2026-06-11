@@ -30,7 +30,6 @@ const nextConfig = {
 
   // Image configuration
   images: {
-    domains: ['localhost'],
     remotePatterns: [
       {
         protocol: 'http',

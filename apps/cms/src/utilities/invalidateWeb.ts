@@ -37,7 +37,9 @@ export const invalidateWeb = async ({ paths = [], tags = [], payload }: Invalida
   // 1. Legacy in-app frontend (bridge period only).
   try {
     for (const path of paths) revalidatePath(path)
-    for (const tag of tags) for (const legacy of LEGACY_TAG_MAP[tag] ?? []) revalidateTag(legacy)
+    // Next 16 requires a cache-life profile; 'max' = expire immediately on
+    // the next request, matching the pre-16 single-argument behavior.
+    for (const tag of tags) for (const legacy of LEGACY_TAG_MAP[tag] ?? []) revalidateTag(legacy, 'max')
   } catch (err) {
     // next/cache is unavailable outside a Next request context (e.g. seeds).
     payload.logger.info(`Legacy revalidation skipped: ${String(err)}`)
