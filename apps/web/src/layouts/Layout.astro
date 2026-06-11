@@ -10,6 +10,7 @@ import Header from '@/components/Header.astro'
 import { isDraft } from '@/lib/draft'
 import { SITE_NAME, type PageMeta } from '@/lib/seo'
 import { webURL } from '@/lib/env'
+import SpeedInsights from '@vercel/speed-insights/astro'
 
 type Props = {
   meta?: PageMeta
@@ -45,6 +46,7 @@ if (draft) {
     <meta name="twitter:card" content="summary_large_image" />
     <link href="/favicon.ico" rel="icon" sizes="32x32" />
     <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
+    <SpeedInsights />
     <slot name="head" />
     <script is:inline>
       ;(function () {
