@@ -12,6 +12,7 @@ export default defineConfig({
   output: 'server',
   site: process.env.WEB_URL || 'http://localhost:4321',
   adapter: vercel({
+    webAnalytics: { enabled: true },
     isr: {
       bypassToken: process.env.REVALIDATE_SECRET,
       exclude: [/^\/api\/.+/],
