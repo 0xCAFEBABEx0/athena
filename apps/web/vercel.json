@@ -1,0 +1,10 @@
+{
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "preview": true,
+      "development": false
+    }
+  },
+  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"preview\" ] && git log -1 --pretty=%s | grep -qE '^Merge pull request #[0-9]+ from [^ ]+/preview$'; then exit 0; fi; exit 1"
+}

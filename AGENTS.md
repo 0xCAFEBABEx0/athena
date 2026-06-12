@@ -128,6 +128,17 @@ enables auto-merge. `preview` still accepts direct pushes (`bun run deploy:previ
 
 CI (GitHub Actions) runs lint + type check on push to `main`/`preview` and PRs to `main`.
 
+Vercel deploy triggers are declared in each app's `vercel.json` (read from the
+project's Root Directory) to avoid duplicate builds:
+
+- `git.deploymentEnabled` turns off deployments from `development` in both
+  projects — only `preview` and `main` pushes deploy.
+- `ignoreCommand` skips Preview builds on the `preview` branch when HEAD is a
+  `preview -> main` release merge commit (`Merge pull request #N from .../preview`):
+  that exact tree was just built for Production, so rebuilding it after the
+  post-release branch sync is redundant. Caveat: if `main` ever gets hotfix
+  commits of its own, the staging URL lags until the next real `preview` push.
+
 ## Environment Variables
 
 CMS (`apps/cms/.env`):
