@@ -17,7 +17,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 ## Tech Stack
 
 - **CMS**: Payload CMS 3 + Next.js 16 (App Router), Tailwind CSS v3 + daisyUI v4
-- **Web**: Astro 6 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`)
+- **Web**: Astro 6 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (Linear-inspired light/dark themes in `src/styles/global.css`)
 - **Language**: TypeScript (strict mode)
 - **Runtime**: Node.js 22 (pinned to 22.22.0 via `.nvmrc`)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
@@ -37,7 +37,7 @@ bun run lint                  # ESLint (cms) + astro check (web)
 bun run generate:types        # Regenerate Payload types -> packages/shared
 bun run generate:importmap    # Regenerate admin import map
 bun run deploy:preview        # Merge development -> preview and push
-bun run deploy:production     # Merge preview -> main and push
+bun run deploy:production     # Open a preview -> main PR and enable auto-merge
 ```
 
 ## Directory Structure
@@ -121,6 +121,10 @@ Three-branch linear promotion: `development` -> `preview` -> `main`
 | `development` | Active development | None |
 | `preview` | Staging review | Vercel Preview |
 | `main` | Production | Vercel Production |
+
+`main` is branch-protected — direct pushes are rejected. Production ships via a
+PR from `preview` to `main`; `bun run deploy:production` opens it with `gh` and
+enables auto-merge. `preview` still accepts direct pushes (`bun run deploy:preview`).
 
 CI (GitHub Actions) runs lint + type check on push to `main`/`preview` and PRs to `main`.
 

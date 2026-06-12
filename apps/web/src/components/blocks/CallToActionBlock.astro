@@ -12,15 +12,30 @@ const { links, richText } = Astro.props
 
 <div class="container">
   <div
-    class="bg-card rounded border-border border p-4 flex flex-col gap-8 md:flex-row md:justify-between md:items-center"
+    class="card relative isolate overflow-hidden rounded-box border border-base-300/60 bg-base-200 p-8 text-center md:p-16"
   >
-    <div class="max-w-[48rem] flex items-center">
-      {richText && (
-        <RichText class="mb-0" data={richText as unknown as SerializedEditorState} enableGutter={false} />
-      )}
+    <div
+      class="pointer-events-none absolute inset-x-0 -top-24 -z-10 h-48 bg-primary/20 blur-[100px]"
+      aria-hidden="true"
+    >
     </div>
-    <div class="flex flex-col gap-8">
-      {(links || []).map(({ link }) => <CMSLink size="lg" appearance="default" {...link} />)}
+    <div class="mx-auto flex max-w-[40rem] flex-col items-center gap-8">
+      {richText && (
+        <RichText
+          class="mb-0 prose-headings:heading-display"
+          data={richText as unknown as SerializedEditorState}
+          enableGutter={false}
+        />
+      )}
+      {
+        (links ?? []).length > 0 && (
+          <div class="flex flex-wrap justify-center gap-3">
+            {(links || []).map(({ link }) => (
+              <CMSLink size="lg" appearance="default" {...link} />
+            ))}
+          </div>
+        )
+      }
     </div>
   </div>
 </div>

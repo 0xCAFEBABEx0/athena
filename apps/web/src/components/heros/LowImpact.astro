@@ -11,7 +11,13 @@ const { richText } = Astro.props
 
 <div class="container mt-16">
   <div class="max-w-[48rem]">
-    {richText && <RichText data={richText as unknown as SerializedEditorState} enableGutter={false} />}
+    {richText && (
+      <RichText
+        class="prose-headings:heading-display"
+        data={richText as unknown as SerializedEditorState}
+        enableGutter={false}
+      />
+    )}
     <slot />
   </div>
 </div>

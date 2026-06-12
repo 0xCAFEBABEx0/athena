@@ -29,52 +29,51 @@ const categoryTitles = (categories ?? [])
   .map((category) => (typeof category === 'object' ? category.title || 'Untitled category' : ''))
 ---
 
-<div class:list={['relative', hasImage ? '-mt-[10.4rem] flex items-end' : 'pt-8']} data-theme="dark">
-  <div
-    class:list={[
-      'container z-10 relative',
-      hasImage && 'lg:grid lg:grid-cols-[1fr_48rem_1fr] text-white pb-8',
-    ]}
-  >
-    <div class:list={[hasImage && 'col-start-1 col-span-1 md:col-start-2 md:col-span-2']}>
+<div class="pb-8">
+  <div class="container">
+    <div class="mx-auto max-w-[48rem]">
       {
         categoryTitles.length > 0 && (
-          <div class="uppercase text-sm mb-6">{categoryTitles.join(', ')}</div>
+          <div class="mb-6 flex flex-wrap gap-2">
+            {categoryTitles.map((categoryTitle) => (
+              <span class="badge badge-ghost border-base-300/60 text-xs font-medium uppercase tracking-wider text-base-content/60">
+                {categoryTitle}
+              </span>
+            ))}
+          </div>
         )
       }
 
-      <div>
-        <h1 class="mb-6 text-3xl md:text-5xl lg:text-6xl">{title}</h1>
-      </div>
+      <h1 class="heading-display mb-6 text-4xl md:text-5xl lg:text-6xl">{title}</h1>
 
-      <div class="flex flex-col md:flex-row gap-4 md:gap-16">
+      <div class="flex flex-col gap-4 text-sm md:flex-row md:items-center md:gap-8">
         {
           hasAuthors && (
-            <div class="flex flex-col gap-4">
-              <div class="flex flex-col gap-1">
-                <p class="text-sm">Author</p>
-                <p>{authorText}</p>
-              </div>
+            <div class="flex items-center gap-2">
+              <span class="text-base-content/50">Author</span>
+              <span class="font-medium">{authorText}</span>
             </div>
           )
         }
         {
           publishedAt && (
-            <div class="flex flex-col gap-1">
-              <p class="text-sm">Date Published</p>
-              <time datetime={publishedAt}>{formatDateTime(publishedAt)}</time>
+            <div class="flex items-center gap-2">
+              <span class="text-base-content/50">Published</span>
+              <time class="font-medium" datetime={publishedAt}>
+                {formatDateTime(publishedAt)}
+              </time>
             </div>
           )
         }
       </div>
     </div>
+
+    {
+      hasImage && (
+        <div class="mx-auto mt-12 max-w-[64rem] select-none overflow-hidden rounded-box border border-base-300/60">
+          <Media loading="eager" imgClass="w-full object-cover" resource={heroImage} />
+        </div>
+      )
+    }
   </div>
-  {
-    hasImage && (
-      <div class="min-h-[80vh] select-none relative w-full">
-        <Media fill loading="eager" imgClass="-z-10 object-cover" resource={heroImage} />
-        <div class="absolute pointer-events-none left-0 bottom-0 w-full h-1/2 bg-gradient-to-t from-black to-transparent" />
-      </div>
-    )
-  }
 </div>

@@ -1,113 +1,98 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
+/* daisyUI v5 — themes are defined below and keyed off the same data-theme
+   attribute the theme script already sets (no OS media query). */
+@plugin 'daisyui' {
+  themes: false;
+}
+
 /* Dark mode is driven by the data-theme attribute, not the OS media query. */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
-/* Design tokens ported from apps/cms (globals.css + tailwind.config.mjs). */
+/* Linear-inspired light theme. */
+@plugin 'daisyui/theme' {
+  name: 'light';
+  default: true;
+  color-scheme: light;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #f9f8f9;
+  --color-base-300: #e9e8ea;
+  --color-base-content: #08090a;
+
+  --color-primary: #5e6ad2;
+  --color-primary-content: #ffffff;
+  --color-secondary: #6e79d6;
+  --color-secondary-content: #ffffff;
+  --color-accent: #7170ff;
+  --color-accent-content: #ffffff;
+  --color-neutral: #3c4149;
+  --color-neutral-content: #f7f8f8;
+
+  --color-info: #4ea7fc;
+  --color-info-content: #08090a;
+  --color-success: #4cb782;
+  --color-success-content: #08090a;
+  --color-warning: #f2c94c;
+  --color-warning-content: #08090a;
+  --color-error: #eb5757;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* Linear-inspired dark theme (near-black base, muted grays, indigo accent). */
+@plugin 'daisyui/theme' {
+  name: 'dark';
+  color-scheme: dark;
+
+  --color-base-100: #08090a;
+  --color-base-200: #141516;
+  --color-base-300: #26282b;
+  --color-base-content: #f7f8f8;
+
+  --color-primary: #5e6ad2;
+  --color-primary-content: #ffffff;
+  --color-secondary: #828fff;
+  --color-secondary-content: #08090a;
+  --color-accent: #7170ff;
+  --color-accent-content: #ffffff;
+  --color-neutral: #1f2023;
+  --color-neutral-content: #d0d6e0;
+
+  --color-info: #4ea7fc;
+  --color-info-content: #08090a;
+  --color-success: #4cb782;
+  --color-success-content: #08090a;
+  --color-warning: #f2c94c;
+  --color-warning-content: #08090a;
+  --color-error: #eb5757;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsla(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-success: hsl(var(--success));
-  --color-warning: hsl(var(--warning));
-  --color-error: hsl(var(--error));
-
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
-
   --font-sans: 'Geist Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
 }
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 240 5% 96%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 240 6% 80%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.2rem;
-
-    --success: 196 52% 74%;
-    --warning: 34 89% 85%;
-    --error: 10 100% 86%;
-  }
-
-  [data-theme='dark'] {
-    --background: 0 0% 0%;
-    --foreground: 210 40% 98%;
-
-    --card: 0 0% 4%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 0, 0%, 15%, 0.8;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-
-    --success: 196 100% 14%;
-    --warning: 34 51% 25%;
-    --error: 10 39% 43%;
-  }
-
   h1,
   h2,
   h3,
@@ -118,17 +103,17 @@
     font-weight: unset;
   }
 
-  * {
-    border-color: hsla(var(--border));
-  }
-
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-primary) 30%, transparent);
   }
 }
 
@@ -165,4 +150,11 @@ html[data-theme='light'] {
   @media (min-width: 86rem) {
     max-width: 86rem;
   }
+}
+
+/* Linear-style display headings: tight tracking, balanced wrapping. */
+@utility heading-display {
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
 }

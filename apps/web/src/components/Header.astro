@@ -9,14 +9,16 @@ const header = await getGlobal<Header>('header')
 const navItems = header?.navItems || []
 ---
 
-<header class="container relative z-20 bg-transparent">
-  <div class="py-8 flex justify-between">
-    <a href="/">
+<header
+  class="sticky top-0 z-20 border-b border-base-300/60 bg-base-100/80 backdrop-blur-xl"
+>
+  <div class="container flex h-16 items-center justify-between">
+    <a class="flex items-center" href="/">
       <Logo loading="eager" class="invert dark:invert-0" />
     </a>
-    <nav class="flex gap-3 items-center">
-      {navItems.map(({ link }) => <CMSLink {...link} appearance="link" />)}
-      <a href="/search">
+    <nav class="flex items-center gap-1">
+      {navItems.map(({ link }) => <CMSLink {...link} appearance="nav" />)}
+      <a class="btn btn-ghost btn-sm btn-square text-base-content/70" href="/search">
         <span class="sr-only">Search</span>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -26,7 +28,7 @@ const navItems = header?.navItems || []
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          class="w-5 text-primary"
+          class="w-4"
           aria-hidden="true"
         >
           <circle cx="11" cy="11" r="8"></circle>

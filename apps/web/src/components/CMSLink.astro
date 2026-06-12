@@ -2,7 +2,7 @@
 import { linkHref, type CMSLinkData } from '@/lib/links'
 
 type Props = CMSLinkData & {
-  appearance?: 'inline' | 'link' | 'default' | 'outline' | null
+  appearance?: 'inline' | 'link' | 'nav' | 'default' | 'outline' | null
   size?: 'sm' | 'default' | 'lg' | 'clear' | null
   class?: string
 }
@@ -13,19 +13,18 @@ const appearance = appearanceProp ?? 'inline'
 const href = linkHref({ ...link, label, newTab })
 
 const sizeClasses: Record<string, string> = {
-  sm: 'px-3 py-1.5 text-sm',
-  default: 'px-4 py-2 text-sm',
-  lg: 'px-6 py-3 text-sm',
+  sm: 'btn-sm',
+  default: '',
+  lg: 'btn-lg',
   clear: '',
 }
 
 const appearanceClasses: Record<string, string> = {
   inline: '',
-  link: 'text-primary underline underline-offset-4 hover:no-underline',
-  default:
-    'inline-flex items-center justify-center rounded bg-primary font-medium text-primary-foreground hover:opacity-90',
-  outline:
-    'inline-flex items-center justify-center rounded border border-border bg-background font-medium hover:bg-card',
+  link: 'link link-hover text-base-content/70 hover:text-base-content text-sm font-medium',
+  nav: 'btn btn-ghost btn-sm font-medium text-base-content/70 hover:text-base-content',
+  default: 'btn btn-primary font-medium',
+  outline: 'btn btn-outline border-base-300 font-medium hover:border-base-content/30',
 }
 
 const isButton = appearance === 'default' || appearance === 'outline'

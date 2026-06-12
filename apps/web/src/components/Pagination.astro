@@ -14,22 +14,21 @@ const hasExtraNextPages = page + 1 < totalPages
 
 const pageHref = (n: number) => `/posts/page/${n}`
 
-const itemClasses =
-  'inline-flex h-10 min-w-10 items-center justify-center rounded border border-border px-3 text-sm hover:bg-card'
-const activeClasses = 'inline-flex h-10 min-w-10 items-center justify-center rounded bg-primary px-3 text-sm text-primary-foreground'
-const disabledClasses =
-  'inline-flex h-10 min-w-10 items-center justify-center rounded border border-border px-3 text-sm opacity-50 pointer-events-none'
+const itemClasses = 'join-item btn btn-sm bg-base-100 border-base-300/60 font-medium'
+const activeClasses = 'join-item btn btn-sm btn-primary font-medium'
+const disabledClasses = 'join-item btn btn-sm btn-disabled border-base-300/60'
+const ellipsisClasses = 'join-item btn btn-sm btn-disabled border-base-300/60'
 ---
 
 <nav class:list={['my-12', className]} aria-label="Pagination">
-  <ul class="flex items-center gap-2">
+  <ul class="join">
     <li>
       <a class={hasPrevPage ? itemClasses : disabledClasses} href={hasPrevPage ? pageHref(page - 1) : undefined}>
         Previous
       </a>
     </li>
 
-    {hasExtraPrevPages && <li class="px-2">…</li>}
+    {hasExtraPrevPages && <li class={ellipsisClasses}>…</li>}
 
     {
       hasPrevPage && (
@@ -57,7 +56,7 @@ const disabledClasses =
       )
     }
 
-    {hasExtraNextPages && <li class="px-2">…</li>}
+    {hasExtraNextPages && <li class={ellipsisClasses}>…</li>}
 
     <li>
       <a class={hasNextPage ? itemClasses : disabledClasses} href={hasNextPage ? pageHref(page + 1) : undefined}>

@@ -14,16 +14,12 @@ Astro.response.status = 404
 ---
 
 <Layout meta={meta}>
-  <div class="container py-28">
-    <div class="prose dark:prose-invert max-w-none">
-      <h1 style="margin-bottom: 0;">404</h1>
-      <p class="mb-4">This page could not be found.</p>
-    </div>
-    <a
-      class="inline-flex items-center justify-center rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-      href="/"
-    >
-      Go home
-    </a>
+  <div class="container flex flex-col items-center py-32 text-center">
+    <p class="text-sm font-medium uppercase tracking-wider text-base-content/50">Error 404</p>
+    <h1 class="heading-display mt-4 text-5xl md:text-6xl">Page not found</h1>
+    <p class="mt-4 max-w-[24rem] text-base-content/60">
+      The page you're looking for doesn't exist or has been moved.
+    </p>
+    <a class="btn btn-primary mt-8 font-medium" href="/"> Go home </a>
   </div>
 </Layout>

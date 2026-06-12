@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev:web"],
+      "port": 4321
+    },
+    {
+      "name": "cms",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev:cms"],
+      "port": 3000
+    }
+  ]
+}

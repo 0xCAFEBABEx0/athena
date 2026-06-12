@@ -22,7 +22,7 @@ if (totalDocs && indexEnd > totalDocs) indexEnd = totalDocs
 const { plural, singular } = labels[collection] ?? { plural: 'Docs', singular: 'Doc' }
 ---
 
-<div class:list={[className, 'font-semibold']}>
+<div class:list={[className, 'text-sm font-medium text-base-content/60']}>
   {(typeof totalDocs === 'undefined' || totalDocs === 0) && 'Search produced no results.'}
   {
     typeof totalDocs !== 'undefined' &&
