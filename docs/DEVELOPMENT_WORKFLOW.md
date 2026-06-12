@@ -51,18 +51,22 @@ origin preview`. The push deploys both apps to **Vercel Preview**.
 
 ### 3. Production Phase
 
-The `main` branch is protected — production ships through a Pull Request:
+The `main` branch is protected — direct pushes are rejected, so production ships
+through a Pull Request:
 
 ```bash
-gh pr create --base main --head preview --title "release: deploy to production"
+# Open a preview -> main PR and enable auto-merge
+bun run deploy:production
 ```
 
-Wait for checks to pass, get approval, then merge. The merge deploys both apps to
-**Vercel Production**.
+`deploy:production` runs `gh pr create --base main --head preview --fill &&
+gh pr merge preview --auto --merge`: it opens the PR and flags it to merge
+automatically once required checks (and any required approvals) pass. The merge
+deploys both apps to **Vercel Production**.
 
-> `bun run deploy:production` (`git checkout main && git merge preview && git push
-> origin main`) exists for repos without branch protection, but the protected-PR
-> route above is the intended path for `main`.
+> The `gh pr merge --auto` step needs **Allow auto-merge** enabled in the repo
+> settings; without it, the PR is still created and you merge it manually after
+> checks pass.
 
 ## 🔒 Branch Protection (recommended GitHub settings)
 
