@@ -1,0 +1,60 @@
+---
+/**
+ * Standalone 500 page — do not import Layout/Header/Footer. Those fetch the
+ * CMS, and a CMS failure is the usual reason we landed here.
+ */
+import '@fontsource/geist-sans/400.css'
+import '@fontsource/geist-sans/600.css'
+import '@/styles/global.css'
+
+import { SITE_NAME } from '@/lib/seo'
+
+type Props = {
+  error?: unknown
+}
+
+const { error } = Astro.props as Props
+const message = error instanceof Error ? error.message : undefined
+const isDev = import.meta.env.DEV
+
+Astro.response.status = 500
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Error | {SITE_NAME}</title>
+    <script is:inline>
+      ;(function () {
+        var theme = 'light'
+        try {
+          var stored = window.localStorage.getItem('payload-theme')
+          if (stored === 'light' || stored === 'dark') theme = stored
+          else if (window.matchMedia('(prefers-color-scheme: dark)').matches) theme = 'dark'
+        } catch (_err) {
+          /* ignore */
+        }
+        document.documentElement.setAttribute('data-theme', theme)
+      })()
+    </script>
+  </head>
+  <body>
+    <div class="container flex flex-col items-center py-32 text-center">
+      <p class="text-sm font-medium uppercase tracking-wider text-base-content/50">Error 500</p>
+      <h1 class="heading-display mt-4 text-5xl md:text-6xl">Something went wrong</h1>
+      <p class="mt-4 max-w-[28rem] text-base-content/60">
+        This page could not be rendered. Please try again in a moment.
+      </p>
+      {
+        isDev && message && (
+          <pre class="mt-8 max-w-[40rem] overflow-x-auto rounded-box bg-base-200 p-4 text-left text-sm text-base-content/80">
+            {message}
+          </pre>
+        )
+      }
+      <a class="btn btn-primary mt-8 font-medium" href="/"> Go home </a>
+    </div>
+  </body>
+</html>

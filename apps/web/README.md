@@ -18,11 +18,12 @@ bun run --filter @athena/web check   # astro check (types)
 
 | Variable | Purpose |
 |---|---|
-| `CMS_URL` | Origin of the Payload CMS admin + REST API (e.g. `http://localhost:3000`). |
-| `WEB_URL` | This app's own public origin (e.g. `http://localhost:4321`). |
+| `CMS_URL` | Origin of the Payload CMS admin + REST API (e.g. `http://localhost:3000`). Required on Vercel — there is no localhost fallback. |
+| `WEB_URL` | This app's own public origin (e.g. `https://www.findb.uk`). Use the custom domain, not the `*.vercel.app` URL. |
 | `PREVIEW_SECRET` | Shared with the CMS; validates `/api/preview` requests before the draft cookie is set. |
 | `REVALIDATE_SECRET` | Shared with the CMS; bearer token for `POST /api/invalidate`, also used as the ISR bypass token. |
 | `PAYLOAD_API_KEY` | API key of the CMS `web-frontend` service-account user (Users collection, "Enable API Key"). Lets draft preview fetch unpublished content over REST. Server-side only. |
+| `CMS_PROTECTION_BYPASS` | Optional. Copy of the athena-cms **Protection Bypass for Automation** secret. Sent as `x-vercel-protection-bypass` so server-side REST fetches still work if the CMS deployment is SSO-protected. Browser form posts to the CMS still need a public API. |
 
 `PREVIEW_SECRET` and `REVALIDATE_SECRET` must be byte-identical to the CMS
 deployment's values — drift shows up as silent 401s (the CMS's

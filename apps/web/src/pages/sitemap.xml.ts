@@ -3,8 +3,8 @@ import type { APIRoute } from 'astro'
 import { webURL } from '@/lib/env'
 import { sitemapResponse } from '@/lib/sitemap'
 
-export const GET: APIRoute = () => {
-  const base = webURL()
+export const GET: APIRoute = ({ url }) => {
+  const base = url.origin || webURL()
   const xml =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +

@@ -9,7 +9,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "lint": "astro check"
+    "lint": "astro check",
+    "test": "bun test src"
   },
   "dependencies": {
     "@astrojs/vercel": "^10.0.8",

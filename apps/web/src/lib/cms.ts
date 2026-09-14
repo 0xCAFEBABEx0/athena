@@ -2,7 +2,7 @@ import { stringify } from 'qs-esm'
 
 import type { Footer, Header, Page, Post, Redirect, Search } from '@athena/shared/payload-types'
 
-import { cmsURL, env } from './env'
+import { cmsProtectionBypass, cmsURL, env } from './env'
 
 /** Shape of Payload's paginated REST responses. */
 export type PaginatedDocs<T> = {
@@ -26,6 +26,96 @@ type FetchOptions = {
   draft?: boolean
 }
 
+export class CmsRequestError extends Error {
+  readonly status: number
+  readonly path: string
+
+  constructor(message: string, { status, path }: { status: number; path: string }) {
+    super(message)
+    this.name = 'CmsRequestError'
+    this.status = status
+    this.path = path
+  }
+}
+
+/** True when a Location / final URL is Vercel's Deployment Protection SSO. */
+export const isVercelSsoLocation = (location: string | null | undefined): boolean => {
+  if (!location) return false
+  try {
+    const url = new URL(location, 'https://vercel.com')
+    if (url.hostname !== 'vercel.com') return false
+    return url.pathname === '/sso-api' || url.pathname.startsWith('/sso-api/') || url.pathname === '/login'
+  } catch {
+    return false
+  }
+}
+
+const ssoError = (path: string, status: number): CmsRequestError =>
+  new CmsRequestError(
+    `CMS is blocked by Vercel Deployment Protection (${path}). ` +
+      'Disable Production protection on the athena-cms project, or set CMS_PROTECTION_BYPASS on athena-web.',
+    { status, path },
+  )
+
+/**
+ * Validate a CMS HTTP response and parse JSON. Exported for unit tests.
+ *
+ * Default `fetch` follows Vercel SSO 302s to a 200 login HTML page, so
+ * `res.ok` is true and `res.json()` throws a SyntaxError — that surfaces on
+ * Vercel as FUNCTION_INVOCATION_FAILED. Catch the SSO/HTML cases first.
+ */
+export const parseCmsResponse = async <T>(res: Response, path: string): Promise<T> => {
+  if (isVercelSsoLocation(res.headers.get('location')) || isVercelSsoLocation(res.url)) {
+    throw ssoError(path, res.status)
+  }
+
+  if (res.status >= 300 && res.status < 400) {
+    const location = res.headers.get('location') ?? 'unknown'
+    throw new CmsRequestError(`CMS request redirected: ${res.status} → ${location} (${path})`, {
+      status: res.status,
+      path,
+    })
+  }
+
+  if (!res.ok) {
+    throw new CmsRequestError(`CMS request failed: ${res.status} ${res.statusText} (${path})`, {
+      status: res.status,
+      path,
+    })
+  }
+
+  const contentType = res.headers.get('content-type') ?? ''
+  if (!contentType.toLowerCase().includes('json')) {
+    throw new CmsRequestError(
+      `CMS returned non-JSON content-type "${contentType || 'unknown'}" (${path})`,
+      { status: res.status, path },
+    )
+  }
+
+  try {
+    return (await res.json()) as T
+  } catch (error) {
+    throw new CmsRequestError(
+      `CMS returned invalid JSON (${path}): ${error instanceof Error ? error.message : String(error)}`,
+      { status: res.status, path },
+    )
+  }
+}
+
+const cmsHeaders = (draft: boolean): Headers => {
+  const headers = new Headers()
+  const bypass = cmsProtectionBypass()
+  if (bypass) {
+    headers.set('x-vercel-protection-bypass', bypass)
+  }
+  if (draft) {
+    const apiKey = env('PAYLOAD_API_KEY')
+    if (!apiKey) throw new Error('PAYLOAD_API_KEY is required to fetch draft content')
+    headers.set('Authorization', `users API-Key ${apiKey}`)
+  }
+  return headers
+}
+
 const cmsFetch = async <T>(
   path: string,
   query: Record<string, unknown> = {},
@@ -33,19 +123,31 @@ const cmsFetch = async <T>(
 ): Promise<T> => {
   // Payload REST expects qs-encoded nested params for where/select objects.
   const qs = stringify({ ...query, ...(draft ? { draft: 'true' } : {}) }, { addQueryPrefix: true })
+  const origin = cmsURL()
+  const url = `${origin}/api${path}${qs}`
 
-  const headers: HeadersInit = {}
-  if (draft) {
-    const apiKey = env('PAYLOAD_API_KEY')
-    if (!apiKey) throw new Error('PAYLOAD_API_KEY is required to fetch draft content')
-    headers.Authorization = `users API-Key ${apiKey}`
+  let res: Response
+  try {
+    res = await fetch(url, {
+      headers: cmsHeaders(draft),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(15_000),
+    })
+  } catch (error) {
+    if (error instanceof CmsRequestError) throw error
+    const message = error instanceof Error ? error.message : String(error)
+    throw new CmsRequestError(`CMS unreachable at ${origin} (${path}): ${message}`, {
+      status: 0,
+      path,
+    })
   }
 
-  const res = await fetch(`${cmsURL()}/api${path}${qs}`, { headers })
-  if (!res.ok) {
-    throw new Error(`CMS request failed: ${res.status} ${res.statusText} (${path})`)
+  try {
+    return await parseCmsResponse<T>(res, path)
+  } catch (error) {
+    console.error('[cms]', error instanceof Error ? error.message : error)
+    throw error
   }
-  return (await res.json()) as T
 }
 
 export const getPage = async (slug: string, opts: FetchOptions = {}): Promise<Page | null> => {
