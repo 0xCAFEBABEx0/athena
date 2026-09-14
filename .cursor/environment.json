@@ -13,5 +13,8 @@
       "command": "export PATH=\"$HOME/.bun/bin:$PATH\"; bun run dev:web"
     }
   ],
-  "ports": [3000, 4321]
+  "ports": [
+    { "name": "cms", "port": 3000 },
+    { "name": "web", "port": 4321 }
+  ]
 }
