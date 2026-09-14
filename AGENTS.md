@@ -183,3 +183,5 @@ PAYLOAD_API_KEY=           # web-frontend service account key (draft fetches)
    endpoint is `/api/invalidate` (no underscore); keep `invalidateWeb.ts` in sync
 9. Payload REST defaults to `limit=10`, and drafts require auth — the web app's
    `lib/cms.ts` always sets `depth`/`limit` explicitly and authenticates draft fetches
+
+## Imported Claude Cowork project instructions
