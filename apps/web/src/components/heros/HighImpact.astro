@@ -9,20 +9,35 @@ import RichText from '@/components/RichText.astro'
 type Props = Page['hero']
 
 const { links, media, richText } = Astro.props
+const hasMedia = media && typeof media === 'object'
 ---
 
-<div
-  class="relative -mt-[10.4rem] flex items-center justify-center text-white"
-  data-theme="dark"
->
-  <div class="container mb-8 z-10 relative flex items-center justify-center">
-    <div class="max-w-[36.5rem] md:text-center">
+<div class="relative isolate -mt-16 overflow-hidden text-white" data-theme="dark">
+  {
+    hasMedia && (
+      <div class="absolute inset-0 -z-10 select-none">
+        <Media fill imgClass="object-cover" loading="eager" resource={media} />
+        <div class="absolute inset-0 bg-gradient-to-b from-base-100/70 via-base-100/40 to-base-100" />
+      </div>
+    )
+  }
+  <div
+    class:list={[
+      'container relative z-10 flex min-h-[70vh] flex-col items-center justify-center py-24 text-center',
+      !hasMedia && 'bg-base-100',
+    ]}
+  >
+    <div class="max-w-[44rem]">
       {richText && (
-        <RichText class="mb-6" data={richText as unknown as SerializedEditorState} enableGutter={false} />
+        <RichText
+          class="mb-8 prose-headings:heading-display prose-h1:text-5xl md:prose-h1:text-6xl"
+          data={richText as unknown as SerializedEditorState}
+          enableGutter={false}
+        />
       )}
       {
         Array.isArray(links) && links.length > 0 && (
-          <ul class="flex md:justify-center gap-4">
+          <ul class="flex flex-wrap justify-center gap-3">
             {links.map(({ link }) => (
               <li>
                 <CMSLink {...link} />
@@ -32,10 +47,5 @@ const { links, media, richText } = Astro.props
         )
       }
     </div>
-  </div>
-  <div class="min-h-[80vh] select-none relative w-full">
-    {media && typeof media === 'object' && (
-      <Media fill imgClass="-z-10 object-cover" loading="eager" resource={media} />
-    )}
   </div>
 </div>

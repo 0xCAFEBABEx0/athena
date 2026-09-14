@@ -50,9 +50,9 @@ type check (it does **not** deploy — see [CI_CD.md](./CI_CD.md)).
 # Promote development -> preview (deploys both apps to Preview)
 bun run deploy:preview          # git checkout preview && git merge development && git push
 
-# Promote preview -> main (production). main is PR-protected — prefer a PR:
-gh pr create --base main --head preview --title "release: deploy to production"
-# (bun run deploy:production exists for unprotected repos)
+# Promote preview -> main (production). main is PR-protected, so this opens a
+# preview -> main PR and enables auto-merge (gh pr create + gh pr merge --auto)
+bun run deploy:production
 ```
 
 ## CMS ⇄ Web Contract (must match across both deployments)

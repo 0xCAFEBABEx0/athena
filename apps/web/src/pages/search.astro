@@ -18,30 +18,23 @@ const meta = {
 ---
 
 <Layout meta={meta}>
-  <div class="pt-24 pb-24">
-    <div class="container mb-16">
-      <div class="prose dark:prose-invert max-w-none text-center">
-        <h1 class="mb-8 lg:mb-16">Search</h1>
+  <div class="pt-16 pb-24">
+    <div class="container mb-16 text-center">
+      <h1 class="heading-display mb-8 text-4xl md:text-5xl">Search</h1>
 
-        <div class="max-w-[50rem] mx-auto">
-          <form action="/search" method="get" class="flex gap-2 not-prose">
-            <label for="search" class="sr-only">Search</label>
-            <input
-              id="search"
-              name="q"
-              type="search"
-              value={query}
-              placeholder="Search"
-              class="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            <button
-              type="submit"
-              class="inline-flex items-center justify-center rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              Search
-            </button>
-          </form>
-        </div>
+      <div class="mx-auto max-w-[36rem]">
+        <form action="/search" method="get" class="join w-full">
+          <label for="search" class="sr-only">Search</label>
+          <input
+            id="search"
+            name="q"
+            type="search"
+            value={query}
+            placeholder="Search posts…"
+            class="input join-item w-full"
+          />
+          <button type="submit" class="btn btn-primary join-item font-medium"> Search </button>
+        </form>
       </div>
     </div>
 
@@ -49,7 +42,7 @@ const meta = {
       results.docs.length > 0 ? (
         <CollectionArchive posts={results.docs as CardPostData[]} />
       ) : (
-        <div class="container">No results found.</div>
+        <div class="container text-center text-base-content/60">No results found.</div>
       )
     }
   </div>

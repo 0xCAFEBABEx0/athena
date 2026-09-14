@@ -11,15 +11,11 @@ const { posts, class: className } = Astro.props
 
 <div class:list={['container', className]}>
   <div>
-    <div class="grid grid-cols-4 sm:grid-cols-8 lg:grid-cols-12 gap-y-4 gap-x-4 lg:gap-y-8 lg:gap-x-8 xl:gap-x-8">
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {
         posts?.map((post) => {
           if (typeof post !== 'object' || post === null) return null
-          return (
-            <div class="col-span-4">
-              <Card class="h-full" doc={post} relationTo="posts" showCategories />
-            </div>
-          )
+          return <Card class="h-full" doc={post} relationTo="posts" showCategories />
         })
       }
     </div>

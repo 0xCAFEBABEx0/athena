@@ -11,30 +11,40 @@ type Props = Page['hero']
 const { links, media, richText } = Astro.props
 ---
 
-<div>
-  <div class="container mb-8">
-    {richText && (
-      <RichText class="mb-6" data={richText as unknown as SerializedEditorState} enableGutter={false} />
-    )}
-    {
-      Array.isArray(links) && links.length > 0 && (
-        <ul class="flex gap-4">
-          {links.map(({ link }) => (
-            <li>
-              <CMSLink {...link} />
-            </li>
-          ))}
-        </ul>
-      )
-    }
+<div class="pt-16">
+  <div class="container mb-12">
+    <div class="max-w-[44rem]">
+      {richText && (
+        <RichText
+          class="mb-8 prose-headings:heading-display"
+          data={richText as unknown as SerializedEditorState}
+          enableGutter={false}
+        />
+      )}
+      {
+        Array.isArray(links) && links.length > 0 && (
+          <ul class="flex flex-wrap gap-3">
+            {links.map(({ link }) => (
+              <li>
+                <CMSLink {...link} />
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
   </div>
   <div class="container">
     {
       media && typeof media === 'object' && (
         <div>
-          <Media pictureClass="-mx-4 md:-mx-8 2xl:-mx-16 block" loading="eager" resource={media} />
+          <Media
+            pictureClass="block overflow-hidden rounded-box border border-base-300/60"
+            loading="eager"
+            resource={media}
+          />
           {media.caption && (
-            <div class="mt-3">
+            <div class="mt-3 text-sm text-base-content/60">
               <RichText data={media.caption as unknown as SerializedEditorState} enableGutter={false} />
             </div>
           )}

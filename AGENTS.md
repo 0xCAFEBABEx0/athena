@@ -17,7 +17,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 ## Tech Stack
 
 - **CMS**: Payload CMS 3 + Next.js 16 (App Router), Tailwind CSS v3 + daisyUI v4
-- **Web**: Astro 6 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`)
+- **Web**: Astro 6 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (Linear-inspired light/dark themes in `src/styles/global.css`)
 - **Language**: TypeScript (strict mode)
 - **Runtime**: Node.js 22 (pinned to 22.22.0 via `.nvmrc`)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
@@ -37,7 +37,7 @@ bun run lint                  # ESLint (cms) + astro check (web)
 bun run generate:types        # Regenerate Payload types -> packages/shared
 bun run generate:importmap    # Regenerate admin import map
 bun run deploy:preview        # Merge development -> preview and push
-bun run deploy:production     # Merge preview -> main and push
+bun run deploy:production     # Open a preview -> main PR and enable auto-merge
 ```
 
 ## Directory Structure
@@ -122,7 +122,22 @@ Three-branch linear promotion: `development` -> `preview` -> `main`
 | `preview` | Staging review | Vercel Preview |
 | `main` | Production | Vercel Production |
 
+`main` is branch-protected — direct pushes are rejected. Production ships via a
+PR from `preview` to `main`; `bun run deploy:production` opens it with `gh` and
+enables auto-merge. `preview` still accepts direct pushes (`bun run deploy:preview`).
+
 CI (GitHub Actions) runs lint + type check on push to `main`/`preview` and PRs to `main`.
+
+Vercel deploy triggers are declared in each app's `vercel.json` (read from the
+project's Root Directory) to avoid duplicate builds:
+
+- `git.deploymentEnabled` turns off deployments from `development` in both
+  projects — only `preview` and `main` pushes deploy.
+- `ignoreCommand` skips Preview builds on the `preview` branch when HEAD is a
+  `preview -> main` release merge commit (`Merge pull request #N from .../preview`):
+  that exact tree was just built for Production, so rebuilding it after the
+  post-release branch sync is redundant. Caveat: if `main` ever gets hotfix
+  commits of its own, the staging URL lags until the next real `preview` push.
 
 ## Environment Variables
 
@@ -168,3 +183,5 @@ PAYLOAD_API_KEY=           # web-frontend service account key (draft fetches)
    endpoint is `/api/invalidate` (no underscore); keep `invalidateWeb.ts` in sync
 9. Payload REST defaults to `limit=10`, and drafts require auth — the web app's
    `lib/cms.ts` always sets `depth`/`limit` explicitly and authenticates draft fetches
+
+## Imported Claude Cowork project instructions

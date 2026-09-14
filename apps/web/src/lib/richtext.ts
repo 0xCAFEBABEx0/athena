@@ -54,14 +54,14 @@ const mediaHTML = (media: MediaBlock['media']): string => {
   ]
     .filter(Boolean)
     .join(' ')
-  return `<img class="m-0 w-full border border-border rounded-[0.8rem]" ${attrs} />`
+  return `<img class="m-0 w-full border border-base-300/60 rounded-box" ${attrs} />`
 }
 
 const bannerStyleClasses: Record<string, string> = {
-  info: 'border-border bg-card',
-  error: 'border-error bg-error/30',
-  success: 'border-success bg-success/30',
-  warning: 'border-warning bg-warning/30',
+  info: 'border-base-300/60 bg-base-200',
+  error: 'border-error/40 bg-error/10',
+  success: 'border-success/40 bg-success/10',
+  warning: 'border-warning/40 bg-warning/10',
 }
 
 const ctaLinkHTML = (links: CallToActionBlock['links']): string =>
@@ -73,7 +73,7 @@ const ctaLinkHTML = (links: CallToActionBlock['links']): string =>
       const newTab = (link as CMSLinkData).newTab
         ? ' target="_blank" rel="noopener noreferrer"'
         : ''
-      return `<a class="inline-flex items-center justify-center rounded bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:opacity-90" href="${escapeHTML(href)}"${newTab}>${label}</a>`
+      return `<a class="btn btn-primary font-medium no-underline" href="${escapeHTML(href)}"${newTab}>${label}</a>`
     })
     .join('')
 
@@ -85,16 +85,16 @@ const htmlConverters: HTMLConvertersFunction<NodeTypes> = ({ defaultConverters }
       const { content, style } = node.fields as BannerBlock
       const inner = content ? richTextToHTML(content as unknown as SerializedEditorState) : ''
       const styleClass = bannerStyleClasses[style ?? 'info'] ?? bannerStyleClasses.info
-      return `<div class="mx-auto my-8 w-full col-start-2 mb-4"><div class="border py-3 px-6 flex items-center rounded ${styleClass}">${inner}</div></div>`
+      return `<div class="mx-auto my-8 w-full col-start-2 mb-4"><div class="border py-3 px-6 flex items-center rounded-field ${styleClass}">${inner}</div></div>`
     },
     code: ({ node }) => {
       const { code, language } = node.fields as CodeBlockFields
-      return `<div class="col-start-2 not-prose"><pre class="border border-border bg-card rounded p-4 overflow-x-auto text-sm"><code class="language-${escapeHTML(language ?? '')}">${escapeHTML(code ?? '')}</code></pre></div>`
+      return `<div class="col-start-2 not-prose"><pre class="border border-base-300/60 bg-base-200 rounded-field p-4 overflow-x-auto text-sm"><code class="language-${escapeHTML(language ?? '')}">${escapeHTML(code ?? '')}</code></pre></div>`
     },
     cta: ({ node }) => {
       const { links, richText } = node.fields as CallToActionBlock
       const inner = richText ? richTextToHTML(richText as unknown as SerializedEditorState) : ''
-      return `<div class="container"><div class="bg-card rounded border-border border p-4 flex flex-col gap-8 md:flex-row md:justify-between md:items-center"><div class="max-w-[48rem] flex items-center">${inner}</div><div class="flex flex-col gap-8">${ctaLinkHTML(links)}</div></div></div>`
+      return `<div class="container"><div class="bg-base-200 rounded-box border-base-300/60 border p-6 flex flex-col gap-8 md:flex-row md:justify-between md:items-center"><div class="max-w-[48rem] flex items-center">${inner}</div><div class="flex flex-col gap-4">${ctaLinkHTML(links)}</div></div></div>`
     },
     mediaBlock: ({ node }) => {
       const { media } = node.fields as MediaBlock

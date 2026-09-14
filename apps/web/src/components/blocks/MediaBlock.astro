@@ -26,7 +26,7 @@ const caption = media && typeof media === 'object' ? media.caption : null
 <div class:list={[enableGutter && 'container', className]}>
   {media && (
     <Media
-      imgClass={['border border-border rounded-[0.8rem]', imgClass].filter(Boolean).join(' ')}
+      imgClass={['border border-base-300/60 rounded-box', imgClass].filter(Boolean).join(' ')}
       resource={media}
     />
   )}

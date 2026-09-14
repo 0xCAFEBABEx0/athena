@@ -10,16 +10,23 @@ const footer = await getGlobal<Footer>('footer')
 const navItems = footer?.navItems || []
 ---
 
-<footer class="mt-auto border-t border-border bg-black dark:bg-card text-white">
-  <div class="container py-8 gap-8 flex flex-col md:flex-row md:justify-between">
-    <a class="flex items-center" href="/">
-      <Logo />
+<footer class="mt-auto border-t border-base-300/60 bg-base-100">
+  <div class="container flex flex-col gap-8 py-12 md:flex-row md:items-center md:justify-between">
+    <a class="flex items-center opacity-80 transition-opacity hover:opacity-100" href="/">
+      <Logo class="invert dark:invert-0" />
     </a>
 
-    <div class="flex flex-col-reverse items-start md:flex-row gap-4 md:items-center">
+    <div class="flex flex-col-reverse items-start gap-4 md:flex-row md:items-center md:gap-6">
       <ThemeSelector />
-      <nav class="flex flex-col md:flex-row gap-4">
-        {navItems.map(({ link }) => <CMSLink class="text-white" {...link} />)}
+      <nav class="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
+        {
+          navItems.map(({ link }) => (
+            <CMSLink
+              class="text-sm text-base-content/60 no-underline transition-colors hover:text-base-content"
+              {...link}
+            />
+          ))
+        }
       </nav>
     </div>
   </div>

@@ -50,10 +50,9 @@ git push -u origin preview
 
 ### 3. **Production**
 ```bash
-# Merge preview branch to main
-git checkout main
-git merge preview
-git push origin main
+# main is branch-protected: open a preview -> main PR and enable auto-merge
+bun run deploy:production
+# (gh pr create --base main --head preview --fill && gh pr merge preview --auto --merge)
 ```
 
 **Access**: Production URL (configured in Vercel)

@@ -45,9 +45,8 @@ const fields: NormalizedField[] = (form?.fields ?? []).map((field) => {
   }
 })
 
-const inputClasses =
-  'w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
-const labelClasses = 'mb-2 block text-sm font-medium'
+const inputClasses = 'input w-full'
+const labelClasses = 'mb-2 block text-sm font-medium text-base-content/80'
 
 const widthStyle = (width: number | null) =>
   width && width < 100 ? `flex-basis: calc(${width}% - 0.75rem)` : 'flex-basis: 100%'
@@ -64,7 +63,7 @@ const widthStyle = (width: number | null) =>
         />
       )}
 
-      <div class="p-4 lg:p-6 border border-border rounded-[0.8rem]">
+      <div class="card rounded-box border border-base-300/60 bg-base-200 p-6 lg:p-8">
         <form
           method="post"
           data-cms-form={String(form.id)}
@@ -87,7 +86,7 @@ const widthStyle = (width: number | null) =>
                 <div style={widthStyle(f.width)}>
                   <label class="flex items-center gap-2 text-sm font-medium">
                     <input
-                      class="h-4 w-4 rounded border-border"
+                      class="checkbox checkbox-sm"
                       type="checkbox"
                       name={f.name}
                       required={f.required}
@@ -105,7 +104,7 @@ const widthStyle = (width: number | null) =>
                     {f.required && <span class="text-error"> *</span>}
                   </label>
                   <textarea
-                    class={inputClasses}
+                    class="textarea w-full"
                     id={f.name}
                     name={f.name}
                     rows={5}
@@ -120,7 +119,7 @@ const widthStyle = (width: number | null) =>
                     {f.label}
                     {f.required && <span class="text-error"> *</span>}
                   </label>
-                  <select class={inputClasses} id={f.name} name={f.name} required={f.required}>
+                  <select class="select w-full" id={f.name} name={f.name} required={f.required}>
                     <option value="">Select...</option>
                     {f.options.map((option) => (
                       <option value={option.value}>{option.label}</option>
@@ -149,15 +148,12 @@ const widthStyle = (width: number | null) =>
           ))}
 
           <div class="w-full">
-            <button
-              class="inline-flex items-center justify-center rounded bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:opacity-90"
-              type="submit"
-            >
+            <button class="btn btn-primary font-medium" type="submit">
               {form.submitButtonLabel || 'Submit'}
             </button>
           </div>
 
-          <p class="form-error hidden w-full text-sm text-red-500" role="alert" />
+          <p class="form-error hidden w-full text-sm text-error" role="alert" />
         </form>
 
         <div class="form-confirmation hidden">

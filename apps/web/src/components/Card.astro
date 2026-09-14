@@ -32,31 +32,46 @@ const categoryTitles = hasCategories
 
 <article
   class:list={[
-    'border border-border rounded-lg overflow-hidden bg-card hover:cursor-pointer',
+    'card group overflow-hidden rounded-box border border-base-300/60 bg-base-200',
+    'transition-all duration-200 hover:-translate-y-0.5 hover:border-base-content/20',
     className,
   ]}
 >
-  <a class="block no-underline" href={href}>
-    <div class="relative w-full">
-      {!metaImage && <div class="" />}
-      {metaImage && typeof metaImage !== 'string' && typeof metaImage !== 'number' && (
-        <Media resource={metaImage} sizes="33vw" />
-      )}
-    </div>
-    <div class="p-4">
+  <a class="flex h-full flex-col no-underline" href={href}>
+    {
+      metaImage && typeof metaImage !== 'string' && typeof metaImage !== 'number' && (
+        <figure class="aspect-video w-full overflow-hidden bg-base-300/40">
+          <Media
+            resource={metaImage}
+            sizes="33vw"
+            pictureClass="block h-full w-full"
+            imgClass="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          />
+        </figure>
+      )
+    }
+    <div class="card-body gap-2 p-5">
       {
         showCategories && categoryTitles.length > 0 && (
-          <div class="uppercase text-sm mb-4">{categoryTitles.join(', ')}</div>
+          <div class="text-xs font-medium uppercase tracking-wider text-base-content/50">
+            {categoryTitles.join(', ')}
+          </div>
         )
       }
       {
         titleToUse && (
-          <div class="prose dark:prose-invert">
-            <h3 class="not-prose">{titleToUse}</h3>
-          </div>
+          <h3 class="card-title heading-display text-lg leading-snug text-base-content">
+            {titleToUse}
+          </h3>
         )
       }
-      {description && <div class="mt-2"><p>{sanitizedDescription}</p></div>}
+      {
+        description && (
+          <p class="line-clamp-3 text-sm leading-relaxed text-base-content/60">
+            {sanitizedDescription}
+          </p>
+        )
+      }
     </div>
   </a>
 </article>

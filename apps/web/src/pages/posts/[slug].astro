@@ -38,10 +38,7 @@ const meta = buildMeta(post, `/posts/${slug}`)
         />
         {
           relatedPosts.length > 0 && (
-            <RelatedPosts
-              class="mt-12 max-w-[52rem] lg:grid lg:grid-cols-subgrid col-start-1 col-span-3 grid-rows-[2fr]"
-              docs={relatedPosts}
-            />
+            <RelatedPosts class="mx-auto mt-16 max-w-[52rem]" docs={relatedPosts} />
           )
         }
       </div>
