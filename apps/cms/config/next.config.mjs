@@ -1,11 +1,32 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
+
 import { withPayload } from '@payloadcms/next/withPayload'
 import { withSentryConfig } from '@sentry/nextjs'
+
+const dirname = path.dirname(fileURLToPath(import.meta.url))
+const cmsRoot = path.resolve(dirname, '..')
+const repoRoot = path.resolve(cmsRoot, '../..')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
     // Enable Web Vitals tracking
     webVitalsAttribution: ['CLS', 'LCP'],
+  },
+
+  // Next 16.3+ infers the workspace root from the nearest lockfile. In this bun
+  // monorepo that is the repo root (where `next` is hoisted), not apps/cms.
+  // The website template sets `root` to its own package dir; we set it to the
+  // lockfile root so Turbopack can resolve next/package.json.
+  turbopack: {
+    root: repoRoot,
+  },
+
+  // Temporarily required until Next.js fixes Turbopack Sass resolution.
+  // See: https://github.com/vercel/next.js/issues/86431
+  sassOptions: {
+    loadPaths: [path.resolve(repoRoot, 'node_modules/@payloadcms/ui/dist/scss/')],
   },
 
   // The Vercel Blob client upload handler imports `getFileKey` from
@@ -16,6 +37,11 @@ const nextConfig = {
   // client-side, so alias the `payload/internal` bridge to an empty module in
   // the client build to keep the server chain out of the bundle.
   webpack: (webpackConfig, { isServer }) => {
+    webpackConfig.resolve.extensionAlias = {
+      '.cjs': ['.cts', '.cjs'],
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+      '.mjs': ['.mts', '.mjs'],
+    }
     if (!isServer) {
       webpackConfig.resolve.alias = {
         ...webpackConfig.resolve.alias,
