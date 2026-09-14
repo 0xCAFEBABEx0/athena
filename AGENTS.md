@@ -158,6 +158,7 @@ Web (`apps/web/.env` — see `apps/web/README.md`):
 ```bash
 CMS_URL= WEB_URL= PREVIEW_SECRET= REVALIDATE_SECRET=
 PAYLOAD_API_KEY=           # web-frontend service account key (draft fetches)
+CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automation
 ```
 
 ## Key URLs (Local Dev)
@@ -183,5 +184,10 @@ PAYLOAD_API_KEY=           # web-frontend service account key (draft fetches)
    endpoint is `/api/invalidate` (no underscore); keep `invalidateWeb.ts` in sync
 9. Payload REST defaults to `limit=10`, and drafts require auth — the web app's
    `lib/cms.ts` always sets `depth`/`limit` explicitly and authenticates draft fetches
+10. **Never enable Vercel Deployment Protection on athena-cms Production.** It
+    302s `/api/*` to Vercel SSO, and athena-web HTML routes 500. Protect
+    Preview only; Payload already gates `/admin`. If Production must stay
+    protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches
+    only — browser form posts to the CMS still fail).
 
 ## Imported Claude Cowork project instructions

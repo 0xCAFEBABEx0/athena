@@ -6,8 +6,13 @@ import Logo from '@/components/Logo.astro'
 import ThemeSelector from '@/components/ThemeSelector.astro'
 import { getGlobal } from '@/lib/cms'
 
-const footer = await getGlobal<Footer>('footer')
-const navItems = footer?.navItems || []
+let navItems: NonNullable<Footer['navItems']> = []
+try {
+  const footer = await getGlobal<Footer>('footer')
+  navItems = footer?.navItems || []
+} catch (error) {
+  console.error('[footer] failed to load nav', error)
+}
 ---
 
 <footer class="mt-auto border-t border-base-300/60 bg-base-100">

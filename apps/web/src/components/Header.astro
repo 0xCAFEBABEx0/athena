@@ -5,8 +5,14 @@ import CMSLink from '@/components/CMSLink.astro'
 import Logo from '@/components/Logo.astro'
 import { getGlobal } from '@/lib/cms'
 
-const header = await getGlobal<Header>('header')
-const navItems = header?.navItems || []
+let navItems: NonNullable<Header['navItems']> = []
+try {
+  const header = await getGlobal<Header>('header')
+  navItems = header?.navItems || []
+} catch (error) {
+  // CMS outage must not 500 every page; Layout still renders without nav.
+  console.error('[header] failed to load nav', error)
+}
 ---
 
 <header

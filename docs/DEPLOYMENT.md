@@ -96,11 +96,12 @@ DEPLOY_ENV=                # development | preview | production (VERCEL_ENV is a
 ### Web project (`apps/web`)
 
 ```bash
-CMS_URL=                   # CMS admin + REST API origin
-WEB_URL=                   # this app's own public origin
+CMS_URL=                   # CMS admin + REST API origin (required; no localhost fallback on Vercel)
+WEB_URL=                   # this app's own public origin (custom domain, e.g. https://www.findb.uk)
 PREVIEW_SECRET=            # shared with CMS
 REVALIDATE_SECRET=         # shared with CMS (also the ISR bypass token)
 PAYLOAD_API_KEY=           # web-frontend service-account key (draft fetches)
+CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automation secret
 ```
 
 Rotate/create the `web-frontend` service account with
@@ -137,3 +138,27 @@ monorepo lockfile and `packages/shared` resolve.
 
 Verify `POSTGRES_URL` per environment, check the Neon user's permissions, and
 confirm network access from Vercel.
+
+### athena-web 500 / `FUNCTION_INVOCATION_FAILED`
+
+Every HTML route (and the page/post sitemaps) fetches the CMS over REST. If
+that fetch fails, Vercel reports `FUNCTION_INVOCATION_FAILED`.
+
+Typical causes:
+
+1. **Vercel Deployment Protection on athena-cms.** Production protection
+   (`Vercel Authentication` / SSO) intercepts `/api/*` with a 302 to
+   `vercel.com/sso-api`. `fetch` follows it, gets login HTML, and used to
+   crash in `res.json()`. **Fix:** Vercel → athena-cms → Settings →
+   Deployment Protection → set **Production** to **None**. Keep protection
+   on Preview if you want. Payload already authenticates `/admin`.
+   Alternatively set **Protection Bypass for Automation** on athena-cms and
+   copy the secret to athena-web as `CMS_PROTECTION_BYPASS` (server-side
+   reads only; browser form POSTs to the CMS still need a public API).
+2. **Missing `CMS_URL` on athena-web.** Without it the app used to call
+   `http://localhost:3000` inside the serverless function (`ECONNREFUSED`).
+   Set `CMS_URL` to the public CMS origin (e.g. `https://cms.findb.uk`).
+3. **Wrong `WEB_URL`.** Must be the public site origin
+   (`https://www.findb.uk`), not the `*.vercel.app` deployment URL. Robots
+   and sitemaps now prefer the incoming request origin so a stale `WEB_URL`
+   no longer advertises the Vercel hostname.
