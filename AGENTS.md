@@ -188,7 +188,7 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
    `lib/cms.ts` always sets `depth`/`limit` explicitly and authenticates draft fetches
 10. Vercel `git.deploymentEnabled` unspecified keys default to `true`. Keep the
     `"**": false` whitelist or Hobby Preview will build every `cursor/*` branch.
-10. **Never enable Vercel Deployment Protection on athena-cms Production.** It
+11. **Never enable Vercel Deployment Protection on athena-cms Production.** It
     302s `/api/*` to Vercel SSO, and athena-web HTML routes 500. Protect
     Preview only; Payload already gates `/admin`. If Production must stay
     protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches
