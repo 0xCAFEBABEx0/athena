@@ -17,7 +17,7 @@ GitHub Actions (`.github/workflows/deployment.yml`) triggers on:
 | Push to `development` | ❌ (no GH Actions trigger) | ❌ None |
 | Push to `preview` | ✅ | ✅ Preview (both apps) |
 | Push to `main` | ✅ | ✅ Production (both apps) |
-| PR targeting `main` | ✅ | Vercel preview deployment per PR |
+| PR targeting `main` | ✅ | ❌ None (`vercel.json` deploys only `preview` / `main`) |
 
 > The workflow listens on `push: [main, preview]` and `pull_request: [main]`.
 > Plain pushes to `development` do not start the GH Actions job; promote to
@@ -81,9 +81,11 @@ jobs:
 
 ## Build Configuration (Vercel)
 
-There is **no `vercel.json`** in this repo — branch/deploy behavior is configured
-in each Vercel project's dashboard. Two projects, one repo, split by **Root
-Directory**:
+Each app has a `vercel.json` (Vercel reads it from the project's Root Directory).
+`git.deploymentEnabled` allows **only** `main` and `preview` (`"**": false`, then
+those two `true`). Feature/`cursor/*` branches and PRs do not create Vercel
+Preview deployments — required on Hobby (1 concurrent build). Two projects, one
+repo, split by **Root Directory**:
 
 | Project | Root Directory | Build Command | Install Command |
 |---|---|---|---|
