@@ -162,3 +162,15 @@ Typical causes:
    (`https://www.findb.uk`), not the `*.vercel.app` deployment URL. Robots
    and sitemaps now prefer the incoming request origin so a stale `WEB_URL`
    no longer advertises the Vercel hostname.
+
+### CMS Preview fails on Vercel Hobby
+
+Hobby allows **1 concurrent build** and **100 deployments/day** (account-wide).
+Two projects (`athena-cms` + `athena-web`) fire on every enabled git branch, so
+extra `cursor/*` remotes exhaust the queue and Preview builds fail.
+
+`git.deploymentEnabled` in each app's `vercel.json` is a whitelist (`"**": false`
+plus `main` / `preview` `true`). Unspecified branches default to **enabled**,
+which is why listing only `development: false` was not enough. Delete unused
+remotes; if a Preview still fails, check the inspect log for concurrent-build or
+`api-deployments-free-per-day` errors.

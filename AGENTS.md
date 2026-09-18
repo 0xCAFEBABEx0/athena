@@ -131,8 +131,10 @@ CI (GitHub Actions) runs lint + type check on push to `main`/`preview` and PRs t
 Vercel deploy triggers are declared in each app's `vercel.json` (read from the
 project's Root Directory) to avoid duplicate builds:
 
-- `git.deploymentEnabled` turns off deployments from `development` in both
-  projects — only `preview` and `main` pushes deploy.
+- `git.deploymentEnabled` is a **whitelist**: `"**": false` plus `main`/`preview`
+  `true`. Unspecified branches default to enabled, so listing only `development:
+  false` still deploys every `cursor/*` PR branch and burns Hobby (1 concurrent
+  build, 100 deploys/day). GitHub Actions still runs on PRs to `main`.
 - `ignoreCommand` skips Preview builds on the `preview` branch when HEAD is a
   `preview -> main` release merge commit (`Merge pull request #N from .../preview`):
   that exact tree was just built for Production, so rebuilding it after the
@@ -184,7 +186,9 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
    endpoint is `/api/invalidate` (no underscore); keep `invalidateWeb.ts` in sync
 9. Payload REST defaults to `limit=10`, and drafts require auth — the web app's
    `lib/cms.ts` always sets `depth`/`limit` explicitly and authenticates draft fetches
-10. **Never enable Vercel Deployment Protection on athena-cms Production.** It
+10. Vercel `git.deploymentEnabled` unspecified keys default to `true`. Keep the
+    `"**": false` whitelist or Hobby Preview will build every `cursor/*` branch.
+11. **Never enable Vercel Deployment Protection on athena-cms Production.** It
     302s `/api/*` to Vercel SSO, and athena-web HTML routes 500. Protect
     Preview only; Payload already gates `/admin`. If Production must stay
     protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches
