@@ -91,13 +91,13 @@ repo, split by **Root Directory**:
 
 | Project | Root Directory | Build Command | Install Command |
 |---|---|---|---|
-| `athena-cms` | `apps/cms` | `bun run build` → `next build --webpack` | `bun install --frozen-lockfile` |
+| `athena-cms` | `apps/cms` | `bun run build` → `next build` (Turbopack) | `bun install --frozen-lockfile` |
 | `athena-web` | `apps/web` | `bun run build` → `astro build` | `bun install --frozen-lockfile` |
 
 - **Node.js**: 22 (pinned to `22.23.4` via `.nvmrc`)
 - **Package manager**: Bun `1.3.5`
-- Keep the CMS `--webpack` flag (Next 16 defaults to Turbopack, which ignores the
-  load-bearing webpack alias). See
+- The CMS builds with Turbopack. A client-side alias must live in
+  `turbopack.resolveAlias` (the `webpack()` callback is ignored). See
   [AGENTS.md → Build Configuration](../AGENTS.md#build-configuration-appscmsconfignextconfigmjs).
 
 Full project setup: [DEPLOYMENT.md](./DEPLOYMENT.md).

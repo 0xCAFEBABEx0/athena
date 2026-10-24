@@ -16,7 +16,7 @@ Create **two** Vercel projects, both pointed at this repository, distinguished b
 
 | Vercel Project | Root Directory | Framework | Build Command | Output |
 |---|---|---|---|---|
-| **athena-cms** | `apps/cms` | Next.js | `bun run build` (`next build --webpack`) | `.next` |
+| **athena-cms** | `apps/cms` | Next.js | `bun run build` (`next build`, Turbopack) | `.next` |
 | **athena-web** | `apps/web` | Astro | `bun run build` (`astro build`) | `@astrojs/vercel` |
 
 Notes:
@@ -27,8 +27,9 @@ Notes:
 - **Install command**: `bun install --frozen-lockfile` (Bun is the only supported
   package manager; a stray `package-lock.json` will be picked up before
   `bun.lock` — keep it deleted).
-- The CMS build **must** keep the `--webpack` flag (Next 16 defaults to Turbopack,
-  which ignores the load-bearing `webpack()` alias). See
+- The CMS builds with Turbopack (Next 16 default). Client-side aliases live in
+  `turbopack.resolveAlias`; the `webpack()` callback only applies to a
+  `next build --webpack` fallback. See
   [Build Configuration in AGENTS.md](../AGENTS.md#build-configuration-appscmsconfignextconfigmjs).
 - Each project deploys on the same branches; a push to `preview`/`main` builds
   **both** apps for that environment.
