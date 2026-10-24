@@ -21,6 +21,11 @@ const nextConfig = {
   // lockfile root so Turbopack can resolve next/package.json.
   turbopack: {
     root: repoRoot,
+    // See the note on `payload/internal` below. Turbopack has no `false` alias,
+    // so the browser condition points it at an empty module instead.
+    resolveAlias: {
+      'payload/internal': { browser: './config/empty-module.mjs' },
+    },
   },
 
   // Temporarily required until Next.js fixes Turbopack Sass resolution.
@@ -35,7 +40,9 @@ const nextConfig = {
   // in `payload/internal` (undici, telemetry), which references `node:*`
   // builtins webpack cannot bundle for the browser. That code never runs
   // client-side, so alias the `payload/internal` bridge to an empty module in
-  // the client build to keep the server chain out of the bundle.
+  // the client build to keep the server chain out of the bundle. Production
+  // builds use Turbopack (`turbopack.resolveAlias` above); this webpack copy
+  // only matters for an explicit `next build --webpack` fallback.
   webpack: (webpackConfig, { isServer }) => {
     webpackConfig.resolve.extensionAlias = {
       '.cjs': ['.cts', '.cjs'],

@@ -31,7 +31,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 bun run dev:cms               # CMS dev server (localhost:3000)
 bun run dev:web               # Astro dev server (localhost:4321)
 bun run build                 # Build all workspaces
-bun run build:cms             # CMS production build (next build --webpack)
+bun run build:cms             # CMS production build (next build, Turbopack)
 bun run build:web             # Astro production build
 bun run lint                  # ESLint (cms) + astro check (web)
 bun run generate:types        # Regenerate Payload types -> packages/shared
@@ -99,18 +99,23 @@ Three things there are load-bearing and easy to break:
 
 1. **`withPayload(...)`** wraps the config so Payload's server-only packages are
    externalized correctly. Do not remove it.
-2. **Client webpack alias `'payload/internal': false`** — the Vercel Blob client
-   upload handler pulls `getFileKey` from a barrel that also re-exports
-   server-only code (`resolveSignedURLKey` -> `payload/internal` -> undici, which
-   references `node:*` builtins). That code never runs in the browser, so the alias
-   keeps it out of the client bundle. Without it, the build fails with
-   `UnhandledSchemeError: Reading from "node:console"`.
-3. **`next build --webpack`** in the cms build script — Next 16 defaults to
-   Turbopack, which ignores the `webpack()` callback above and the Sentry
-   webpack plugin. Keep the flag until the alias is ported to `turbopack.resolveAlias`.
+2. **Browser alias for `payload/internal`** — the Vercel Blob client upload
+   handler pulls `getFileKey` from a barrel that also re-exports server-only code
+   (`resolveSignedURLKey` -> `payload/internal` -> undici, which references
+   `node:*` builtins). That code never runs in the browser. Production builds use
+   Turbopack, where `turbopack.resolveAlias` maps it (browser condition only) to
+   `config/empty-module.mjs`; Turbopack currently tree-shakes the chain anyway,
+   so the alias is a safety net. The `webpack()` callback keeps the original
+   `'payload/internal': false` alias for a `next build --webpack` fallback, which
+   otherwise fails with `UnhandledSchemeError: Reading from "node:console"`.
+3. **Turbopack builds** (`next build`, no `--webpack`) — about half the build
+   time of webpack. Turbopack ignores the `webpack()` callback, so any new
+   client alias must go in `turbopack.resolveAlias` too.
 
 Sentry (`withSentryConfig`) wraps the result only when `SENTRY_DSN` +
-`SENTRY_ORG`/`SENTRY_PROJECT` are set.
+`SENTRY_ORG`/`SENTRY_PROJECT` are set. With Turbopack, source maps are uploaded
+by Sentry's after-production-compile hook (needs `SENTRY_AUTH_TOKEN`); the
+options under `webpack` (`treeshake`, `automaticVercelMonitors`) are no-ops.
 
 ## Git Workflow
 
@@ -179,8 +184,8 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
 3. Sentry wraps Next.js config only when `SENTRY_DSN` + `SENTRY_ORG`/`SENTRY_PROJECT` are set
 4. Dockerfile uses Docker Hardened Images (`dhi.io/`), not standard Docker Hub
 5. Use type-only imports for Payload generated types
-6. Keep `withPayload`, the `'payload/internal': false` client alias, and the
-   `--webpack` build flag in apps/cms (see [Build Configuration](#build-configuration-appscmsconfignextconfigmjs))
+6. Keep `withPayload` and the browser `payload/internal` alias (in both
+   `turbopack.resolveAlias` and `webpack()`) in apps/cms (see [Build Configuration](#build-configuration-appscmsconfignextconfigmjs))
 7. Re-run `bun run generate:importmap` after upgrading `@payloadcms/*` packages
 8. Astro excludes underscore-prefixed files from routing — the invalidation
    endpoint is `/api/invalidate` (no underscore); keep `invalidateWeb.ts` in sync

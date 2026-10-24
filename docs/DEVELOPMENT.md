@@ -38,7 +38,7 @@ bun run dev:web                 # Astro dev server (:4321)
 
 # Builds
 bun run build                   # build all workspaces
-bun run build:cms               # CMS production build (next build --webpack)
+bun run build:cms               # CMS production build (next build, Turbopack)
 bun run build:web               # Astro production build
 
 # Quality
