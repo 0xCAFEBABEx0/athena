@@ -11,7 +11,7 @@ Bun-workspaces monorepo. Full guidance lives in `AGENTS.md` (single source of tr
 ## Project Structure
 
 - **`apps/cms`**: Payload CMS 3 + Next.js 16 (admin + REST/GraphQL API)
-- **`apps/web`**: Astro 6 public frontend (consumes the CMS REST API)
+- **`apps/web`**: Astro 7 public frontend (consumes the CMS REST API)
 - **`packages/shared`**: generated Payload types + cross-app constants
 - **Database**: PostgreSQL (Neon cloud)
 - **Package Manager**: Bun

@@ -13,7 +13,7 @@ PG_BIN="/usr/lib/postgresql/16/bin"
 PGDATA="$HOME/pgdata"
 PGSOCK="$HOME/pgsock"
 # Keep in sync with package.json's `packageManager` field.
-BUN_VERSION="1.3.5"
+BUN_VERSION="1.4.4"
 
 # --- 1. Bun (pinned + integrity-verified) -----------------------------------
 # Download the exact pinned release from GitHub and verify its SHA-256 against

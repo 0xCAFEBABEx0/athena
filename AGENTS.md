@@ -9,7 +9,7 @@
 **Athena** is a content-driven website, organized as a Bun-workspaces monorepo:
 
 - **`apps/cms`** — Payload CMS 3 on Next.js 16 (App Router): admin panel, REST/GraphQL API, and the legacy in-app public frontend (bridge period only).
-- **`apps/web`** — Astro 6 public frontend consuming the CMS over its REST API.
+- **`apps/web`** — Astro 7 public frontend consuming the CMS over its REST API.
 - **`packages/shared`** — generated Payload types + cross-app constants (cache tags, the draft cookie name, collection slugs).
 
 Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and Vercel Blob for media storage.
@@ -17,9 +17,9 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 ## Tech Stack
 
 - **CMS**: Payload CMS 3 + Next.js 16 (App Router), Tailwind CSS v3 + daisyUI v4
-- **Web**: Astro 6 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (Linear-inspired light/dark themes in `src/styles/global.css`)
+- **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (Linear-inspired light/dark themes in `src/styles/global.css`)
 - **Language**: TypeScript (strict mode)
-- **Runtime**: Node.js 22 (pinned to 22.22.0 via `.nvmrc`)
+- **Runtime**: Node.js 22 (pinned to 22.23.4 via `.nvmrc`)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
 - **Database**: PostgreSQL 16 (`@payloadcms/db-postgres`, Neon)
 - **Rich Text**: Lexical (`@payloadcms/richtext-lexical`; the web app renders it via `convertLexicalToHTML` in `apps/web/src/lib/richtext.ts`)

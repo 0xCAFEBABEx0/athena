@@ -4,7 +4,7 @@ description: Development workflow for the Bun-workspaces monorepo — server sta
 
 # Development Workflow
 
-> Monorepo: `apps/cms` (Payload + Next.js 16), `apps/web` (Astro 6),
+> Monorepo: `apps/cms` (Payload + Next.js 16), `apps/web` (Astro 7),
 > `packages/shared`. Run everything from the repo root. See
 > [`AGENTS.md`](../../AGENTS.md).
 

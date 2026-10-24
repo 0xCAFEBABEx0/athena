@@ -11,6 +11,9 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   output: 'server',
   site: process.env.WEB_URL || 'http://localhost:4321',
+  // Astro 7 defaults to JSX-style whitespace stripping ('jsx'), which drops the
+  // spaces between inline elements. Keep the v6 HTML-aware behavior.
+  compressHTML: true,
   adapter: vercel({
     webAnalytics: { enabled: true },
     isr: {

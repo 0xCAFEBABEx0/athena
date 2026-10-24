@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4   # node-version: 22.22.0
+      - uses: actions/setup-node@v4   # node-version: 22.23.4
       - uses: oven-sh/setup-bun@v2    # bun-version: 1.3.5
       - run: bun install --frozen-lockfile
       - run: bun run lint             # ESLint (cms) + astro check (web)
@@ -94,7 +94,7 @@ repo, split by **Root Directory**:
 | `athena-cms` | `apps/cms` | `bun run build` → `next build --webpack` | `bun install --frozen-lockfile` |
 | `athena-web` | `apps/web` | `bun run build` → `astro build` | `bun install --frozen-lockfile` |
 
-- **Node.js**: 22 (pinned to `22.22.0` via `.nvmrc`)
+- **Node.js**: 22 (pinned to `22.23.4` via `.nvmrc`)
 - **Package manager**: Bun `1.3.5`
 - Keep the CMS `--webpack` flag (Next 16 defaults to Turbopack, which ignores the
   load-bearing webpack alias). See

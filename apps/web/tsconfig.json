@@ -4,7 +4,6 @@
   "exclude": ["dist", "**/*.test.ts"],
   "compilerOptions": {
     "noUncheckedIndexedAccess": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }

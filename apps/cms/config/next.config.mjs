@@ -2,7 +2,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 import { withPayload } from '@payloadcms/next/withPayload'
-import { withSentryConfig } from '@sentry/nextjs'
+import { withSentryConfig } from '@sentry/nextjs/config'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const cmsRoot = path.resolve(dirname, '..')
@@ -118,15 +118,18 @@ if (shouldUseSentry && hasSentryConfig) {
           return source.replace(process.cwd(), '~')
         },
       },
-    },
-    {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
-      treeshake: {
-        removeDebugLogging: true,
-      },
 
-      // Enables automatic instrumentation of Vercel Cron Monitors.
-      automaticVercelMonitors: true,
+      // withSentryConfig takes only two arguments; these webpack-only options
+      // used to sit in an ignored third argument.
+      webpack: {
+        // Automatically tree-shake Sentry logger statements to reduce bundle size
+        treeshake: {
+          removeDebugLogging: true,
+        },
+
+        // Enables automatic instrumentation of Vercel Cron Monitors.
+        automaticVercelMonitors: true,
+      },
     },
   )
 } else {
