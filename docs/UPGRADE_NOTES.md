@@ -2,6 +2,65 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## Node.js 22.23.4 (October 2026 security release) + dependency refresh
+
+Node.js shipped security releases on 2026-10-21
+([advisory](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)).
+The 22.x fix is **v22.23.4** (high: Brotli decoder OOB write in `node:zlib`, TLS
+hostname-check bypasses for non-canonical IPv4 hosts, `dns.resolve*` NUL
+truncation; medium: keep-alive response smuggling; plus c-ares, OpenSSL, SQLite,
+Undici and CA-store updates). Pinned everywhere: `.nvmrc`, root `engines`
+(`>=22.23.4 <23`), CI `setup-node`, `apps/cms/vercel.json` `NODE_VERSION`.
+Bun moved to `1.4.4` (`packageManager`, CI).
+
+### Updated
+
+| Package | From | To | Notes |
+|---|---|---|---|
+| `payload` / `@payloadcms/*` | 3.89.0 | 3.92.0 | Adds `users.reset_password_requested_at` (nullable). Import map regenerated. |
+| `next` / `eslint-config-next` | 16.3.3 | 16.4.3 | |
+| `astro` | 6.4 | **7.4** | `compressHTML: true` set to keep v6 whitespace handling (v7 defaults to `'jsx'`). Requires Node `>=22.23.4`. |
+| `@astrojs/vercel` | 10.0 | **11.0** | Peer of Astro 7. |
+| `@sentry/nextjs` | 10.57 | **11.9** | `withSentryConfig` now from `@sentry/nextjs/config`; `enableLogs` removed; `dataCollection` set to the v10 defaults (v11 collects cookies/bodies by default); the webpack options that sat in an ignored third argument moved under `webpack`. |
+| `typescript` | 5.9 | **6.0** | `baseUrl` removed from both tsconfigs (deprecated in 6.0); bare `src/...` imports in cms switched to `@/...`. |
+| `checkly` | 6.9 | **9.5** | |
+| `sharp` | 0.34 | 0.35 | |
+| `lucide-react` | 0.562 | **1.x** | Icons used (`Check`, `Chevron*`, `MoreHorizontal`, `SearchIcon`) still exported. |
+| `@types/node` | 24.x | 22.x | Aligned with the Node 22 runtime. |
+| Others | | | React 19.3, Radix, geist, react-hook-form, tailwind-merge, postcss, prettier, autoprefixer, daisyUI 5.7 / Tailwind 4.3 (web), fontsource, qs-esm. |
+
+### Held back
+
+| Package | Current | Latest | Why held |
+|---|---|---|---|
+| `typescript` | 6.0 | 7.x | `@astrojs/check` peer-depends on `^5 \|\| ^6` |
+| `eslint` | 9.x | 10.x | `eslint-plugin-react`, `-import`, `-jsx-a11y` (via `eslint-config-next`) cap at ESLint 9 |
+| `graphql` | 16.x | 17.x | `payload` peer-depends on `graphql@^16.8.1` |
+| `tailwindcss` / `daisyui` (cms) | 3.x / 4.x | 4.x / 5.x | Legacy bridge frontend only; a config rewrite not worth doing before it is retired |
+| Node.js major | 22 | 24 / 26 | Out of scope for a security patch; 22 is in maintenance LTS |
+
+### Database
+
+Payload 3.92 adds one nullable column. With push disabled in production, apply it
+before (or together with) the deploy, or `users` queries fail:
+
+```sql
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "reset_password_requested_at" timestamp(3) with time zone;
+```
+
+Verified by pushing the 3.89 and 3.92 schemas to empty databases and diffing
+`pg_dump --schema-only`: that column is the only difference.
+
+### Verification
+
+- [x] `bun run lint` passes (warnings only).
+- [x] `tsc --noEmit` passes in both apps; `bun run generate:types` regenerated.
+- [x] `bun run build:cms` and `bun run build:web` succeed on Node 22.23.4.
+- [x] `bun test` in `apps/web` passes.
+- [x] `next start` smoke test: `/admin/login`, `/api/pages`, `/api/users/forgot-password` respond.
+
+---
+
 ## Monorepo conversion + Next.js 16 + Astro 6 frontend
 
 The single-app project was restructured into a **Bun-workspaces monorepo** and the
