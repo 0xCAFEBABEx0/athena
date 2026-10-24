@@ -34,7 +34,7 @@ git commit -m "feat: implement new feature"
 git push origin development
 ```
 
-**Result**: GitHub Actions runs lint + type check. No deployment (fast feedback).
+**Result**: Nothing runs yet. GitHub Actions only triggers on `preview`/`main` pushes and PRs to `main`, and Vercel does not deploy `development`.
 
 ### 2. Staging Phase
 
@@ -67,6 +67,11 @@ deploys both apps to **Vercel Production**.
 > The `gh pr merge --auto` step needs **Allow auto-merge** enabled in the repo
 > settings; without it, the PR is still created and you merge it manually after
 > checks pass.
+>
+> Auto-merge is currently **disabled** on this repository, so merge the PR by
+> hand once "Lint and Type Check" is green. Always use a **merge commit**: the
+> `ignoreCommand` in both `vercel.json` files recognises the release by its
+> `Merge pull request #N from .../preview` subject.
 
 ## 🔒 Branch Protection (recommended GitHub settings)
 

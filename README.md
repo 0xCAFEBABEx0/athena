@@ -1,138 +1,51 @@
-# Payload Website Template
+# Athena
 
-This is a [Payload](https://github.com/payloadcms/payload) website template perfect for a personal site, blog, or any content-driven website.
+A content-driven website: editors manage pages, posts, media, navigation and
+forms in **Payload CMS**, and an **Astro** frontend renders the public site.
+Production: https://www.findb.uk
 
-## Features
+| Workspace | What it is |
+|---|---|
+| [`apps/cms`](./apps/cms) | Payload CMS 3 on Next.js 16: admin panel, REST/GraphQL API, form intake, cache-invalidation webhooks. |
+| [`apps/web`](./apps/web) | Astro 7 public site on Vercel (on-demand rendering + ISR), reading the CMS over REST. |
+| [`packages/shared`](./packages/shared) | Generated Payload types and constants shared by both apps. |
 
-- **Payload CMS 3.85** - Headless CMS with admin panel
-- **Next.js 15.4.10** - React framework with App Router and Turbopack
-- **TypeScript** - Type-safe development
-- **Bun** - Fast package manager and runtime (17x faster than pnpm)
-- **Tailwind CSS** - Utility-first CSS framework
-- **daisyUI** - Tailwind CSS component library for rapid UI development
-- **Sentry Integration** - Error tracking and performance monitoring
-- **Vercel Analytics & Speed Insights** - Performance monitoring
-- **Form Builder** - Dynamic form creation
-- **SEO Plugin** - Built-in SEO management
-- **Search Plugin** - Full-text search capabilities
-- **Redirects Plugin** - URL redirection management
-- **Nested Docs** - Hierarchical content structure
+Infrastructure: Vercel (two projects, one repo), Neon PostgreSQL, Vercel Blob
+for media, Sentry for errors.
 
-## Development Flow
+## Quick start
 
-This project follows a **Development → Preview → Production** workflow using Vercel:
+Requires Node.js 22.23.4 (`.nvmrc`) and Bun 1.4.x. Bun is the only supported
+package manager.
 
-### 1. **Development (Local)**
 ```bash
-# Clone and setup
-git clone https://github.com/0xCAFEBABEx0/athena.git
-cd athena
 bun install
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your local configuration
-
-# Start development server
-bun dev
+# create apps/cms/.env and apps/web/.env (see docs/API.md#5-environment-variables)
+bun run dev:cms   # http://localhost:3000/admin
+bun run dev:web   # http://localhost:4321
 ```
 
-**Access**: [http://localhost:3000](http://localhost:3000)
+Other commands: `bun run build`, `bun run lint`, `bun run generate:types`,
+`bun run generate:importmap`. See the [Development Guide](./docs/DEVELOPMENT.md).
 
-### 2. **Preview (Staging)**
-```bash
-# Create and push to preview branch
-git checkout -b preview
-git push -u origin preview
-```
+## Branches and releases
 
-**Access**: Vercel automatically creates a preview URL for each push to the `preview` branch
+`development` → `preview` (Vercel Preview) → `main` (Vercel Production, PR
+only). See [Development Workflow](./docs/DEVELOPMENT_WORKFLOW.md).
 
-### 3. **Production**
-```bash
-# main is branch-protected: open a preview -> main PR and enable auto-merge
-bun run deploy:production
-# (gh pr create --base main --head preview --fill && gh pr merge preview --auto --merge)
-```
+## Documentation
 
-**Access**: Production URL (configured in Vercel)
+Everything lives in [`docs/`](./docs/README.md):
 
-## Environment Configuration
+- [Architecture](./docs/ARCHITECTURE.md)
+- [Functional Specification](./docs/SPECIFICATION.md)
+- [Content Model](./docs/CONTENT_MODEL.md)
+- [API Reference](./docs/API.md)
+- [Database](./docs/DATABASE.md)
+- [Decision Records](./docs/adr/README.md)
+- [Deployment](./docs/DEPLOYMENT.md) · [CI/CD](./docs/CI_CD.md) · [Sentry](./docs/SENTRY_SETUP.md) · [Upgrade Notes](./docs/UPGRADE_NOTES.md)
 
-### Environment Variables
-- **Development**: Uses `.env.local`
-- **Preview**: Uses Vercel environment variables (staging)
-- **Production**: Uses Vercel environment variables (production)
-
-### Sentry Integration
-- **Development**: `development` environment
-- **Preview**: `staging` environment  
-- **Production**: `production` environment
-
-### Database
-- **Development**: Local or development database
-- **Preview**: Production database (read-only recommended)
-- **Production**: Production database
-
-## Deployment
-
-This project is configured for deployment on Vercel with automatic deployments triggered by Git pushes.
-
-- See docs: 
-  - [CI/CD Pipeline](./docs/CI_CD.md) - CI/CD details and flow diagrams
-  - [Deployment Guide](./docs/DEPLOYMENT.md) - Deployment procedures and environment setup
-  - [Development Workflow](./docs/DEVELOPMENT_WORKFLOW.md) - Branch strategy and development flow
-  - [Development Guide](./docs/DEVELOPMENT.md) - Development environment setup
-  - [Sentry Setup](./docs/SENTRY_SETUP.md) - Error tracking configuration
-  - [Upgrade Notes](./docs/UPGRADE_NOTES.md) - Dependency upgrade log
-
-## Sentry Integration
-
-This project includes comprehensive Sentry integration for error tracking, performance monitoring, and logging.
-
-### Test Sentry Features
-
-Visit `/sentry-test` to test Sentry functionality:
-- Error tracking with `myUndefinedFunction()`
-- Performance monitoring with custom spans
-- Structured logging
-- API error tracking
-
-### Test Vercel Analytics & Speed Insights
-
-Visit `/vercel-insights-test` to test analytics functionality:
-- Check if Analytics and Speed Insights are loaded
-- Test custom event tracking
-- Debug environment configuration
-- View troubleshooting tips
-
-## Development
-
-### Available Scripts
-
-- `bun dev` - Start development server
-- `bun run build` - Build for production
-- `bun run start` - Start production server
-- `bun run lint` - Run ESLint
-- `bun run generate:types` - Generate TypeScript types
-- `bun run generate:importmap` - Generate import map for admin
-
-### Project Structure
-
-```
-src/
-├── app/                    # Next.js App Router
-│   ├── (frontend)/        # Public-facing pages
-│   └── (payload)/         # Payload CMS admin
-├── blocks/                # Content blocks
-├── collections/           # Payload CMS collections
-├── components/            # React components
-├── fields/                # Custom form fields
-├── heros/                 # Hero section components
-├── plugins/               # Payload CMS plugins
-├── providers/             # React context providers
-└── utilities/             # Utility functions
-```
+Guidance for AI coding agents is in [`AGENTS.md`](./AGENTS.md).
 
 ## License
 

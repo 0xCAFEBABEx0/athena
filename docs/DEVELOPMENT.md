@@ -4,7 +4,7 @@
 > [`AGENTS.md`](../AGENTS.md) for the canonical architecture overview.
 >
 > - **`apps/cms`** — Payload CMS 3 on Next.js 16 (admin panel + REST/GraphQL API).
-> - **`apps/web`** — Astro 6 public frontend that consumes the CMS over REST.
+> - **`apps/web`** — Astro 7 public frontend that consumes the CMS over REST.
 > - **`packages/shared`** — generated Payload types + cross-app constants.
 
 ## 🚀 Getting Started
@@ -94,7 +94,7 @@ the full list. The CMS↔web contract (`WEB_URL`/`CMS_URL`, `PREVIEW_SECRET`,
 ## 🛠️ Tech Stack
 
 - **CMS**: Payload CMS 3 + Next.js 16 (App Router), Tailwind CSS v3 + daisyUI v4
-- **Web**: Astro 6 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`)
+- **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`)
 - **Database**: PostgreSQL 16 via `@payloadcms/db-postgres` (Neon)
 - **Media**: Vercel Blob (`BLOB_READ_WRITE_TOKEN`)
 - **Rich text**: Lexical; the web app renders it via `convertLexicalToHTML` in
