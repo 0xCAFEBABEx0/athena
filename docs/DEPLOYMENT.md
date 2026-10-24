@@ -2,7 +2,7 @@
 
 Athena is a **Bun-workspaces monorepo** that deploys as **two Vercel projects
 from one repository** — `apps/cms` (Payload CMS + Next.js 16) and `apps/web`
-(Astro 6 frontend) — both backed by Neon PostgreSQL and Vercel Blob. It follows a
+(Astro 7 frontend) — both backed by Neon PostgreSQL and Vercel Blob. It follows a
 **development → preview → main** branch promotion.
 
 > **📚 Related**:

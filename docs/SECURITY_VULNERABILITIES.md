@@ -6,7 +6,7 @@
 
 > ⚠️ **Historical document.** This report captures a point-in-time audit from the
 > pre-monorepo single-app era (Next.js 15). The project has since moved to a
-> Bun-workspaces monorepo on **Next.js 16** (`apps/cms`) plus an **Astro 6**
+> Bun-workspaces monorepo on **Next.js 16** (`apps/cms`) plus an **Astro 7**
 > frontend (`apps/web`). The CVE analysis below remains a useful record, but the
 > version numbers it cites are superseded — see **Current State** for what ships
 > today, and re-audit rather than relying on these figures.
@@ -18,7 +18,7 @@ historical sections below.
 
 - **`apps/cms`** — Next.js **16.x**, React / React DOM **19.2.x**
   (`@sentry/nextjs` 10.x).
-- **`apps/web`** — Astro **6.x** (`@astrojs/vercel`), no Next.js/React.
+- **`apps/web`** — Astro **7.x** (`@astrojs/vercel`), no Next.js/React.
 
 ```bash
 bun audit                 # check the monorepo lockfile
