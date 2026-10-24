@@ -1,0 +1,17 @@
+# Payload Website Template
+
+> A content-driven website built with Payload CMS and Astro. It publishes pages and blog posts managed in the CMS.
+
+Content on this site is publicly readable. The `/api/` paths are internal endpoints and are not intended for crawling.
+
+## Main sections
+
+- [Home](https://www.findb.uk/): Landing page
+- [Posts](https://www.findb.uk/posts): Index of all published posts
+- [Contact](https://www.findb.uk/contact): Contact form
+- [Search](https://www.findb.uk/search): Full-text search across posts
+
+## Optional
+
+- [Sitemap](https://www.findb.uk/sitemap.xml): Every published page and post
+- [robots.txt](https://www.findb.uk/robots.txt): Crawl rules
