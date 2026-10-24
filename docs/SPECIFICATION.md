@@ -48,8 +48,9 @@ all managed by editors without code changes.
 
 ### 2.3 Archive block
 
-- **F-ARCH-1** In *collection* mode it lists up to `limit` posts (falls back
-  to 3 when no limit is set), optionally filtered to selected categories.
+- **F-ARCH-1** In *collection* mode it lists up to `limit` posts, optionally
+  filtered to selected categories. The CMS field defaults to 10; the renderer
+  falls back to 3 when the stored value is empty or 0.
 - **F-ARCH-2** In *selection* mode it lists the hand-picked posts in order.
 
 ### 2.4 Search

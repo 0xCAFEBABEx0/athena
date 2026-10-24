@@ -211,7 +211,7 @@ Layout blocks (Pages `layout`):
 | `cta` | `CallToActionBlock` | `richText`, `links` (max 2, default/outline). |
 | `content` | `ContentBlock` | `columns[]`: `size` (`oneThird` default, `half`, `twoThirds`, `full`), `richText`, `enableLink`, `link`. |
 | `mediaBlock` | `MediaBlock` | `media` (required). |
-| `archive` | `ArchiveBlock` | `introContent`, `populateBy` (`collection` default / `selection`), `relationTo` (`posts`), `categories`, `limit` (default 10), `selectedDocs`. |
+| `archive` | `ArchiveBlock` | `introContent`, `populateBy` (`collection` default / `selection`), `relationTo` (`posts`), `categories`, `limit` (field default 10; renderers fall back to 3 when empty), `selectedDocs`. |
 | `formBlock` | `FormBlock` | `form` (required → forms), `enableIntro`, `introContent`. |
 
 Rich-text blocks (Posts `content`):

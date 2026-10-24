@@ -270,7 +270,8 @@ Never enable Vercel Deployment Protection on athena-cms Production: it turns
 | Deploys on | `main` (Production), `preview` (Preview) | same |
 
 Both `vercel.json` files whitelist only `main` and `preview` and skip the
-redundant Preview build that follows a `preview → main` release merge. GitHub
+Preview build when `preview` is synced to a `preview → main` release merge
+commit (that tree was just built for Production). GitHub
 Actions runs lint + type generation; it does not deploy. Details:
 [DEPLOYMENT.md](./DEPLOYMENT.md), [CI_CD.md](./CI_CD.md).
 

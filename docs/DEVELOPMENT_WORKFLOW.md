@@ -69,9 +69,11 @@ deploys both apps to **Vercel Production**.
 > checks pass.
 >
 > Auto-merge is currently **disabled** on this repository, so merge the PR by
-> hand once "Lint and Type Check" is green. Always use a **merge commit**: the
-> `ignoreCommand` in both `vercel.json` files recognises the release by its
-> `Merge pull request #N from .../preview` subject.
+> hand once "Lint and Type Check" is green. Use a **merge commit**. The release
+> merge always builds for Production on `main`; the `ignoreCommand` in both
+> `vercel.json` files only skips the later Preview build when `preview` is
+> synced to that commit, and it recognises it by the
+> `Merge pull request #N from .../preview` subject that only a merge commit has.
 
 ## 🔒 Branch Protection (recommended GitHub settings)
 

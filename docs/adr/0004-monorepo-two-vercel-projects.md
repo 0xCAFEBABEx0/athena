@@ -16,8 +16,10 @@ build settings and domains.
   `packages/shared`.
 - Two Vercel projects pointing at the same repository, selected by Root
   Directory. Each project's `vercel.json` whitelists only `main` and `preview`
-  for deploys (`"**": false`) and skips the redundant Preview build after a
-  `preview → main` release merge.
+  for deploys (`"**": false`) and skips the Preview build when `preview` is
+  synced to a `preview → main` release merge commit (a commit on `preview`
+  whose subject is `Merge pull request #N from .../preview`). The release
+  merge itself always builds for Production on `main`.
 - Branch promotion `development → preview → main`. `main` is protected and
   updated through a PR from `preview`.
 
