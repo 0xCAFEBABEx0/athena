@@ -138,7 +138,7 @@ all managed by editors without code changes.
 | NF-SEC-2 | Secrets never reach the browser. | All CMS reads with credentials run server-side; only the public CMS origin is embedded in form markup. |
 | NF-OBS-1 | Errors are reported. | Sentry in the CMS (client, server, edge); Vercel Analytics and Speed Insights on the web. |
 | NF-MAINT-1 | Both apps agree on types and constants. | `packages/shared`, regenerated with `bun run generate:types`. |
-| NF-COMPAT-1 | Runtime | Node.js 22.23.4, Bun 1.4.x. |
+| NF-COMPAT-1 | Runtime | Node.js 24.x LTS (24.22.1 locally and in CI), Bun 1.4.x. |
 
 ## 5. Environments
 

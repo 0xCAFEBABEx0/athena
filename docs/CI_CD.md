@@ -64,9 +64,9 @@ jobs:
   lint:                              # "Lint and Type Check"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4   # node-version: 22.23.4
-      - uses: oven-sh/setup-bun@v2    # bun-version: 1.3.5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6   # node-version: 24.22.1
+      - uses: oven-sh/setup-bun@v2    # bun-version: 1.4.4
       - run: bun install --frozen-lockfile
       - run: bun run lint             # ESLint (cms) + astro check (web)
       - run: bun run generate:types   # type generation acts as the type check
@@ -94,8 +94,8 @@ repo, split by **Root Directory**:
 | `athena-cms` | `apps/cms` | `bun run build` → `next build` (Turbopack) | `bun install --frozen-lockfile` |
 | `athena-web` | `apps/web` | `bun run build` → `astro build` | `bun install --frozen-lockfile` |
 
-- **Node.js**: 22 (pinned to `22.23.4` via `.nvmrc`)
-- **Package manager**: Bun `1.3.5`
+- **Node.js**: 24 LTS (pinned to `24.22.1` via `.nvmrc`; on Vercel, `engines.node: "24.x"` in each app's `package.json` selects the 24.x runtime)
+- **Package manager**: Bun `1.4.4`
 - The CMS builds with Turbopack. A client-side alias must live in
   `turbopack.resolveAlias` (the `webpack()` callback is ignored). See
   [AGENTS.md → Build Configuration](../AGENTS.md#build-configuration-appscmsconfignextconfigmjs).

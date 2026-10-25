@@ -266,7 +266,7 @@ Never enable Vercel Deployment Protection on athena-cms Production: it turns
 |---|---|---|
 | Root Directory | `apps/cms` | `apps/web` |
 | Build | `next build` (Turbopack) + `next-sitemap` | `astro build` |
-| Node | 22.23.4 (`vercel.json` `NODE_VERSION`) | 22.23.4 |
+| Node | 24.x (`engines.node`; `vercel.json` `NODE_VERSION` 24.22.1) | 24.x (`engines.node`; functions run `nodejs24.x`) |
 | Deploys on | `main` (Production), `preview` (Preview) | same |
 
 Both `vercel.json` files whitelist only `main` and `preview` and skip the

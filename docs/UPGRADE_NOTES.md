@@ -2,6 +2,46 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## Node.js 22 → 24 LTS (24.22.1)
+
+Moved the runtime to the Active LTS line. **v24.22.1** is the 24.x build of the
+[2026-10-21 security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases),
+so this keeps every fix that 22.23.4 shipped.
+
+| Where | From | To |
+|---|---|---|
+| `.nvmrc` | `22.23.4` | `24.22.1` |
+| root `engines.node` | `>=22.23.4 <23` | `>=24.22.1 <25` |
+| `apps/cms` / `apps/web` `engines.node` | — | `24.x` |
+| CI `setup-node` | `22.23.4` | `24.22.1` |
+| `apps/cms/vercel.json` `NODE_VERSION` | `22.23.4` | `24.22.1` |
+| Dockerfile dev image | `dhi.io/node:22-debian13-sfw-dev` | `dhi.io/node:24-debian13-sfw-dev` |
+| `@types/node` (cms) | `^22.20.5` | `^24.19.2` (`undici-types` 6.21 → 7.24) |
+
+Vercel reads `engines.node` from the `package.json` in each project's Root
+Directory and only accepts a major (`24.x`); it overrides the project's
+"Node.js Version" setting, so both projects build and run on the latest 24.x
+Vercel provides. `@astrojs/vercel` derives the function runtime from the build's
+Node major, so athena-web functions now deploy as `nodejs24.x`.
+
+### Compatibility
+
+- No installed package (1,291 checked) declares an `engines.node` range that
+  excludes 24.22.1.
+- Native addons (`sharp`, `bufferutil`, `utf-8-validate`, rolldown, Tailwind
+  oxide, the Astro compiler) are N-API prebuilds, so no rebuild is needed.
+- No other dependency changes were needed.
+
+### Verification (Node 24.22.1)
+
+- [x] `bun run lint` passes (warnings only, same as before).
+- [x] `tsc --noEmit` passes in `apps/cms` against `@types/node` 24; `bun run generate:types` produces no diff.
+- [x] `bun run build:cms` and `bun run build:web` succeed with no new warnings; web functions emit `"runtime": "nodejs24.x"`.
+- [x] `bun test` in `apps/web` passes.
+- [x] `next start` smoke test: `/admin/login`, `/api/pages`, `/api/posts` return 200.
+
+---
+
 ## Node.js 22.23.4 (October 2026 security release) + dependency refresh
 
 Node.js shipped security releases on 2026-10-21
@@ -37,7 +77,7 @@ Bun moved to `1.4.4` (`packageManager`, CI).
 | `eslint` | 9.x | 10.x | `eslint-plugin-react`, `-import`, `-jsx-a11y` (via `eslint-config-next`) cap at ESLint 9 |
 | `graphql` | 16.x | 17.x | `payload` peer-depends on `graphql@^16.8.1` |
 | `tailwindcss` / `daisyui` (cms) | 3.x / 4.x | 4.x / 5.x | Legacy bridge frontend only; a config rewrite not worth doing before it is retired |
-| Node.js major | 22 | 24 / 26 | Out of scope for a security patch; 22 is in maintenance LTS |
+| Node.js major | 22 | 24 / 26 | Out of scope for a security patch; 22 is in maintenance LTS (moved to 24 in the entry above) |
 
 ### Database
 

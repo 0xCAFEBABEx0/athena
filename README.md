@@ -15,7 +15,7 @@ for media, Sentry for errors.
 
 ## Quick start
 
-Requires Node.js 22.23.4 (`.nvmrc`) and Bun 1.4.x. Bun is the only supported
+Requires Node.js 24.22.1 (`.nvmrc`) and Bun 1.4.x. Bun is the only supported
 package manager.
 
 ```bash
