@@ -204,5 +204,3 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
     Preview only; Payload already gates `/admin`. If Production must stay
     protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches
     only — browser form posts to the CMS still fail).
-
-## Imported Claude Cowork project instructions
