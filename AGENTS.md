@@ -19,7 +19,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 - **CMS**: Payload CMS 3 + Next.js 16 (App Router), Tailwind CSS v3 + daisyUI v4
 - **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (Linear-inspired light/dark themes in `src/styles/global.css`)
 - **Language**: TypeScript (strict mode)
-- **Runtime**: Node.js 22 (pinned to 22.23.4 via `.nvmrc`)
+- **Runtime**: Node.js 24 LTS (pinned to 24.22.1 via `.nvmrc`; Vercel runs the latest 24.x via `engines.node: "24.x"` in each app)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
 - **Database**: PostgreSQL 16 (`@payloadcms/db-postgres`, Neon)
 - **Rich Text**: Lexical (`@payloadcms/richtext-lexical`; the web app renders it via `convertLexicalToHTML` in `apps/web/src/lib/richtext.ts`)

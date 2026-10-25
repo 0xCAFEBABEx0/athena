@@ -7,7 +7,7 @@
 FROM dhi.io/bun:1-debian13-dev AS base-bun
 
 # Base image for development (includes both Node.js and Bun)
-FROM dhi.io/node:22-debian13-sfw-dev AS base-node
+FROM dhi.io/node:24-debian13-sfw-dev AS base-node
 
 # Install dependencies only when needed
 FROM base-bun AS deps
