@@ -4,6 +4,12 @@
 > `CLAUDE.md` imports this file, so there is a single source of truth.
 > Deep-dive human docs live in [`docs/`](./docs).
 
+## Working Rules
+
+- **Code wins over docs**: when documentation and the existing code disagree,
+  follow the code's conventions, and list every discrepancy you found in your
+  final reply.
+
 ## Project Overview
 
 **Athena** is a content-driven website, organized as a Bun-workspaces monorepo:
@@ -198,5 +204,3 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
     Preview only; Payload already gates `/admin`. If Production must stay
     protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches
     only — browser form posts to the CMS still fail).
-
-## Imported Claude Cowork project instructions
