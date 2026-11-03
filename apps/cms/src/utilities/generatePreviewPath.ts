@@ -19,11 +19,9 @@ export const generatePreviewPath = ({ collection, slug }: Props) => {
     previewSecret: process.env.PREVIEW_SECRET || '',
   })
 
-  // When the Astro web app exists, preview happens on its origin.
-  // Until then (bridge period), use the legacy in-app Next preview route.
-  const webURL = process.env.WEB_URL
+  // Preview always happens on the Astro web app's origin. Without WEB_URL
+  // (local dev), assume the Astro dev server.
+  const webURL = process.env.WEB_URL || 'http://localhost:4321'
 
-  return webURL
-    ? `${webURL}/api/preview?${encodedParams.toString()}`
-    : `/next/preview?${encodedParams.toString()}`
+  return `${webURL}/api/preview?${encodedParams.toString()}`
 }

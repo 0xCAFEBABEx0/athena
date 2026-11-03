@@ -11,12 +11,12 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
   return (
     <html lang="en">
       <body>
-        <div className="container py-28">
-          <div className="prose max-w-none">
+        <div style={{ margin: '0 auto', maxWidth: '48rem', padding: '7rem 1rem', fontFamily: 'system-ui, sans-serif' }}>
+          <div>
             <h1 style={{ marginBottom: 0 }}>Something went wrong!</h1>
-            <p className="mb-4">An unexpected error occurred. Please try again later.</p>
+            <p style={{ marginBottom: '1rem' }}>An unexpected error occurred. Please try again later.</p>
             {process.env.NODE_ENV === 'development' && error && (
-              <pre className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded overflow-auto">
+              <pre style={{ marginTop: '1rem', padding: '1rem', background: '#f3f4f6', borderRadius: '0.25rem', overflow: 'auto' }}>
                 {error.message}
                 {error.stack && (
                   <>

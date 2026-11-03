@@ -15,8 +15,8 @@ export const getServerSideURL = () => {
 
 /**
  * Origin of the public web frontend (the Astro app). Used for CORS/CSRF,
- * preview URLs, and cache-invalidation webhooks. Empty string while the
- * frontend still lives in this app (bridge period) — callers must handle that.
+ * preview URLs, and cache-invalidation webhooks. Empty string when WEB_URL is
+ * unset (local dev) — callers must handle that.
  */
 export const getWebURL = () => {
   return process.env.WEB_URL || ''
