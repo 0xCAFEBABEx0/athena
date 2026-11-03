@@ -1,0 +1,143 @@
+# CodeRabbit AI code review.
+# Schema: https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+# Docs:   https://docs.coderabbit.ai/reference/configuration
+#
+# Requires the CodeRabbit GitHub App to be installed on this repository.
+# The review posts a `CodeRabbit` check run on each PR; add it as a required
+# status check on `main` to block merges while a review is in progress.
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+
+language: en-US
+early_access: false
+
+reviews:
+  profile: chill
+  high_level_summary: true
+  poem: false
+  in_progress_fortune: false
+  review_status: true
+  collapse_walkthrough: true
+  sequence_diagrams: true
+  changed_files_summary: true
+  # Report a review that errors out as failed, so a required check blocks merging.
+  fail_commit_status: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    # `main` (the default branch) is always reviewed. Dependabot targets
+    # `development`, and `preview` is listed for any PR opened against it.
+    base_branches:
+      - development
+      - preview
+    ignore_title_keywords:
+      - WIP
+      - '[skip review]'
+
+  path_filters:
+    # Generated files: regenerate instead of reviewing.
+    - '!packages/shared/src/payload-types.ts'
+    - '!apps/cms/src/payload-types.ts'
+    - '!apps/cms/src/app/(payload)/admin/importMap.js'
+    # Migration snapshots (the .ts migrations are still reviewed).
+    - '!apps/cms/src/migrations/*.json'
+    - '!bun.lock'
+    - '!**/*.min.js'
+
+  path_instructions:
+    - path: '**/*.{ts,tsx,astro}'
+      instructions: |
+        TypeScript runs in strict mode with `noUncheckedIndexedAccess`.
+        Flag non-null assertions or unchecked index access that hide real
+        `undefined` cases. Imports of Payload generated types must be
+        type-only (`import type`). Use the `@/*` path alias rather than long
+        relative paths. Unused variables must be prefixed with `_`.
+    - path: 'apps/cms/src/collections/**'
+      instructions: |
+        Collections export a `CollectionConfig` typed with their slug.
+        Public read should use `authenticatedOrPublished`; writes should use
+        `authenticated`. Flag any access rule that exposes drafts or
+        unpublished content to anonymous users. Revalidation hooks
+        (`afterChange`, `afterDelete`) must call `invalidateWeb()`.
+    - path: 'apps/cms/src/migrations/**/*.ts'
+      instructions: |
+        These run against the production Neon Postgres database. Flag
+        destructive or data-losing operations (DROP, column type changes,
+        NOT NULL without a default), missing `down` migrations, and changes
+        that will lock large tables.
+    - path: 'apps/cms/config/next.config.mjs'
+      instructions: |
+        Load-bearing config. `withPayload(...)` must stay. The browser alias
+        for `payload/internal` must exist in both `turbopack.resolveAlias`
+        (browser condition -> config/empty-module.mjs) and the `webpack()`
+        callback (`'payload/internal': false`). Any new client alias must be
+        added to `turbopack.resolveAlias` too, since Turbopack ignores
+        `webpack()`.
+    - path: 'apps/cms/src/utilities/{invalidateWeb,generatePreviewPath}.ts'
+      instructions: |
+        Part of the CMS <-> web contract. `invalidateWeb` POSTs
+        `{ paths, tags }` to `${WEB_URL}/api/invalidate` with
+        `Authorization: Bearer ${REVALIDATE_SECRET}`; the preview path
+        targets `${WEB_URL}/api/preview`. Check the matching endpoints in
+        `apps/web/src/pages/api/` stay in sync, and that secrets are never
+        logged or sent to the browser.
+    - path: 'apps/web/src/pages/api/**'
+      instructions: |
+        Endpoints that gate drafts and cache invalidation. Verify the
+        `PREVIEW_SECRET` / `REVALIDATE_SECRET` checks happen before any side
+        effect, that comparisons do not leak secrets, and that the
+        `athena-draft` cookie stays HttpOnly. Astro skips underscore-prefixed
+        files, so endpoint file names must not start with `_`.
+    - path: 'apps/web/src/lib/cms.ts'
+      instructions: |
+        Payload REST defaults to `limit=10` and drafts require auth. Every
+        request must set `depth` and `limit` explicitly, and draft fetches
+        must authenticate with the `PAYLOAD_API_KEY` service account. The
+        API key must never reach client-side code.
+    - path: '**/vercel.json'
+      instructions: |
+        `git.deploymentEnabled` is a whitelist: keep `"**": false` with only
+        `main` and `preview` enabled, or every PR branch will deploy and
+        exhaust the Hobby build quota. Keep the `ignoreCommand` that skips
+        rebuilding `preview -> main` release merge commits.
+    - path: '.github/workflows/**'
+      instructions: |
+        Node is pinned to 24.22.1 (`.nvmrc`) and Bun to the version in the
+        root `package.json` `packageManager` field; flag drift. Bun is the
+        only package manager: flag any `npm`, `pnpm` or `yarn` usage.
+    - path: '**/package.json'
+      instructions: |
+        Bun is the only package manager; a `package-lock.json` or
+        `pnpm-lock.yaml` must never be added. `payload` and every
+        `@payloadcms/*` package must share the same version. After bumping
+        `@payloadcms/*`, `bun run generate:importmap` must be re-run and the
+        resulting `importMap.js` committed.
+
+  tools:
+    github-checks:
+      enabled: true
+    actionlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    hadolint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    yamllint:
+      enabled: true
+    eslint:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - AGENTS.md
+      - .cursor/rules/*.mdc

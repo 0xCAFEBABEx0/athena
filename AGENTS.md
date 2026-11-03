@@ -138,6 +138,9 @@ PR from `preview` to `main`; `bun run deploy:production` opens it with `gh` and
 enables auto-merge. `preview` still accepts direct pushes (`bun run deploy:preview`).
 
 CI (GitHub Actions) runs lint + type check on push to `main`/`preview` and PRs to `main`.
+CodeRabbit (`.coderabbit.yaml`) reviews PRs to `main`, `development`, and
+`preview` in English; when a rule in this file changes, update the matching
+`path_instructions` entry there too.
 
 Vercel deploy triggers are declared in each app's `vercel.json` (read from the
 project's Root Directory) to avoid duplicate builds:
