@@ -1,0 +1,46 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "root": true,
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "root": "../.."
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!public",
+      "!src/app/(payload)/admin/importMap.js",
+      "!src/migrations",
+      "!**/*.css",
+      "!**/*.scss"
+    ]
+  },
+  "formatter": {
+    "enabled": false
+  },
+  "assist": {
+    "enabled": false
+  },
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "react": "recommended",
+      "next": "recommended"
+    },
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "useExhaustiveDependencies": "warn"
+      },
+      "suspicious": {
+        "noArrayIndexKey": "warn",
+        "noShadowRestrictedNames": "warn",
+        "noImplicitAnyLet": "warn",
+        "useIterableCallbackReturn": "warn",
+        "noRedeclare": "off"
+      }
+    }
+  }
+}

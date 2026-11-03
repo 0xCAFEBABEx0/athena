@@ -163,7 +163,6 @@ From the 2026-10 review; none of these are implemented yet.
   Testimonials or Locations.
 - **Template branding**: `SITE_NAME` and SEO titles still read "Payload
   Website Template"; admin welcome/login components are the template's.
-- **Legacy frontend**: the CMS's `(frontend)` route group is still deployed.
 - **Schema migrations**: production schema changes are applied by hand (see
   [DATABASE.md](./DATABASE.md)).
 - **Testing**: one unit-test file in `apps/web`; no end-to-end tests; the

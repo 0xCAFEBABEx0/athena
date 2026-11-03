@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(_request: NextRequest) {
   // Only allow access in development and preview environments

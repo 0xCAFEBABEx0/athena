@@ -10,7 +10,7 @@
     "vscode": {
       "extensions": [
         "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
+        "biomejs.biome",
         "bradlc.vscode-tailwindcss",
         "ms-vscode.vscode-typescript-next",
         "formulahendry.auto-rename-tag",
@@ -28,7 +28,7 @@
     "cursor": {
       "extensions": [
         "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
+        "biomejs.biome",
         "bradlc.vscode-tailwindcss",
         "ms-vscode.vscode-typescript-next",
         "formulahendry.auto-rename-tag",
@@ -46,7 +46,7 @@
     "antigravity": {
       "extensions": [
         "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
+        "biomejs.biome",
         "bradlc.vscode-tailwindcss",
         "ms-vscode.vscode-typescript-next",
         "formulahendry.auto-rename-tag",

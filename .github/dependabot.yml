@@ -24,19 +24,34 @@ updates:
       prefix: 'chore(deps)'
       prefix-development: 'chore(deps-dev)'
     groups:
+      # Scoped wildcards like '@payloadcms/*' did not match on the bun
+      # ecosystem (first run, 2026-11-03: @payloadcms/*, @astrojs/vercel and
+      # @sentry/nextjs all landed in production-dependencies), so scoped
+      # packages are also listed by exact name. Add new scoped deps here.
       # payload and every @payloadcms/* package must move in lockstep.
       payload:
         patterns:
           - payload
           - '@payloadcms/*'
+          - '@payloadcms/db-postgres'
+          - '@payloadcms/next'
+          - '@payloadcms/plugin-form-builder'
+          - '@payloadcms/plugin-nested-docs'
+          - '@payloadcms/plugin-redirects'
+          - '@payloadcms/plugin-search'
+          - '@payloadcms/plugin-seo'
+          - '@payloadcms/richtext-lexical'
+          - '@payloadcms/storage-vercel-blob'
+          - '@payloadcms/ui'
       astro:
         patterns:
           - astro
           - '@astrojs/*'
+          - '@astrojs/check'
+          - '@astrojs/vercel'
       next-react:
         patterns:
           - next
-          - eslint-config-next
           - react
           - react-dom
           - '@types/react'
@@ -44,25 +59,56 @@ updates:
       sentry:
         patterns:
           - '@sentry/*'
+          - '@sentry/nextjs'
       tailwind:
         patterns:
           - tailwindcss
           - '@tailwindcss/*'
+          - '@tailwindcss/typography'
+          - '@tailwindcss/vite'
           - daisyui
       # Everything else: batch minor/patch bumps into one PR per side.
+      # The exclusions keep the named groups above out of these catch-alls.
       dev-dependencies:
         dependency-type: development
         update-types:
           - minor
           - patch
+        exclude-patterns:
+          - payload
+          - '@payloadcms*'
+          - astro
+          - '@astrojs*'
+          - '@sentry*'
+          - tailwindcss
+          - '@tailwindcss*'
+          - daisyui
       production-dependencies:
         dependency-type: production
         update-types:
           - minor
           - patch
+        exclude-patterns:
+          - payload
+          - '@payloadcms*'
+          - astro
+          - '@astrojs*'
+          - '@sentry*'
+          - tailwindcss
+          - '@tailwindcss*'
+          - daisyui
     ignore:
       # Node is pinned to 24.x (.nvmrc / engines); skip @types/node majors.
       - dependency-name: '@types/node'
+        update-types:
+          - version-update:semver-major
+      # payload / @payloadcms/next peer-depend on graphql ^16.
+      - dependency-name: graphql
+        update-types:
+          - version-update:semver-major
+      # apps/cms is on TS 7 already; apps/web stays on 6 because astro check
+      # doesn't support TS 7 yet (experimental: @astrojs/ts-content-mapper, 7.1+).
+      - dependency-name: typescript
         update-types:
           - version-update:semver-major
 

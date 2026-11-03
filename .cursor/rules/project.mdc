@@ -15,7 +15,7 @@ Bun-workspaces monorepo. Full guidance lives in `AGENTS.md` (single source of tr
 - **`packages/shared`**: generated Payload types + cross-app constants
 - **Database**: PostgreSQL (Neon cloud)
 - **Package Manager**: Bun
-- **Styling**: Tailwind CSS (v3 in cms, v4 in web)
+- **Styling**: Tailwind CSS v4 (web only; the cms admin uses Payload's SCSS)
 
 ## Development Guidelines
 
@@ -29,7 +29,7 @@ Bun-workspaces monorepo. Full guidance lives in `AGENTS.md` (single source of tr
 - Use functional components with hooks
 - Implement proper TypeScript interfaces
 - Follow React best practices
-- Use Tailwind CSS for styling
+- Use Tailwind CSS for styling in apps/web
 
 ### Database
 - Use Payload CMS collections for data modeling

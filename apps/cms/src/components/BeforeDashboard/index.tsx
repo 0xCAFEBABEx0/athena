@@ -1,7 +1,7 @@
 import { Banner } from '@payloadcms/ui/elements/Banner'
-import React from 'react'
+import type React from 'react'
 
-import { SeedButton } from './SeedButton'
+import { getWebURL } from '@/utilities/getURL'
 import './index.scss'
 
 const baseClass = 'before-dashboard'
@@ -15,12 +15,13 @@ const BeforeDashboard: React.FC = () => {
       Here&apos;s what to do next:
       <ul className={`${baseClass}__instructions`}>
         <li>
-          <SeedButton />
-          {' with a few pages, posts, and projects to jump-start your new site, then '}
-          <a href="/" target="_blank">
+          {'Publish pages and posts here, then '}
+          <a href={getWebURL() || 'http://localhost:4321'} rel="noopener noreferrer" target="_blank">
             visit your website
           </a>
-          {' to see the results.'}
+          {' to see the results. For demo content in a local database, run '}
+          <code>bun run seed:standalone</code>
+          {' in apps/cms (it deletes existing content first).'}
         </li>
         <li>
           If you created this repo using Payload Cloud, head over to GitHub and clone it to your

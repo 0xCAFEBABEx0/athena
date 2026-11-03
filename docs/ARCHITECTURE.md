@@ -38,7 +38,7 @@ graph LR
 | Element | Technology | Responsibility |
 |---|---|---|
 | **athena-web** (`apps/web`) | Astro 7, `@astrojs/vercel`, Tailwind v4 + daisyUI v5 | Public website. Renders every page on demand from CMS data and caches the HTML with Vercel ISR. |
-| **athena-cms** (`apps/cms`) | Payload CMS 3.92, Next.js 16 (App Router, Turbopack builds) | Admin panel, content storage, REST + GraphQL API, form submission intake, cache-invalidation webhooks. Also still hosts the legacy public frontend (see §6). |
+| **athena-cms** (`apps/cms`) | Payload CMS 3.92, Next.js 16 (App Router, Turbopack builds) | Admin panel, content storage, REST + GraphQL API, form submission intake, cache-invalidation webhooks. Serves no public pages (see §6). |
 | **Shared package** (`packages/shared`) | TypeScript only | Generated Payload types and cross-app constants (`CACHE_TAGS`, `DRAFT_COOKIE`, `COLLECTION_SLUGS`, `IMAGE_SIZES`). |
 | **Database** | Neon PostgreSQL 16 via `@payloadcms/db-postgres` | All documents, versions, users, form submissions, search index. |
 | **Media storage** | Vercel Blob via `@payloadcms/storage-vercel-blob` | Original uploads and all generated renditions. Served directly from Blob (`disablePayloadAccessControl: true`). |
@@ -59,7 +59,6 @@ athena/
 │   │   ├── config/          # real next.config.mjs, empty-module.mjs (browser alias target)
 │   │   └── src/
 │   │       ├── app/(payload)/   # admin panel + /api routes (Payload)
-│   │       ├── app/(frontend)/  # legacy public pages (bridge period)
 │   │       ├── collections/ globals in Header/ Footer/
 │   │       ├── blocks/ heros/ fields/ hooks/ access/ plugins/ search/
 │   │       ├── endpoints/seed/  # demo content
@@ -150,7 +149,6 @@ sequenceDiagram
     participant E as Vercel ISR cache
     Ed->>C: Publish post "hello"
     C->>C: afterChange hook (revalidatePost)
-    C->>C: revalidatePath/Tag (legacy frontend)
     C->>W: POST {paths:["/posts/hello","/posts"], tags:["posts","sitemap"]}<br/>Authorization: Bearer REVALIDATE_SECRET
     W->>W: map tags to paths (sitemap → *-sitemap.xml, posts → /posts)
     loop each path
@@ -190,7 +188,7 @@ sequenceDiagram
 ```
 
 `generatePreviewPath()` builds the Preview button URL. When `WEB_URL` is unset
-it falls back to the legacy `/next/preview` route in the CMS. Live Preview in
+(local dev) it targets the Astro dev server at `http://localhost:4321`. Live Preview in
 the admin uses the same URL in an iframe. `GET /api/exit-preview` clears the
 cookie. See [ADR 0003](./adr/0003-draft-preview-service-account.md).
 
@@ -265,7 +263,7 @@ Never enable Vercel Deployment Protection on athena-cms Production: it turns
 | | athena-cms | athena-web |
 |---|---|---|
 | Root Directory | `apps/cms` | `apps/web` |
-| Build | `next build` (Turbopack) + `next-sitemap` | `astro build` |
+| Build | `next build` (Turbopack) | `astro build` |
 | Node | 24.x (`engines.node`; `vercel.json` `NODE_VERSION` 24.22.1) | 24.x (`engines.node`; functions run `nodejs24.x`) |
 | Deploys on | `main` (Production), `preview` (Preview) | same |
 
@@ -279,22 +277,23 @@ Load-bearing CMS build settings (`withPayload`, the browser alias for
 `payload/internal`, Turbopack) are documented in
 [AGENTS.md → Build Configuration](../AGENTS.md#build-configuration-appscmsconfignextconfigmjs).
 
-## 6. The Bridge Period
+## 6. The Retired CMS Frontend
 
 The CMS was originally the Payload Website Template with its own Next.js
 public frontend (`apps/cms/src/app/(frontend)`). The public site moved to
-Astro ([ADR 0001](./adr/0001-separate-astro-frontend.md)), but the legacy
-frontend is still in the CMS app. While it exists:
+Astro ([ADR 0001](./adr/0001-separate-astro-frontend.md)), and the legacy
+frontend was removed from the CMS in 2026-11, together with Tailwind v3,
+daisyUI v4, PostCSS, `next-sitemap` and the template's Next render components.
 
-- `invalidateWeb()` also calls `revalidatePath`/`revalidateTag` for it, using
-  `LEGACY_TAG_MAP` to translate tag names.
-- `generatePreviewPath()` uses the legacy `/next/preview` route when `WEB_URL`
-  is unset.
-- The CMS keeps Tailwind v3 + daisyUI v4 only for those pages.
+What remains of it in the CMS:
 
-Retiring it means deleting the `(frontend)` route group, the legacy branch in
-`invalidateWeb.ts` and `generatePreviewPath.ts`, and the frontend-only
-components, then simplifying the CMS styling stack.
+- Block, hero, header and footer **configs** (the Payload schema). Their
+  renderers exist only in `apps/web`.
+- `config/next.config.mjs` `redirects()`: `/` → `/admin` (307), and when
+  `WEB_URL` is set, every other path outside `/admin`, `/api`, `/_next`,
+  `/monitoring` and the root static files → the same path on `WEB_URL` (308),
+  so old `cms.findb.uk/posts/...` links land on the public site.
+- `public/robots.txt` disallows crawling the CMS origin.
 
 ## 7. Cross-Cutting Conventions
 

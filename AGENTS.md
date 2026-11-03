@@ -14,7 +14,7 @@
 
 **Athena** is a content-driven website, organized as a Bun-workspaces monorepo:
 
-- **`apps/cms`** — Payload CMS 3 on Next.js 16 (App Router): admin panel, REST/GraphQL API, and the legacy in-app public frontend (bridge period only).
+- **`apps/cms`** — Payload CMS 3 on Next.js 16 (App Router): admin panel and REST/GraphQL API. It serves no public pages; old public URLs redirect to `WEB_URL`.
 - **`apps/web`** — Astro 7 public frontend consuming the CMS over its REST API.
 - **`packages/shared`** — generated Payload types + cross-app constants (cache tags, the draft cookie name, collection slugs).
 
@@ -22,9 +22,9 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 
 ## Tech Stack
 
-- **CMS**: Payload CMS 3 + Next.js 16 (App Router), Tailwind CSS v3 + daisyUI v4
+- **CMS**: Payload CMS 3 + Next.js 16 (App Router); admin styling is Payload's own SCSS (no Tailwind)
 - **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (Linear-inspired light/dark themes in `src/styles/global.css`)
-- **Language**: TypeScript (strict mode)
+- **Language**: TypeScript (strict mode). `apps/cms` is on TypeScript 7 (native `tsc`); `apps/web` stays on 6 until `astro check` supports 7
 - **Runtime**: Node.js 24 LTS (pinned to 24.22.1 via `.nvmrc`; Vercel runs the latest 24.x via `engines.node: "24.x"` in each app)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
 - **Database**: PostgreSQL 16 (`@payloadcms/db-postgres`, Neon)
@@ -39,7 +39,8 @@ bun run dev:web               # Astro dev server (localhost:4321)
 bun run build                 # Build all workspaces
 bun run build:cms             # CMS production build (next build, Turbopack)
 bun run build:web             # Astro production build
-bun run lint                  # ESLint (cms) + astro check (web)
+bun run lint                  # Biome (cms) + astro check (web)
+bun run typecheck             # tsc --noEmit (cms)
 bun run generate:types        # Regenerate Payload types -> packages/shared
 bun run generate:importmap    # Regenerate admin import map
 bun run deploy:preview        # Merge development -> preview and push
@@ -50,9 +51,8 @@ bun run deploy:production     # Open a preview -> main PR and enable auto-merge
 
 ```
 apps/cms/src/
-├── app/(frontend)/           # Legacy in-app public pages (bridge; being replaced by apps/web)
 ├── app/(payload)/            # Payload admin panel + API routes
-├── blocks/ collections/ fields/ heros/ hooks/ plugins/ providers/
+├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only; rendering lives in apps/web
 ├── utilities/                # invalidateWeb.ts, generatePreviewPath.ts, env.ts, getURL.ts
 └── payload.config.ts         # Main Payload CMS configuration
 
@@ -60,7 +60,7 @@ apps/cms/config/next.config.mjs   # Real Next.js config (root next.config.mjs re
 
 apps/web/src/
 ├── pages/                    # [...slug], posts/*, search, sitemaps, 404, api/* endpoints
-├── components/               # Astro ports of the cms frontend (blocks/, heros/, ...)
+├── components/               # Block/hero renderers (blocks/, heros/, ...)
 ├── lib/                      # cms.ts (REST client), richtext.ts, draft.ts, seo.ts, media.ts
 ├── layouts/Layout.astro      # Theme init, meta tags, Header/Footer
 └── middleware.ts             # Redirects-collection handling
@@ -88,14 +88,14 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 - **CMS**: Server Components by default; add `'use client'` only when needed
 - **Dark mode**: Controlled by `data-theme="dark"` attribute, not OS media query (theme stored under the `payload-theme` localStorage key in both apps)
 - **Prefix unused vars** with `_` to suppress lint warnings
-- **ESLint (cms)**: flat config using `eslint-config-next`'s native flat exports (`next lint` is gone in Next 16; scripts call `eslint .`)
+- **Lint (cms)**: Biome (`apps/cms/biome.json`, `react` + `next` domains), not ESLint: typescript-eslint has no TypeScript 7 support. Suppress with `// biome-ignore lint/<group>/<rule>: reason`. Prettier still formats
 
 ## Payload CMS Patterns
 
 - Collections export a `CollectionConfig` typed with their slug
 - Use `authenticatedOrPublished` access for public read, `authenticated` for write
 - Versions/drafts with autosave enabled on Posts and Pages
-- Revalidation hooks (`afterChange`, `afterDelete`) call `invalidateWeb()` — legacy next/cache revalidation for the bridge frontend plus the web webhook
+- Revalidation hooks (`afterChange`, `afterDelete`) call `invalidateWeb()`, which POSTs to the web app's `/api/invalidate`
 - Changing `src/payload.config.ts` requires a dev server restart
 - Run `bun run generate:importmap` after adding new Payload admin components **or after upgrading any `@payloadcms/*` package** (component import paths can move between versions)
 
@@ -163,7 +163,7 @@ CMS (`apps/cms/.env`):
 POSTGRES_URL=              # Neon Postgres connection string (required at startup)
 PAYLOAD_SECRET=            # 32+ char JWT secret
 CMS_URL=                   # CMS origin (NEXT_PUBLIC_SERVER_URL is a legacy alias)
-WEB_URL=                   # Astro frontend origin; unset = legacy in-app behavior
+WEB_URL=                   # Astro frontend origin; unset = no invalidation webhook, preview targets localhost:4321
 PREVIEW_SECRET=            # Shared with web: gates the draft cookie
 REVALIDATE_SECRET=         # Shared with web: bearer token for /api/invalidate
 BLOB_READ_WRITE_TOKEN=     # Vercel Blob storage token
@@ -180,7 +180,7 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
 ## Key URLs (Local Dev)
 
 - `http://localhost:4321` - Astro frontend
-- `http://localhost:3000` - CMS (admin + API + legacy frontend)
+- `http://localhost:3000` - CMS (redirects to `/admin`)
 - `http://localhost:3000/admin` - Payload admin panel
 - `http://localhost:3000/api/graphql-playground` - GraphQL Playground
 
@@ -202,7 +202,11 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
    `lib/cms.ts` always sets `depth`/`limit` explicitly and authenticates draft fetches
 10. Vercel `git.deploymentEnabled` unspecified keys default to `true`. Keep the
     `"**": false` whitelist or Hobby Preview will build every `cursor/*` branch.
-11. **Never enable Vercel Deployment Protection on athena-cms Production.** It
+11. The root `package.json` pins `typescript@^6` on purpose: hoisted tooling
+    (`astro check` via `@volar/kit`) resolves TypeScript from the repo root and
+    crashes on TS 7. `apps/cms` gets TS 7 nested in its own `node_modules`.
+    Don't remove the root pin until `astro check` supports TS 7.
+12. **Never enable Vercel Deployment Protection on athena-cms Production.** It
     302s `/api/*` to Vercel SSO, and athena-web HTML routes 500. Protect
     Preview only; Payload already gates `/admin`. If Production must stay
     protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches

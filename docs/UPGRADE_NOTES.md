@@ -2,6 +2,43 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## Dependabot round 1, Biome, TypeScript 7 (cms) — 2026-11-03
+
+First Dependabot run (config in `.github/dependabot.yml`). Applied as one
+commit to `development` because every PR rewrites `bun.lock`:
+
+| Package | From | To |
+|---|---|---|
+| `payload` + `@payloadcms/*` | 3.92.0 | 3.92.1 (must move together) |
+| `@sentry/nextjs` / `geist` / `lucide-react` | 11.9 / 1.8 / 1.61 | 11.10 / 1.9 / 1.66 |
+| `astro` / `@astrojs/vercel` | 7.4.2 / 11.0.16 | 7.4.5 / 11.0.18 |
+| `autoprefixer` / `postcss` | 10.6.1 / 8.5.31 | 10.6.2 / 8.5.32 |
+| `checkly` | 9.5 | 10.1 |
+| `actions/checkout` / `actions/setup-node` | v6 | v7 |
+
+Follow-ups for the majors Dependabot proposed:
+
+- **ESLint → Biome (cms)**. ESLint 10 itself worked (`eslint-config-next` 16.4
+  added support, so the "held back" row below is outdated), but typescript-eslint
+  cannot run on TypeScript 7 until the 7.1 API ships. `apps/cms` now lints with
+  Biome 2.6 (`biome.json`: recommended preset + `react` / `next` domains).
+  Template-era patterns that ESLint only warned about (array-index keys,
+  exhaustive deps, shadowed `Error`/`Number` component names) stay warnings.
+  Not covered by Biome: the React Compiler rules (`react-hooks/set-state-in-effect`,
+  `react-hooks/refs`). Prettier still formats.
+- **TypeScript 7 (cms only)**. `next build` (16.4) runs the project-local `tsc`
+  CLI by default (`experimental.useTypeScriptCli`), so TS 7 works for builds;
+  the native binary comes from a per-platform optional dependency. `apps/web`
+  stays on TS 6 because `astro check` refuses TS 7; the root `package.json`
+  pins `typescript@^6` so hoisted Astro tooling resolves TS 6 while cms gets
+  TS 7 nested. CI now runs
+  `bun run typecheck` (`tsc --noEmit` in cms); before this, CI ran no `tsc`.
+- **graphql**: removed from `apps/cms` dependencies (no app code imports it;
+  Payload's docs advise against a separate copy). Bun still installs 16.x as
+  Payload's peer, so there is a single copy and Dependabot no longer proposes 17.
+- **Tailwind 4 / daisyUI 5 (cms)**: not migrated; retiring the legacy
+  `(frontend)` removes them instead.
+
 ## Node.js 22 → 24 LTS (24.22.1)
 
 Moved the runtime to the Active LTS line. **v24.22.1** is the 24.x build of the

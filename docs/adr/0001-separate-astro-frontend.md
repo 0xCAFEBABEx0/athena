@@ -1,6 +1,6 @@
 # 0001. Serve the public site from a separate Astro app
 
-- **Status**: Accepted
+- **Status**: Accepted (bridge period ended 2026-11: the CMS `(frontend)` route group was removed)
 - **Area**: `apps/web`, `apps/cms/src/app/(frontend)`
 
 ## Context

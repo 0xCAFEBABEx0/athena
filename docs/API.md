@@ -132,7 +132,7 @@ There is no captcha, honeypot or rate limit.
 | `/api/graphql`, `/api/graphql-playground` | Payload GraphQL. |
 | `/api/payload-jobs/run` | Jobs runner. Vercel Cron daily at 00:00 UTC; needs a logged-in user or `Authorization: Bearer ${CRON_SECRET}`. |
 | `/api/sentry-test` | Sentry smoke test route. |
-| `/next/preview`, `/next/exit-preview`, `/next/seed` | Legacy frontend routes (bridge period). `POST /next/seed` (logged-in users only, called by the admin dashboard's Seed button) **deletes existing pages, posts, media, categories, forms, submissions, search entries and globals** and loads demo content. Never run it against production. |
+| `/` | Redirects to `/admin`. Any other non-admin, non-API path redirects (308) to the same path on `WEB_URL`. |
 
 ## 4. Shared Constants (`packages/shared/src/constants.ts`)
 
@@ -153,7 +153,7 @@ both apps together.
 | `POSTGRES_URL` | required | | Neon connection string. `DATABASE_URL` is a fallback. |
 | `PAYLOAD_SECRET` | required | | JWT / encryption secret. |
 | `CMS_URL` | yes | required on Vercel | CMS origin. `NEXT_PUBLIC_SERVER_URL` is a legacy alias in the CMS. |
-| `WEB_URL` | yes | yes | Web origin (custom domain). Unset in the CMS = legacy behaviour. |
+| `WEB_URL` | yes | yes | Web origin (custom domain). Unset in the CMS = no invalidation webhook, no public-URL redirects, preview targets `localhost:4321`. |
 | `PREVIEW_SECRET` | yes | yes | Must match. |
 | `REVALIDATE_SECRET` | yes | yes | Must match. Also the ISR bypass token. |
 | `PAYLOAD_API_KEY` | | yes | `web-frontend` API key for draft reads. |

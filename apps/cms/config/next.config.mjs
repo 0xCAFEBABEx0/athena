@@ -58,6 +58,27 @@ const nextConfig = {
     return webpackConfig
   },
 
+  // This app no longer serves a public site (it moved to apps/web). Send the
+  // bare origin to the admin panel and, when WEB_URL is set, permanently
+  // redirect any old public URL (e.g. /posts/foo) to the same path on the web
+  // app. Admin, API, Next assets, the Sentry tunnel and static files at the
+  // root are left alone.
+  async redirects() {
+    const webURL = process.env.WEB_URL
+    return [
+      { source: '/', destination: '/admin', permanent: false },
+      ...(webURL
+        ? [
+            {
+              source: '/:path((?!admin(?:/|$)|api(?:/|$)|_next/|monitoring(?:/|$)|robots\\.txt$|favicon\\.(?:ico|svg)$).+)',
+              destination: `${webURL}/:path`,
+              permanent: true,
+            },
+          ]
+        : []),
+    ]
+  },
+
   // Enable standalone output for Docker
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
 

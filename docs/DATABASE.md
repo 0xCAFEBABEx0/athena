@@ -79,8 +79,7 @@ of `payload_migrations` first.
 
 ## 4. Seeding
 
-- **Admin dashboard → Seed** (`POST /next/seed`, logged-in users only) and
-  `bun run --filter @athena/cms seed:standalone` both **delete** existing
+- `bun run --filter @athena/cms seed:standalone` **deletes** existing
   content in pages, posts, media, categories, forms, form submissions, search
   and the globals before loading demo data. Development databases only.
 - Seeding sets `context.disableRevalidate` so it does not fire invalidation
