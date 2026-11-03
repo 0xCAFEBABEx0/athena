@@ -1,0 +1,82 @@
+# Dependabot version updates.
+# https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+#
+# - PRs target `development` (the start of development -> preview -> main).
+#   Security updates ignore `target-branch` and always open against `main`.
+# - One `bun` entry at the repo root covers every workspace (apps/*, packages/*)
+#   through the single root bun.lock.
+# - After merging a @payloadcms/* bump, run `bun run generate:importmap` and
+#   commit the result (see AGENTS.md).
+
+version: 2
+
+updates:
+  - package-ecosystem: bun
+    directory: /
+    target-branch: development
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: 'chore(deps)'
+      prefix-development: 'chore(deps-dev)'
+    groups:
+      # payload and every @payloadcms/* package must move in lockstep.
+      payload:
+        patterns:
+          - payload
+          - '@payloadcms/*'
+      astro:
+        patterns:
+          - astro
+          - '@astrojs/*'
+      next-react:
+        patterns:
+          - next
+          - eslint-config-next
+          - react
+          - react-dom
+          - '@types/react'
+          - '@types/react-dom'
+      sentry:
+        patterns:
+          - '@sentry/*'
+      tailwind:
+        patterns:
+          - tailwindcss
+          - '@tailwindcss/*'
+          - daisyui
+      # Everything else: batch minor/patch bumps into one PR per side.
+      dev-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+      production-dependencies:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Node is pinned to 24.x (.nvmrc / engines); skip @types/node majors.
+      - dependency-name: '@types/node'
+        update-types:
+          - version-update:semver-major
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: development
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Tokyo
+    commit-message:
+      prefix: 'ci(deps)'
+    groups:
+      github-actions:
+        patterns:
+          - '*'
