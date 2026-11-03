@@ -64,7 +64,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.6.1",
-    "checkly": "^9.5.0",
+    "checkly": "^10.1.0",
     "daisyui": "^4.12.24",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.4.3",
