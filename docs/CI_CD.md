@@ -80,6 +80,29 @@ jobs:
   out** — deploys are handled by Vercel's Git integration, so the
   `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` secrets are not required.
 
+## AI Code Review (CodeRabbit)
+
+The [CodeRabbit](https://coderabbit.ai) GitHub App reviews pull requests in
+English, configured by `.coderabbit.yaml` at the repo root.
+
+- **Which PRs**: PRs to `main` (the default branch), plus PRs to `development`
+  (Dependabot opens its PRs there) and `preview`. Draft PRs and titles
+  containing `WIP` or `[skip review]` are skipped.
+- **Check**: each review shows up as a `CodeRabbit` check run. A review that
+  errors out reports as failed (`fail_commit_status: true`), so the check can
+  be made required on `main` alongside "Lint and Type Check".
+- **Skipped paths**: generated files (`payload-types.ts`, `importMap.js`),
+  migration JSON snapshots, and `bun.lock`.
+- **Review rules**: `path_instructions` in `.coderabbit.yaml` encode the
+  load-bearing rules from AGENTS.md (strict TS, Payload access patterns,
+  `next.config.mjs` aliases, the CMS⇄web contract, the `vercel.json`
+  whitelist). CodeRabbit also reads `AGENTS.md` as coding guidelines.
+- **Commands**: comment `@coderabbitai review` to re-run, `@coderabbitai pause`
+  / `resume` to toggle auto-review on a PR.
+
+The app itself is installed once per repository at
+<https://github.com/apps/coderabbitai>; without it, the config file does nothing.
+
 ## Build Configuration (Vercel)
 
 Each app has a `vercel.json` (Vercel reads it from the project's Root Directory).
@@ -112,6 +135,7 @@ identical across both projects. See
 ## Monitoring Deployment Status
 
 1. **GitHub Actions** — repo "Actions" tab → "Lint and Type Check".
+   The `CodeRabbit` check on each PR links to its review.
 2. **Vercel** — each project's dashboard for build/deploy logs.
 3. **Sentry** — runtime errors and performance.
 
