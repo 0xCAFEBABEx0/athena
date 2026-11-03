@@ -8,7 +8,7 @@ same change that alters the behaviour they describe.
 
 | Document | Read it to learn |
 |---|---|
-| [Architecture](./ARCHITECTURE.md) | The system's parts, how they communicate (rendering, caching, preview, forms), security model and the bridge period. |
+| [Architecture](./ARCHITECTURE.md) | The system's parts, how they communicate (rendering, caching, preview, forms), security model and the retired CMS frontend. |
 | [Functional Specification](./SPECIFICATION.md) | What the site and the admin do today, non-functional requirements, environments and known gaps. |
 | [Content Model](./CONTENT_MODEL.md) | Collections, globals, blocks, fields, access rules and hooks. |
 | [API Reference](./API.md) | Web endpoints, the CMS REST calls the web app makes, shared constants and environment variables. |

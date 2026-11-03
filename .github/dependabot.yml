@@ -33,9 +33,7 @@ updates:
         patterns:
           - payload
           - '@payloadcms/*'
-          - '@payloadcms/admin-bar'
           - '@payloadcms/db-postgres'
-          - '@payloadcms/live-preview-react'
           - '@payloadcms/next'
           - '@payloadcms/plugin-form-builder'
           - '@payloadcms/plugin-nested-docs'
@@ -102,14 +100,6 @@ updates:
     ignore:
       # Node is pinned to 24.x (.nvmrc / engines); skip @types/node majors.
       - dependency-name: '@types/node'
-        update-types:
-          - version-update:semver-major
-      # apps/cms (legacy bridge frontend) is on Tailwind v3 + daisyUI v4; v4/v5
-      # need a PostCSS/config migration (apps/web is already on v4/v5).
-      - dependency-name: tailwindcss
-        update-types:
-          - version-update:semver-major
-      - dependency-name: daisyui
         update-types:
           - version-update:semver-major
       # payload / @payloadcms/next peer-depend on graphql ^16.

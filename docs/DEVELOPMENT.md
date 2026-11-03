@@ -26,8 +26,8 @@ bun run dev          # both at once (filtered across all workspaces)
 | **REST API** | http://localhost:3000/api |
 | **GraphQL Playground** | http://localhost:3000/api/graphql-playground |
 
-> The CMS still serves a **legacy in-app frontend** at `http://localhost:3000`
-> during the bridge period, but the production public site is `apps/web`.
+> The CMS serves no public pages: `http://localhost:3000` redirects to `/admin`.
+> The public site is `apps/web`.
 
 ## 🔧 Development Commands (repo root)
 
@@ -60,15 +60,14 @@ bun run --filter @athena/cms payload migrate
 
 ```
 apps/cms/src/
-├── app/(frontend)/      # Legacy in-app public pages (bridge; replaced by apps/web)
 ├── app/(payload)/       # Payload admin panel + API routes
-├── blocks/ collections/ fields/ heros/ hooks/ plugins/ providers/
+├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only
 ├── utilities/           # invalidateWeb.ts, generatePreviewPath.ts, env.ts, getURL.ts
 └── payload.config.ts    # Main Payload CMS configuration
 
 apps/web/src/
 ├── pages/               # [...slug], posts/*, search, sitemaps, 404, api/* endpoints
-├── components/          # Astro ports of the cms frontend (blocks/, heros/, ...)
+├── components/          # Block/hero renderers (blocks/, heros/, ...)
 ├── lib/                 # cms.ts (REST client), richtext.ts, draft.ts, seo.ts, media.ts
 ├── layouts/Layout.astro # Theme init, meta tags, Header/Footer
 └── middleware.ts        # Redirects-collection handling
@@ -94,7 +93,7 @@ the full list. The CMS↔web contract (`WEB_URL`/`CMS_URL`, `PREVIEW_SECRET`,
 
 ## 🛠️ Tech Stack
 
-- **CMS**: Payload CMS 3 + Next.js 16 (App Router), Tailwind CSS v3 + daisyUI v4
+- **CMS**: Payload CMS 3 + Next.js 16 (App Router); admin styling is Payload's own SCSS
 - **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`)
 - **Database**: PostgreSQL 16 via `@payloadcms/db-postgres` (Neon)
 - **Media**: Vercel Blob (`BLOB_READ_WRITE_TOKEN`)
@@ -109,8 +108,8 @@ the full list. The CMS↔web contract (`WEB_URL`/`CMS_URL`, `PREVIEW_SECRET`,
 bun run --filter @athena/cms payload migrate
 bun run --filter @athena/cms payload migrate:status
 
-# Seed demo content (CMS dev server must be running)
-curl http://localhost:3000/next/seed
+# Seed demo content (DELETES existing content first; local databases only)
+bun run --filter @athena/cms seed:standalone
 ```
 
 Access the admin panel at http://localhost:3000/admin to manage content.

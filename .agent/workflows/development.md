@@ -36,7 +36,7 @@ bun run --filter @athena/cms env:check
 
 ```bash
 bun run --filter @athena/cms payload migrate     # run migrations
-curl http://localhost:3000/next/seed             # seed (CMS dev server running)
+bun run --filter @athena/cms seed:standalone     # seed (deletes existing content)
 ```
 
 ## 🔄 Git Workflow

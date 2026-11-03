@@ -7,11 +7,11 @@
 
 Bun-workspaces monorepo:
 
-- **`apps/cms`**: Payload CMS 3 + Next.js 16 (App Router) — admin, REST/GraphQL API, legacy bridge frontend
+- **`apps/cms`**: Payload CMS 3 + Next.js 16 (App Router) — admin + REST/GraphQL API (no public pages)
 - **`apps/web`**: Astro 7 public frontend (Vercel adapter, consumes the CMS REST API)
 - **`packages/shared`**: generated Payload types + cross-app constants
 - **Database**: PostgreSQL (Neon cloud, via `@payloadcms/db-postgres`)
-- **Styling**: Tailwind CSS v3 + daisyUI v4 (cms), Tailwind CSS v4 (web)
+- **Styling**: Tailwind CSS v4 + daisyUI v5 (web); Payload admin SCSS (cms)
 - **Package Manager**: Bun (never `npm` or `pnpm`)
 
 ## 📝 Code Style
@@ -29,7 +29,7 @@ Bun-workspaces monorepo:
 
 - Server Components by default; add `'use client'` only when needed.
 - Use functional components with hooks and proper TypeScript types.
-- Style with Tailwind utilities; merge classes with `cn()` from `@/utilities/ui`.
+- Style the web app with Tailwind utilities; style CMS admin components with SCSS.
 
 ## 🗄️ Database
 

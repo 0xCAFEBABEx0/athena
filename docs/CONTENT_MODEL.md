@@ -222,10 +222,10 @@ Rich-text blocks (Posts `content`):
 | `code` | `CodeBlock` | `language` (`typescript` default, `javascript`, `css`), `code` (required). |
 | `mediaBlock` | `MediaBlock` | as above. |
 
-Each block has a Next.js component in `apps/cms/src/blocks/*/Component.tsx`
-(legacy frontend) and an Astro port in `apps/web/src/components/blocks/` or,
-for rich-text blocks, an HTML converter in `apps/web/src/lib/richtext.ts`.
-Adding a block means touching both, plus `bun run generate:types`.
+Each block's schema lives in `apps/cms/src/blocks/*/config.ts`; it renders in
+`apps/web/src/components/blocks/` or, for rich-text blocks, through an HTML
+converter in `apps/web/src/lib/richtext.ts`. Adding a block means touching
+both apps, plus `bun run generate:types`.
 
 ## 8. Hooks Summary
 
