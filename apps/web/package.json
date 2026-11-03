@@ -20,7 +20,7 @@
     "@payloadcms/richtext-lexical": "3.92.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "astro": "^7.4.2",
+    "astro": "^7.4.4",
     "qs-esm": "^8.0.2"
   },
   "devDependencies": {
