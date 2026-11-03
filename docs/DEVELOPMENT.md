@@ -42,7 +42,8 @@ bun run build:cms               # CMS production build (next build, Turbopack)
 bun run build:web               # Astro production build
 
 # Quality
-bun run lint                    # ESLint (cms) + astro check (web)
+bun run lint                    # Biome (cms) + astro check (web)
+bun run typecheck               # tsc --noEmit (cms)
 bun run generate:types          # regenerate Payload types -> packages/shared
 bun run generate:importmap      # regenerate the admin import map
 ```
@@ -50,7 +51,7 @@ bun run generate:importmap      # regenerate the admin import map
 CMS-only scripts (run via the workspace filter when you need them):
 
 ```bash
-bun run --filter @athena/cms lint:fix      # eslint --fix
+bun run --filter @athena/cms lint:fix      # biome lint --write (safe fixes)
 bun run --filter @athena/cms env:check     # print NODE_ENV / VERCEL_ENV
 bun run --filter @athena/cms payload migrate
 ```

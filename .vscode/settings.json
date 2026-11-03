@@ -3,7 +3,7 @@
   "typescript.suggest.autoImports": true,
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
+    "source.fixAll.biome": "explicit"
   },
   "files.associations": {
     "*.css": "tailwindcss"

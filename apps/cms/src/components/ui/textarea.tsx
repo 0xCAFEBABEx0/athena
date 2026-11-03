@@ -1,5 +1,5 @@
 import { cn } from '@/utilities/ui'
-import * as React from 'react'
+import type * as React from 'react'
 
 const Textarea: React.FC<
   {

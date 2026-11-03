@@ -1,5 +1,4 @@
 import clsx from 'clsx'
-import React from 'react'
 
 interface Props {
   className?: string
@@ -14,7 +13,7 @@ export const Logo = (props: Props) => {
   const priority = priorityFromProps || 'low'
 
   return (
-    /* eslint-disable @next/next/no-img-element */
+    // biome-ignore lint/performance/noImgElement: static remote SVG logo; next/image adds nothing here
     <img
       alt="Payload Logo"
       width={193}

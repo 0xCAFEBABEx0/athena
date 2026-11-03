@@ -54,7 +54,6 @@ updates:
       next-react:
         patterns:
           - next
-          - eslint-config-next
           - react
           - react-dom
           - '@types/react'
@@ -117,7 +116,8 @@ updates:
       - dependency-name: graphql
         update-types:
           - version-update:semver-major
-      # TS 7: typescript-eslint (<6.1) and astro check don't support it yet.
+      # apps/cms is on TS 7 already; apps/web stays on 6 because astro check
+      # doesn't support TS 7 yet (experimental: @astrojs/ts-content-mapper, 7.1+).
       - dependency-name: typescript
         update-types:
           - version-update:semver-major

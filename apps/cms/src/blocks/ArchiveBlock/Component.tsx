@@ -3,7 +3,7 @@ import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
 
 import configPromise from '../../payload.config'
 import { getPayload } from 'payload'
-import React from 'react'
+import type React from 'react'
 import RichText from '@/components/RichText'
 
 import { CollectionArchive } from '@/components/CollectionArchive'

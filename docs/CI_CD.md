@@ -64,18 +64,20 @@ jobs:
   lint:                              # "Lint and Type Check"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6   # node-version: 24.22.1
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7   # node-version: 24.22.1
       - uses: oven-sh/setup-bun@v2    # bun-version: 1.4.4
       - run: bun install --frozen-lockfile
-      - run: bun run lint             # ESLint (cms) + astro check (web)
-      - run: bun run generate:types   # type generation acts as the type check
+      - run: bun run lint             # Biome (cms) + astro check (web)
+      - run: bun run typecheck        # tsc --noEmit (cms, TypeScript 7)
+      - run: bun run generate:types   # regenerate Payload types
 ```
 
-- **`bun run lint`** fans out across workspaces: ESLint in `apps/cms`, `astro
-  check` in `apps/web`.
-- **`bun run generate:types`** regenerates `packages/shared/src/payload-types.ts`;
-  it doubles as the type check (a build error here fails CI).
+- **`bun run lint`** fans out across workspaces: Biome in `apps/cms`, `astro
+  check` in `apps/web` (which also type-checks the web app).
+- **`bun run typecheck`** runs `tsc --noEmit` in `apps/cms`.
+- **`bun run generate:types`** regenerates `packages/shared/src/payload-types.ts`
+  (a config error here fails CI).
 - Deployment jobs (`deploy-preview` / `deploy-production`) remain **commented
   out** — deploys are handled by Vercel's Git integration, so the
   `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` secrets are not required.

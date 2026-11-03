@@ -34,6 +34,9 @@ jobs:
         run: bun run lint
 
       - name: Type check
+        run: bun run typecheck
+
+      - name: Generate Payload types
         run: bun run generate:types
 
   # Deployment jobs commented out until GitHub Secrets are configured

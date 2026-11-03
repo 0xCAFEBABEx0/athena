@@ -24,7 +24,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 
 - **CMS**: Payload CMS 3 + Next.js 16 (App Router), Tailwind CSS v3 + daisyUI v4
 - **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (Linear-inspired light/dark themes in `src/styles/global.css`)
-- **Language**: TypeScript (strict mode)
+- **Language**: TypeScript (strict mode). `apps/cms` is on TypeScript 7 (native `tsc`); `apps/web` stays on 6 until `astro check` supports 7
 - **Runtime**: Node.js 24 LTS (pinned to 24.22.1 via `.nvmrc`; Vercel runs the latest 24.x via `engines.node: "24.x"` in each app)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
 - **Database**: PostgreSQL 16 (`@payloadcms/db-postgres`, Neon)
@@ -39,7 +39,8 @@ bun run dev:web               # Astro dev server (localhost:4321)
 bun run build                 # Build all workspaces
 bun run build:cms             # CMS production build (next build, Turbopack)
 bun run build:web             # Astro production build
-bun run lint                  # ESLint (cms) + astro check (web)
+bun run lint                  # Biome (cms) + astro check (web)
+bun run typecheck             # tsc --noEmit (cms)
 bun run generate:types        # Regenerate Payload types -> packages/shared
 bun run generate:importmap    # Regenerate admin import map
 bun run deploy:preview        # Merge development -> preview and push
@@ -88,7 +89,7 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 - **CMS**: Server Components by default; add `'use client'` only when needed
 - **Dark mode**: Controlled by `data-theme="dark"` attribute, not OS media query (theme stored under the `payload-theme` localStorage key in both apps)
 - **Prefix unused vars** with `_` to suppress lint warnings
-- **ESLint (cms)**: flat config using `eslint-config-next`'s native flat exports (`next lint` is gone in Next 16; scripts call `eslint .`)
+- **Lint (cms)**: Biome (`apps/cms/biome.json`, `react` + `next` domains), not ESLint: typescript-eslint has no TypeScript 7 support. Suppress with `// biome-ignore lint/<group>/<rule>: reason`. Prettier still formats
 
 ## Payload CMS Patterns
 
@@ -202,7 +203,11 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
    `lib/cms.ts` always sets `depth`/`limit` explicitly and authenticates draft fetches
 10. Vercel `git.deploymentEnabled` unspecified keys default to `true`. Keep the
     `"**": false` whitelist or Hobby Preview will build every `cursor/*` branch.
-11. **Never enable Vercel Deployment Protection on athena-cms Production.** It
+11. The root `package.json` pins `typescript@^6` on purpose: hoisted tooling
+    (`astro check` via `@volar/kit`) resolves TypeScript from the repo root and
+    crashes on TS 7. `apps/cms` gets TS 7 nested in its own `node_modules`.
+    Don't remove the root pin until `astro check` supports TS 7.
+12. **Never enable Vercel Deployment Protection on athena-cms Production.** It
     302s `/api/*` to Vercel SSO, and athena-web HTML routes 500. Protect
     Preview only; Payload already gates `/admin`. If Production must stay
     protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches

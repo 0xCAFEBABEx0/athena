@@ -1,12 +1,12 @@
 import Script from 'next/script'
-import React from 'react'
+import type React from 'react'
 
 import { defaultTheme, themeLocalStorageKey } from '../ThemeSelector/types'
 
 export const InitTheme: React.FC = () => {
   return (
-    // eslint-disable-next-line @next/next/no-before-interactive-script-outside-document
     <Script
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: static theme bootstrap script, no user input
       dangerouslySetInnerHTML={{
         __html: `
   (function () {

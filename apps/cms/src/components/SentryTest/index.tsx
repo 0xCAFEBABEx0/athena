@@ -1,7 +1,7 @@
 'use client'
 
 import * as Sentry from "@sentry/nextjs";
-import React from 'react';
+import type React from 'react';
 
 // myUndefinedFunction is intentionally not defined to test Sentry error tracking
 // This will throw a ReferenceError when called
@@ -69,6 +69,7 @@ export const SentryTest: React.FC = () => {
       <h2 className="text-xl font-bold mb-4">Sentry Test Component</h2>
       <div className="space-y-4">
         <button
+          type="button"
           onClick={handleTestError}
           className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
         >
@@ -76,6 +77,7 @@ export const SentryTest: React.FC = () => {
         </button>
         
         <button
+          type="button"
           onClick={handleTestSpan}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
@@ -83,6 +85,7 @@ export const SentryTest: React.FC = () => {
         </button>
         
         <button
+          type="button"
           onClick={handleTestLog}
           className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
         >
@@ -90,6 +93,7 @@ export const SentryTest: React.FC = () => {
         </button>
         
         <button
+          type="button"
           onClick={handleTestAPI}
           className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
         >

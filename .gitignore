@@ -17,3 +17,6 @@ node_modules
 
 # parked pre-monorepo root env files (superseded by apps/*/.env)
 .stale-root-dotenv*
+
+# TypeScript incremental build info
+*.tsbuildinfo

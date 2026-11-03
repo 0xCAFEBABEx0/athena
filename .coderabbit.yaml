@@ -129,7 +129,7 @@ reviews:
       enabled: true
     yamllint:
       enabled: true
-    eslint:
+    biome:
       enabled: true
 
 chat:

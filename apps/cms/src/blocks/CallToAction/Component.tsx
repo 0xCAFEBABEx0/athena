@@ -1,4 +1,4 @@
-import React from 'react'
+import type React from 'react'
 
 import type { CallToActionBlock as CTABlockProps } from '@/payload-types'
 import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'

@@ -9,7 +9,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
   }, [error])
 
   return (
-    <html>
+    <html lang="en">
       <body>
         <div className="container py-28">
           <div className="prose max-w-none">

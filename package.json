@@ -17,6 +17,7 @@
     "build:cms": "bun run --filter @athena/cms build",
     "build:web": "bun run --filter @athena/web build",
     "lint": "bun run --filter '*' lint",
+    "typecheck": "bun run --filter @athena/cms typecheck",
     "generate:types": "bun run --filter @athena/cms generate:types",
     "generate:importmap": "bun run --filter @athena/cms generate:importmap",
     "test": "echo \"Info: No tests specified\" && exit 0",
@@ -37,5 +38,8 @@
     "sharp",
     "esbuild",
     "unrs-resolver"
-  ]
+  ],
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
 }
