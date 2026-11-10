@@ -10,6 +10,9 @@
 #    deployment ($VERCEL_GIT_PREVIOUS_SHA). On Hobby only one build runs at a
 #    time, so skipping the untouched app also stops it from queueing ahead of
 #    the one that changed.
+#
+# Always builds a redeploy of the same commit (the Redeploy button, usually
+# to pick up changed environment variables): there is nothing to compare.
 set -u
 
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = "preview" ] &&
@@ -24,8 +27,14 @@ if [ -z "$previous" ]; then
   exit 1
 fi
 
-# This app, the shared package and the root files every build reads.
-git diff --quiet "$previous" HEAD -- . ../../packages ../../package.json ../../bun.lock ../../.nvmrc
+if [ "$previous" = "${VERCEL_GIT_COMMIT_SHA:-}" ] || [ "$(git rev-parse HEAD 2>/dev/null)" = "$(git rev-parse --verify --quiet "$previous^{commit}" 2>/dev/null)" ]; then
+  echo "Redeploy of ${previous:0:7}; building."
+  exit 1
+fi
+
+# This app, the shared package, the build scripts and the root files every
+# build reads.
+git diff --quiet "$previous" HEAD -- . ../../packages ../../scripts ../../package.json ../../bun.lock ../../.nvmrc
 case $? in
   0)
     echo "No changes for this app since ${previous:0:7}; skipping."

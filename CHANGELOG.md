@@ -47,6 +47,8 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 
 ### Fixed
 
+- Redeploying a Vercel deployment (for example after changing environment
+  variables) builds again instead of being skipped as "no changes".
 - Japanese and Chinese pages: a missing page now shows the 404 in the page's
   language (it fell back to English), and the settings panel, previous and
   next links and the home summary line are translated.

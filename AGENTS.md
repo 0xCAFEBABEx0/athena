@@ -169,9 +169,11 @@ project's Root Directory) to avoid duplicate builds:
   post-release branch sync is redundant. Caveat: if `main` ever gets hotfix
   commits of its own, the staging URL lags until the next real `preview` push.
   It also skips an app when nothing it depends on (its own folder,
-  `packages/`, root `package.json`, `bun.lock`, `.nvmrc`) changed since
-  `$VERCEL_GIT_PREVIOUS_SHA`, so a web-only change does not queue a CMS build
-  on Hobby's single build slot. If the comparison fails, it builds.
+  `packages/`, `scripts/`, root `package.json`, `bun.lock`, `.nvmrc`) changed
+  since `$VERCEL_GIT_PREVIOUS_SHA`, so a web-only change does not queue a CMS
+  build on Hobby's single build slot. If the comparison fails, it builds. A
+  Redeploy of the same commit (e.g. after changing env vars) always builds;
+  before this, it was silently canceled.
 - `apps/web` uses Astro's passthrough image service (no `astro:assets`), which
   keeps sharp out of the server functions (26 MB -> 7 MB each). Switch it back
   before using `<Image>`.
