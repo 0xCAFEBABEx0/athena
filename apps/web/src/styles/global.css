@@ -107,6 +107,18 @@
   }
 }
 
+/* /status → Config → Reduce motion: no page fades or caret blink, even when
+   the OS allows motion. */
+:root[data-motion='reduce']::view-transition-group(*),
+:root[data-motion='reduce']::view-transition-old(*),
+:root[data-motion='reduce']::view-transition-new(*) {
+  animation: none !important;
+}
+
+:root[data-motion='reduce'] .caret {
+  animation: none;
+}
+
 @layer base {
   h1,
   h2,
@@ -348,7 +360,7 @@ html:not([data-theme='dark']) .theme-when-dark {
 
 /* /status panel --------------------------------------------------------- */
 .status-tab {
-  @apply rounded-[0.375rem] px-2 py-0.5 text-[13px];
+  @apply rounded-[0.375rem] px-1.5 py-0.5 text-[13px] sm:px-2;
   color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   cursor: pointer;
 
@@ -379,15 +391,71 @@ html:not([data-theme='dark']) .theme-when-dark {
   }
 }
 
-.status-choice {
-  @apply rounded-[0.375rem] border border-base-300 px-2 py-0.5 text-[12.5px];
+.config-search {
+  @apply mb-3 flex items-center gap-2 rounded-[0.375rem] border border-base-300 px-3 py-2;
   color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+
+  &:focus-within {
+    border-color: var(--color-primary);
+  }
+
+  input {
+    @apply min-w-0 flex-1 bg-transparent text-[13px] outline-none;
+    color: var(--color-base-content);
+
+    &::placeholder {
+      color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+    }
+  }
+}
+
+.config-row {
+  display: grid;
+  /* Narrow: value right after a flexible label. Wide: values line up in a
+     column, like a terminal settings sheet. */
+  grid-template-columns: 1.25rem minmax(0, 1fr) minmax(0, max-content);
+  column-gap: 0.75rem;
+
+  @media (min-width: 40rem) {
+    grid-template-columns: 1.25rem minmax(0, 15rem) minmax(0, 1fr);
+  }
+  width: 100%;
+  padding: 0.2rem 0;
+  text-align: start;
+  line-height: 1.6;
   cursor: pointer;
 
-  &[aria-pressed='true'],
-  &[aria-current='true'] {
-    border-color: var(--color-primary);
+  &:focus-visible {
+    outline: none;
+  }
+
+  .config-cursor {
+    visibility: hidden;
     color: var(--color-primary);
+  }
+
+  .config-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .config-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: color-mix(in oklab, var(--color-base-content) 80%, transparent);
+  }
+
+  &[data-active] .config-cursor {
+    visibility: visible;
+  }
+
+  &[data-active] .config-label,
+  &[data-active] .config-value {
+    color: var(--color-primary);
+  }
+
+  &:hover .config-label {
+    color: var(--color-base-content);
   }
 }
 

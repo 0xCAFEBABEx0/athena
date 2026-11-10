@@ -25,6 +25,18 @@ const tabs = [
   { id: 'keys', label: 'Keys' },
 ] as const
 
+// Config rows: each one is a setting stored in this browser only.
+const langIndex = LOCALES.indexOf(locale)
+const nextLocale = LOCALES[(langIndex + 1) % LOCALES.length] ?? locale
+const settings = [
+  { id: 'view', label: 'View', hint: 'CLI or ADE layout' },
+  { id: 'theme', label: 'Theme', hint: 'light or dark colors' },
+  { id: 'language', label: 'Language', hint: 'English, Japanese, Chinese' },
+  { id: 'motion', label: 'Reduce motion', hint: 'no page fades or blinking cursor' },
+  { id: 'keys', label: 'Keyboard shortcuts', hint: 'single-key shortcuts like / t v s' },
+  { id: 'reset', label: 'Reset to defaults', hint: 'clear the settings above' },
+] as const
+
 const keys: [string, string][] = [
   ['/  ⌘K', 'search'],
   ['j  k', 'move between posts'],
@@ -45,7 +57,7 @@ const keys: [string, string][] = [
     class="status-box modal-box w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-base-300 p-0 font-mono text-[13px] shadow-2xl"
   >
     <div class="flex flex-wrap items-center gap-x-1 gap-y-2 px-5 pb-3 pt-4" role="tablist" aria-label="Status panel">
-      <h2 id="status-title" class="me-3 text-[13px] font-semibold text-primary">❯ /status</h2>
+      <h2 id="status-title" class="me-2 text-[13px] font-semibold text-primary sm:me-3">Settings</h2>
       {
         tabs.map((tab, index) => (
           <button
@@ -103,36 +115,41 @@ const keys: [string, string][] = [
         data-status-panel="config"
         hidden
       >
-        <dl class="status-grid items-center">
-          <dt>View</dt>
-          <dd class="flex gap-1">
-            <button type="button" class="status-choice" data-view-set="cli" data-status-choice="view:cli">CLI</button>
-            <button type="button" class="status-choice" data-view-set="modern" data-status-choice="view:modern">ADE</button>
-          </dd>
-          <dt>Theme</dt>
-          <dd class="flex gap-1">
-            <button type="button" class="status-choice" data-status-choice="theme:light">Light</button>
-            <button type="button" class="status-choice" data-status-choice="theme:dark">Dark</button>
-          </dd>
-          <dt>Language</dt>
-          <dd class="flex gap-1">
-            {
-              LOCALES.map((code) => (
-                <a
-                  class="status-choice no-underline"
-                  href={localizePath(code, current)}
-                  hreflang={code}
-                  lang={code}
-                  title={LOCALE_NAME[code]}
-                  aria-current={code === locale ? 'true' : undefined}
+        <label class="config-search">
+          <span aria-hidden="true">⌕</span>
+          <span class="sr-only">Search settings</span>
+          <input
+            type="search"
+            placeholder="Search settings…"
+            autocomplete="off"
+            spellcheck="false"
+            data-config-search
+          />
+        </label>
+        <ul class="config-list" aria-label="Settings" data-config-list>
+          {
+            settings.map((setting) => (
+              <li data-config-item data-config-label={`${setting.label} ${setting.hint}`.toLowerCase()}>
+                <button
+                  type="button"
+                  class="config-row"
+                  data-config={setting.id}
+                  data-next-href={setting.id === 'language' ? localizePath(nextLocale, current) : undefined}
+                  title={setting.hint}
                 >
-                  {LOCALE_LABEL[code]}
-                </a>
-              ))
-            }
-          </dd>
-        </dl>
-        <p class="mt-4 text-base-content/65">Saved in this browser only.</p>
+                  <span class="config-cursor" aria-hidden="true">❯</span>
+                  <span class="config-label">{setting.label}</span>
+                  <span class="config-value" data-config-value>
+                    {setting.id === 'language' && `${LOCALE_LABEL[locale]} (${LOCALE_NAME[locale]}) `}
+                    {(setting.id === 'language' || setting.id === 'reset') && <span aria-hidden="true">›</span>}
+                  </span>
+                </button>
+              </li>
+            ))
+          }
+        </ul>
+        <p class="mt-3 text-base-content/65" data-config-empty hidden>No settings match.</p>
+        <p class="mt-3 text-base-content/65">Saved in this browser only.</p>
       </section>
 
       <section id="status-panel-keys" role="tabpanel" aria-labelledby="status-tab-keys" data-status-panel="keys" hidden>
@@ -152,8 +169,7 @@ const keys: [string, string][] = [
     </div>
 
     <div class="flex items-center gap-4 border-t border-base-300 px-5 py-2.5 text-xs text-base-content/65">
-      <span>esc to close</span>
-      <span class="hidden sm:inline">← → switch tabs</span>
+      <span class="min-w-0 truncate" data-status-hint>←/→ to switch · Esc to close</span>
       <form method="dialog" class="ms-auto">
         <button class="btn btn-ghost btn-xs font-mono" aria-label="Close status panel">✕</button>
       </form>
@@ -165,15 +181,68 @@ const keys: [string, string][] = [
 </dialog>
 
 <script>
+  type Win = Window & {
+    __openStatus?: () => void
+    __toggleTheme?: () => void
+    __toggleView?: () => void
+  }
+
   const dialog = document.querySelector<HTMLDialogElement>('[data-status-dialog]')
+
+  // Browser-only settings; the attributes are applied before paint in Layout.
+  const store = {
+    get(key: string): string | null {
+      try {
+        return window.localStorage.getItem(key)
+      } catch {
+        return null
+      }
+    },
+    set(key: string, value: string | null) {
+      try {
+        if (value === null) window.localStorage.removeItem(key)
+        else window.localStorage.setItem(key, value)
+      } catch {
+        /* storage blocked: the change lasts for this page only */
+      }
+    },
+  }
 
   if (dialog) {
     const root = document.documentElement
+    const win = window as Win
     const tabs = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-status-tab]'))
     const panels = Array.from(dialog.querySelectorAll<HTMLElement>('[data-status-panel]'))
     const rendered = dialog.querySelector<HTMLTimeElement>('[data-status-rendered]')
     const content = dialog.querySelector<HTMLElement>('[data-status-content]')
+    const hint = dialog.querySelector<HTMLElement>('[data-status-hint]')
+    const search = dialog.querySelector<HTMLInputElement>('[data-config-search]')
+    const items = Array.from(dialog.querySelectorAll<HTMLElement>('[data-config-item]'))
+    const empty = dialog.querySelector<HTMLElement>('[data-config-empty]')
+    const reducedByOS = window.matchMedia('(prefers-reduced-motion: reduce)')
     let counted = false
+
+    const HINTS: Record<string, string> = {
+      status: '←/→ to switch · Esc to close',
+      config: '↑/↓ to select · Enter to change · ←/→ to switch · Esc to close',
+      keys: '←/→ to switch · Esc to close',
+    }
+
+    const currentTab = () =>
+      tabs.find((tab) => tab.getAttribute('aria-selected') === 'true')?.dataset.statusTab ?? 'status'
+
+    const rows = () =>
+      items
+        .filter((item) => !item.hidden)
+        .map((item) => item.querySelector<HTMLButtonElement>('[data-config]'))
+        .filter((row): row is HTMLButtonElement => row !== null)
+
+    const setActive = (row: HTMLElement | undefined, focus = true) => {
+      for (const other of dialog.querySelectorAll('[data-config]')) other.removeAttribute('data-active')
+      if (!row) return
+      row.setAttribute('data-active', '')
+      if (focus) row.focus()
+    }
 
     const showTab = (id: string, focus = false) => {
       for (const tab of tabs) {
@@ -183,6 +252,8 @@ const keys: [string, string][] = [
         if (selected && focus) tab.focus()
       }
       for (const panel of panels) panel.hidden = panel.dataset.statusPanel !== id
+      if (hint) hint.textContent = HINTS[id] ?? HINTS.status ?? ''
+      if (id === 'config') setActive(rows()[0], focus)
     }
 
     const ago = (iso: string): string => {
@@ -196,22 +267,79 @@ const keys: [string, string][] = [
       return `${Math.round(hours / 24)} days ago · from cache`
     }
 
-    // Live values: they change with the toggles while the panel is open.
+    const motionReduced = () => {
+      const stored = root.getAttribute('data-motion')
+      return stored ? stored === 'reduce' : reducedByOS.matches
+    }
+
+    // Values change while the panel is open, so read them from the page.
     const refresh = () => {
-      const view = root.getAttribute('data-view') === 'modern' ? 'modern' : 'cli'
-      const theme = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
-      const viewLabel = view === 'modern' ? 'ADE' : 'CLI'
-      const themeLabel = theme === 'dark' ? 'Dark' : 'Light'
+      const view = root.getAttribute('data-view') === 'modern' ? 'ADE' : 'CLI'
+      const theme = root.getAttribute('data-theme') === 'dark' ? 'Dark mode' : 'Light mode'
+      const values: Record<string, string> = {
+        view,
+        theme,
+        motion: String(motionReduced()),
+        keys: String(root.getAttribute('data-keys') !== 'off'),
+      }
+      for (const row of dialog.querySelectorAll<HTMLElement>('[data-config]')) {
+        const value = values[row.dataset.config ?? '']
+        const cell = row.querySelector('[data-config-value]')
+        if (value !== undefined && cell) cell.textContent = value
+        const label = row.querySelector('.config-label')?.textContent ?? ''
+        const shown = cell?.textContent?.replace('›', '').trim() ?? ''
+        row.setAttribute('aria-label', shown ? `${label}: ${shown}. Press Enter to change.` : label)
+      }
       const viewCell = dialog.querySelector('[data-status-view]')
       const themeCell = dialog.querySelector('[data-status-theme]')
-      if (viewCell) viewCell.textContent = viewLabel
-      if (themeCell) themeCell.textContent = themeLabel
-      for (const choice of dialog.querySelectorAll<HTMLElement>('[data-status-choice]')) {
-        const [key, value] = (choice.dataset.statusChoice ?? '').split(':')
-        const on = (key === 'view' && value === view) || (key === 'theme' && value === theme)
-        choice.setAttribute('aria-pressed', String(on))
-      }
+      if (viewCell) viewCell.textContent = view
+      if (themeCell) themeCell.textContent = theme.replace(' mode', '')
       if (rendered) rendered.textContent = ago(rendered.dateTime)
+    }
+
+    const change = (row: HTMLElement) => {
+      switch (row.dataset.config) {
+        case 'view':
+          win.__toggleView?.()
+          break
+        case 'theme':
+          win.__toggleTheme?.()
+          break
+        case 'language':
+          if (row.dataset.nextHref) window.location.href = row.dataset.nextHref
+          return
+        case 'motion': {
+          const next = motionReduced() ? 'full' : 'reduce'
+          root.setAttribute('data-motion', next)
+          store.set('athena-motion', next)
+          break
+        }
+        case 'keys': {
+          const off = root.getAttribute('data-keys') !== 'off'
+          if (off) root.setAttribute('data-keys', 'off')
+          else root.removeAttribute('data-keys')
+          store.set('athena-keys', off ? 'off' : null)
+          break
+        }
+        case 'reset': {
+          for (const key of ['athena-view', 'athena-motion', 'athena-keys', 'payload-theme']) store.set(key, null)
+          window.location.reload()
+          return
+        }
+      }
+      refresh()
+    }
+
+    const filter = () => {
+      const query = (search?.value ?? '').trim().toLowerCase()
+      let shown = 0
+      for (const item of items) {
+        const match = !query || (item.dataset.configLabel ?? '').includes(query)
+        item.hidden = !match
+        if (match) shown += 1
+      }
+      if (empty) empty.hidden = shown > 0
+      setActive(rows()[0], false)
     }
 
     // Post and page counts come from the popup search index (cached at Vercel).
@@ -232,6 +360,8 @@ const keys: [string, string][] = [
 
     const open = () => {
       if (dialog.open) return
+      if (search) search.value = ''
+      filter()
       showTab('status')
       refresh()
       dialog.showModal()
@@ -243,9 +373,46 @@ const keys: [string, string][] = [
       tab.addEventListener('click', () => showTab(tab.dataset.statusTab ?? 'status'))
     }
 
+    search?.addEventListener('input', filter)
+
     dialog.addEventListener('keydown', (event) => {
+      const target = event.target as HTMLElement | null
+      const inSearch = target === search
+      const tab = currentTab()
+
+      if (tab === 'config' && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        const list = rows()
+        const active = list.findIndex((row) => row.hasAttribute('data-active'))
+        event.preventDefault()
+        if (inSearch) {
+          if (event.key === 'ArrowDown') setActive(list[Math.max(active, 0)])
+          return
+        }
+        if (event.key === 'ArrowUp' && active <= 0) {
+          search?.focus()
+          return
+        }
+        const next = event.key === 'ArrowDown' ? Math.min(active + 1, list.length - 1) : active - 1
+        setActive(list[next])
+        return
+      }
+
+      if (tab === 'config' && inSearch && event.key === 'Enter') {
+        event.preventDefault()
+        const row = rows().find((r) => r.hasAttribute('data-active'))
+        if (row) change(row)
+        return
+      }
+
+      // Typing on a row jumps to the search box.
+      if (tab === 'config' && !inSearch && search && event.key.length === 1 && event.key !== ' ' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        search.focus()
+        return
+      }
+
+      if (inSearch) return
       if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
-      const index = tabs.findIndex((tab) => tab.getAttribute('aria-selected') === 'true')
+      const index = tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true')
       const step = event.key === 'ArrowRight' ? 1 : -1
       const next = tabs[(index + step + tabs.length) % tabs.length]
       if (!next) return
@@ -254,16 +421,15 @@ const keys: [string, string][] = [
     })
 
     dialog.addEventListener('click', (event) => {
-      const choice = (event.target as Element | null)?.closest<HTMLElement>('[data-status-choice]')
-      if (!choice) return
-      const [key, value] = (choice.dataset.statusChoice ?? '').split(':')
-      if (key === 'theme') {
-        const now = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
-        const toggle = (window as Window & { __toggleTheme?: () => void }).__toggleTheme
-        if (value !== now) toggle?.()
-      }
-      // View buttons also carry data-view-set, which ViewToggle handles.
-      requestAnimationFrame(refresh)
+      const row = (event.target as Element | null)?.closest<HTMLElement>('[data-config]')
+      if (!row) return
+      setActive(row, false)
+      change(row)
+    })
+
+    dialog.addEventListener('focusin', (event) => {
+      const row = (event.target as Element | null)?.closest<HTMLElement>('[data-config]')
+      if (row) setActive(row, false)
     })
 
     document.addEventListener('click', (event) => {
@@ -273,6 +439,6 @@ const keys: [string, string][] = [
     })
 
     // The `s` shortcut (Layout) and `/status` in the popup search call this.
-    ;(window as Window & { __openStatus?: () => void }).__openStatus = open
+    win.__openStatus = open
   }
 </script>

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --bun astro dev",
-    "build": "bun --bun astro build",
+    "build": "bun --bun astro build && bun scripts/pin-bun-runtime.mjs",
     "preview": "bun --bun astro preview",
     "check": "astro check",
     "lint": "astro check",

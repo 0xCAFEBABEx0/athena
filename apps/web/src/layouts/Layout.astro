@@ -130,6 +130,14 @@ if (draft) {
           if (view === 'cli' || view === 'modern') {
             document.documentElement.setAttribute('data-view', view)
           }
+          // /status → Config: Reduce motion and Keyboard shortcuts.
+          var motion = window.localStorage.getItem('athena-motion')
+          if (motion === 'reduce' || motion === 'full') {
+            document.documentElement.setAttribute('data-motion', motion)
+          }
+          if (window.localStorage.getItem('athena-keys') === 'off') {
+            document.documentElement.setAttribute('data-keys', 'off')
+          }
         } catch (_err) {
           /* storage blocked: keep the default */
         }
@@ -167,6 +175,8 @@ if (draft) {
       ;(function () {
         document.addEventListener('keydown', function (event) {
           if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return
+          // Turned off in /status → Config (⌘K still opens search).
+          if (document.documentElement.getAttribute('data-keys') === 'off') return
           var target = event.target
           var tag = target && target.tagName
           if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable)) {

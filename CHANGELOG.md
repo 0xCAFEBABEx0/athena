@@ -16,8 +16,10 @@ First versioned release: the portfolio and blog redesign for whoa.me.
   EN / JP / ZH switch.
 - Popup search (`/` or `⌘K`) that searches posts and pages in the browser from
   a cached index, plus `/status` as a command.
-- Site version next to the site name, and a `/status` panel (click the
-  version or press `s`) with build, cache and preference details.
+- Site version next to the site name, and a settings panel (click the
+  version, press `s`, or run `/status`) with build and cache details and a
+  searchable Config list, including Reduce motion and an option to turn off
+  single-key shortcuts.
 - Site name, intro, links, projects and the default view are editable in the
   CMS (Site global).
 - A prompt-style favicon.
