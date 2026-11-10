@@ -9,6 +9,7 @@ import { linkHref, type CMSLinkData } from '@/lib/links'
 import { SHORT_VERSION } from '@/lib/build'
 import { getHeaderNav, getRecentPosts } from '@/lib/nav'
 import type { SiteData } from '@/lib/site'
+import { getWork } from '@/lib/work'
 
 type Props = {
   site: SiteData
@@ -19,17 +20,21 @@ const locale = localeOf(Astro)
 const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
 
-const [navLinks, recent] = await Promise.all([
+const [navLinks, recent, work] = await Promise.all([
   getHeaderNav(Astro.request, locale),
   getRecentPosts(Astro.request, locale),
+  getWork(Astro.request, locale),
 ])
+// Threads in the sidebar: what is in progress first, like an agent app.
+const sideWork = work.filter((item) => item.pinned || item.status === 'working').slice(0, 5)
 const links: CMSLinkData[] =
   navLinks.length > 0
     ? navLinks
     : [
         { type: 'custom', url: '/', label: t.home },
         { type: 'custom', url: '/posts', label: t.posts },
-      ]
+        { type: 'custom', url: '/work', label: t.work },
+        ]
 
 const current = splitLocale(Astro.originPathname).path
 const isCurrent = (href: string | null): boolean => {
@@ -89,6 +94,34 @@ const authorInitial = (site.authorName.match(/[\p{L}\p{N}]/u)?.[0] ?? initial).t
       <li><a href={lp('/rss.xml')}>{t.rss}</a></li>
     </ul>
   </nav>
+
+  {
+    sideWork.length > 0 && (
+      <section class="mt-5 min-h-0" aria-labelledby="sidebar-work">
+        <h2 id="sidebar-work" class="flex items-baseline justify-between px-3 pb-1.5 text-xs font-medium text-base-content/65">
+          {t.workTitle}
+          <a class="font-normal no-underline hover:text-base-content" href={lp('/work')}>{t.workAll} →</a>
+        </h2>
+        <ul class="menu w-full p-0 text-[13.5px]">
+          {sideWork.map((item) => {
+            const href = lp(`/work/${item.slug}`)
+            return (
+              <li>
+                <a
+                  href={href}
+                  class:list={['sidebar-work-link', { 'menu-active': current === `/work/${item.slug}` }]}
+                  title={item.description || item.title}
+                >
+                  <span class:list={['work-icon', `work-icon-${item.status}`]} aria-hidden="true" />
+                  <span class="min-w-0 flex-1 truncate">{item.title}</span>
+                </a>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+    )
+  }
 
   {
     recent.length > 0 && (

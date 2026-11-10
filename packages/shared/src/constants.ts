@@ -6,6 +6,7 @@
 export const COLLECTION_SLUGS = {
   pages: 'pages',
   posts: 'posts',
+  projects: 'projects',
   media: 'media',
   categories: 'categories',
   search: 'search',
@@ -32,6 +33,7 @@ export const DRAFT_COOKIE = 'athena-draft'
 export const CACHE_TAGS = {
   pages: 'pages',
   posts: 'posts',
+  projects: 'projects',
   site: 'global_site',
   header: 'global_header',
   footer: 'global_footer',

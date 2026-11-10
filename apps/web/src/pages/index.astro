@@ -8,6 +8,8 @@ import { getPosts } from '@/lib/cms'
 import { formatDate } from '@/lib/format'
 import { routeMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
+import WorkList from '@/components/work/WorkList.astro'
+import { getWork } from '@/lib/work'
 import type { Post } from '@athena/shared/payload-types'
 
 const RECENT = 8
@@ -26,6 +28,13 @@ try {
 } catch (error) {
   console.error('[home] failed to load posts', error)
 }
+
+const work = await getWork(Astro.request, locale)
+const pinnedWork = (
+  work.some((item) => item.pinned)
+    ? work.filter((item) => item.pinned).sort((a, b) => a.order - b.order)
+    : work
+).slice(0, 4)
 
 const updated = formatDate(posts[0]?.publishedAt)
 const more = Math.max(0, totalPosts - posts.length)
@@ -92,7 +101,17 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
     </section>
 
     {
-      site.projects.length > 0 && (
+      pinnedWork.length > 0 ? (
+        <section class="mt-9" aria-labelledby="projects">
+          <Prompt command="ls ~/work --pinned" question={t.askWork} heading={t.projects} count={work.length} id="projects" />
+          <WorkList class="mt-1.5" items={pinnedWork} />
+          <p class="list-more mt-2.5 pl-5 font-mono text-[13px] text-base-content/65">
+            {work.length > pinnedWork.length && <span>{t.more(work.length - pinnedWork.length)} · </span>}
+            <a class="link-term" href={lp('/work')}>{t.workAll}</a>
+          </p>
+        </section>
+      ) : (
+        site.projects.length > 0 && (
         <section class="mt-9" aria-labelledby="projects">
           <Prompt command="ls projects" question={t.askProjects} heading={t.projects} count={site.projects.length} id="projects" />
           <ul class="project-list mt-1.5 list-none pl-5 leading-relaxed">
@@ -113,7 +132,7 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
             ))}
           </ul>
         </section>
-      )
+      ))
     }
 
     <SearchPrompt class="mt-11" />

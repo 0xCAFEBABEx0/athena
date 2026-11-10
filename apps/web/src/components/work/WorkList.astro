@@ -1,0 +1,231 @@
+---
+/**
+ * Work threads (GitHub repositories), drawn for both views from one HTML:
+ *
+ *   CLI  a session picker: title, search box, group labels, two-line rows
+ *          ❯ athena  This site. Payload CMS + Astro…
+ *            11 minutes ago · TypeScript · 153 commits
+ *        and a key hint line (↑/↓, Enter, 1–9, /).
+ *   ADE  a thread list: "Working · 3 ⌄" group headings, a status icon
+ *        (spinning ring / dashed circle / check), the name, "— summary",
+ *        an optional pill and a short time on the right. No card borders.
+ */
+import RelativeTimes from '@/components/work/RelativeTimes.astro'
+import { dict, localeOf, localizePath } from '@/lib/i18n'
+import { formatDate } from '@/lib/format'
+import { displayHost, type WorkItem, type WorkStatus } from '@/lib/work'
+
+type Props = {
+  items: WorkItem[]
+  /** The /work page: group by status, search box, keyboard hints. */
+  picker?: boolean
+  class?: string
+}
+
+const { items, picker = false, class: className } = Astro.props
+const locale = localeOf(Astro)
+const t = dict(locale)
+
+const STATUSES: WorkStatus[] = ['working', 'idle', 'done']
+const groups = picker
+  ? STATUSES.map((status) => ({ status, items: items.filter((item) => item.status === status) })).filter(
+      (group) => group.items.length > 0,
+    )
+  : [{ status: null, items }]
+const searchText = (item: WorkItem) =>
+  [item.title, item.description, item.language, ...item.topics].filter(Boolean).join(' ').toLowerCase()
+---
+
+<div class:list={['work-list', { 'work-picker': picker }, className]} data-work-list={picker ? 'picker' : 'plain'}>
+  {
+    picker && (
+      <div class="cli-only work-picker-head">
+        <h1 class="work-picker-title">{t.workPickerTitle}</h1>
+        <label class="work-filter">
+          <span class="text-base-content/65" aria-hidden="true">⌕</span>
+          <span class="sr-only">{t.workFilter}</span>
+          <input type="search" placeholder={t.workFilter} autocomplete="off" spellcheck="false" data-work-filter />
+        </label>
+      </div>
+    )
+  }
+  {
+    groups.map((group) => {
+      const rows = (
+        <ul class="work-rows" role="list">
+          {group.items.map((item) => (
+            <li data-work-item data-search={searchText(item)}>
+              <a class="work-row" href={localizePath(locale, `/work/${item.slug}`)} data-post-row>
+                <span class="post-row-marker" aria-hidden="true">
+                  ❯
+                </span>
+                <span class:list={['work-icon', `work-icon-${item.status}`]} aria-hidden="true" />
+                <span class="sr-only">{t.workStatus[item.status]}:</span>
+                <span class="work-main">
+                  <span class="work-line">
+                    <span class="work-name">{item.title}</span>
+                    {item.description && (
+                      <span class="work-desc">
+                        <span class="modern-only" aria-hidden="true">
+                          —{' '}
+                        </span>
+                        {item.description}
+                      </span>
+                    )}
+                    {item.release && <span class="work-pill modern-only">{item.release.tag}</span>}
+                  </span>
+                  <span class="work-meta cli-only">
+                    {item.pushedAt && (
+                      <time datetime={item.pushedAt} data-relative>
+                        {formatDate(item.pushedAt)}
+                      </time>
+                    )}
+                    {[
+                      item.language,
+                      item.commitCount ? t.workCommits(item.commitCount) : null,
+                      item.release?.tag,
+                      item.liveUrl ? displayHost(item.liveUrl) : null,
+                    ]
+                      .filter(Boolean)
+                      .map((part) => ` · ${part}`)
+                      .join('')}
+                  </span>
+                </span>
+                {item.pushedAt && (
+                  <time class="work-time modern-only" datetime={item.pushedAt} data-relative="compact">
+                    {formatDate(item.pushedAt)}
+                  </time>
+                )}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+      return group.status ? (
+        <details class="work-group" open={group.status !== 'done'} data-work-group>
+          <summary class="work-group-heading">
+            <span class="work-group-label">{t.workStatus[group.status]}</span>
+            <span class="work-group-count">{group.items.length}</span>
+            <span class="work-group-chevron" aria-hidden="true" />
+          </summary>
+          {rows}
+        </details>
+      ) : (
+        rows
+      )
+    })
+  }
+  {
+    picker && (
+      <>
+        <p class="work-nomatch cli-only" hidden data-work-nomatch>
+          {t.workNoMatch}
+        </p>
+        <p class="work-hints cli-only">{t.workHints}</p>
+      </>
+    )
+  }
+</div>
+<RelativeTimes />
+
+<script>
+  // The /work picker: type to filter, ↑/↓ (and j/k) to move, Enter to open,
+  // 1–9 to open that row, "/" to jump to the search box (CLI view only; in
+  // the ADE view "/" keeps opening the site search).
+  const list = document.querySelector<HTMLElement>('[data-work-list="picker"]')
+  const filter = list?.querySelector<HTMLInputElement>('[data-work-filter]')
+
+  if (list && filter) {
+    const items = Array.from(list.querySelectorAll<HTMLElement>('[data-work-item]'))
+    const groups = Array.from(list.querySelectorAll<HTMLDetailsElement>('[data-work-group]'))
+    const noMatch = list.querySelector<HTMLElement>('[data-work-nomatch]')
+    const isCli = () => document.documentElement.dataset.view !== 'modern'
+    const keysOff = () => document.documentElement.dataset.keys === 'off'
+    const visibleRows = () =>
+      items
+        .filter((item) => !item.hidden && item.closest('details')?.open !== false)
+        .map((item) => item.querySelector<HTMLAnchorElement>('a'))
+        .filter((row): row is HTMLAnchorElement => Boolean(row))
+
+    const select = (row: HTMLAnchorElement | undefined) => {
+      list.querySelectorAll('[data-selected]').forEach((el) => el.removeAttribute('data-selected'))
+      if (row) row.setAttribute('data-selected', '')
+    }
+    select(visibleRows()[0])
+    list.addEventListener('focusin', (event) => {
+      const row = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-post-row]')
+      if (row) select(row)
+    })
+
+    filter.addEventListener('input', () => {
+      const query = filter.value.trim().toLowerCase()
+      let shown = 0
+      for (const item of items) {
+        item.hidden = Boolean(query) && !(item.dataset.search ?? '').includes(query)
+        if (!item.hidden) shown += 1
+      }
+      for (const group of groups) {
+        const any = Array.from(group.querySelectorAll<HTMLElement>('[data-work-item]')).some((i) => !i.hidden)
+        group.hidden = !any
+        if (query && any) group.open = true
+      }
+      if (noMatch) noMatch.hidden = shown > 0
+      select(visibleRows()[0])
+    })
+
+    window.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.metaKey || event.ctrlKey || event.altKey || keysOff()) return
+        const target = event.target as HTMLElement | null
+        const inFilter = target === filter
+
+        if (inFilter) {
+          if (event.key === 'Escape') {
+            filter.value = ''
+            filter.dispatchEvent(new Event('input'))
+            filter.blur()
+            event.stopPropagation()
+          } else if (event.key === 'ArrowDown' || event.key === 'Enter') {
+            const row = list.querySelector<HTMLAnchorElement>('[data-selected]') ?? visibleRows()[0]
+            if (!row) return
+            event.preventDefault()
+            event.stopPropagation()
+            if (event.key === 'Enter') row.click()
+            else row.focus()
+          }
+          return
+        }
+        if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return
+
+        if (event.key === '/' && isCli()) {
+          event.preventDefault()
+          event.stopPropagation()
+          filter.focus()
+          return
+        }
+        const rows = visibleRows()
+        if (/^[1-9]$/.test(event.key)) {
+          const row = rows[Number(event.key) - 1]
+          if (row) {
+            event.preventDefault()
+            event.stopPropagation()
+            row.click()
+          }
+          return
+        }
+        if (['ArrowDown', 'ArrowUp', 'j', 'k'].includes(event.key) && rows.length) {
+          const current = rows.findIndex((row) => row.hasAttribute('data-selected'))
+          const down = event.key === 'ArrowDown' || event.key === 'j'
+          const from = rows.indexOf(document.activeElement as HTMLAnchorElement)
+          const base = from >= 0 ? from : current
+          const next = base < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, base + (down ? 1 : -1)))
+          event.preventDefault()
+          event.stopPropagation()
+          rows[next]?.focus()
+        }
+      },
+      true,
+    )
+  }
+</script>

@@ -189,7 +189,9 @@ if (draft) {
             if (window.__openSearch) window.__openSearch()
             else window.location.href = document.documentElement.dataset.searchPath || '/search'
           } else if (event.key === 'j' || event.key === 'k') {
-            var rows = Array.prototype.slice.call(document.querySelectorAll('[data-post-row]'))
+            var rows = Array.prototype.slice.call(document.querySelectorAll('[data-post-row]')).filter(function (row) {
+              return row.getClientRects().length > 0
+            })
             if (rows.length === 0) return
             var index = rows.indexOf(document.activeElement)
             var next = event.key === 'j' ? index + 1 : index - 1

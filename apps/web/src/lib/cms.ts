@@ -381,3 +381,17 @@ export const getAllSlugs = async (
   )
   return result.docs
 }
+
+/**
+ * Portfolio entries (`projects` collection): editorial fields from the admin
+ * plus a `github` snapshot written by the CMS sync job. The web app never
+ * calls GitHub itself.
+ */
+export const getProjectDocs = async <T>(opts: FetchOptions = {}): Promise<T[]> => {
+  const result = await cmsFetch<PaginatedDocs<T>>(
+    '/projects',
+    { depth: 0, limit: 100, sort: 'order', where: { hidden: { not_equals: true } } },
+    opts,
+  )
+  return result.docs
+}

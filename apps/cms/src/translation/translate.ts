@@ -4,7 +4,7 @@ import { DEFAULT_LOCALE } from '@athena/shared/constants'
 import { TARGET_LANGUAGES, type TargetLocale, TranslationError, translateSegments } from './claude'
 import { SegmentCollector, stripRowIds } from './segments'
 
-export type Translatable = 'posts' | 'pages'
+export type Translatable = 'posts' | 'pages' | 'projects'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -17,6 +17,12 @@ const clone = <T>(value: T): T => structuredClone(value)
  */
 function prepare(collection: Translatable, source: Record<string, unknown>) {
   const collector = new SegmentCollector()
+  if (collection === 'projects') {
+    // Plain-text fields only; the GitHub snapshot is not localized.
+    const fields = { description: source.description, brief: source.brief, notes: source.notes }
+    for (const name of Object.keys(fields)) collector.addField(fields, name)
+    return { collector, data: fields as Record<string, unknown> }
+  }
   const data: Record<string, unknown> = { title: source.title }
   collector.addField(data, 'title')
 
@@ -70,7 +76,8 @@ export async function translateDocument({
     id,
     locale: DEFAULT_LOCALE,
     fallbackLocale: false,
-    draft: true,
+    // Projects have no drafts: the translation is saved directly.
+    draft: collection !== 'projects',
     depth: 0,
     overrideAccess: true,
   })) as unknown as Record<string, unknown>
@@ -87,7 +94,14 @@ export async function translateDocument({
     }),
   )
   for (const { locale, data } of results) {
-    await payload.update({ collection, id, locale, data, draft: true, overrideAccess: true })
+    await payload.update({
+      collection,
+      id,
+      locale,
+      data,
+      draft: collection !== 'projects',
+      overrideAccess: true,
+    })
   }
   return {
     seconds: Math.round((Date.now() - started) / 1000),
@@ -97,7 +111,7 @@ export async function translateDocument({
   }
 }
 
-export const TRANSLATABLE: readonly Translatable[] = ['posts', 'pages']
+export const TRANSLATABLE: readonly Translatable[] = ['posts', 'pages', 'projects']
 export const TARGET_LOCALES = Object.keys(TARGET_LANGUAGES) as TargetLocale[]
 export { TranslationError }
 

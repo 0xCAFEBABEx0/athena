@@ -60,6 +60,7 @@ Defined in `apps/cms/src/access/`:
 |---|---|---|---|---|
 | pages, posts | authenticated | authenticatedOrPublished | authenticated | authenticated |
 | media, categories | authenticated | anyone | authenticated | authenticated |
+| projects | authenticated | logged-in users: all; visitors: entries without `hidden` | authenticated | authenticated |
 | users | authenticated | authenticated | authenticated | authenticated (also `admin`) |
 | site, header, footer | n/a | anyone | (Payload default: authenticated) | n/a |
 
@@ -140,6 +141,30 @@ in Vercel Blob. Renditions (also listed in `IMAGE_SIZES`):
 Auth collection with `useAPIKey: true` and a single custom field `name`.
 Timestamps on. Create or rotate the web service account with
 `apps/cms/src/scripts/create-web-service-account.ts`.
+
+### 3.5a Work (`projects`)
+
+Repositories shown on the public site at `/work` (and pinned ones on the home
+page), one entry per public GitHub repository. Nothing is imported
+automatically: only repositories added here appear, and **Hidden** takes one
+off the site without deleting it (visitors' reads filter it out).
+
+| Field | Notes |
+|---|---|
+| `repo` | Required, unique, `owner/name` (a pasted `https://github.com/` prefix is stripped). |
+| `title`, `liveUrl` | Optional; default to the repository name and homepage. |
+| `description`, `brief`, `notes` | Localized. One-line summary (filled from GitHub on first save), what the author set out to build (shown as the user's message of the thread), and the write-up (shown as the reply). The Translate button fills `ja`/`zh`. |
+| `status` | `auto` (default), `working`, `idle`, `done`. Auto: pushed in the last 30 days = working, archived = done, else idle. |
+| `order`, `pinned`, `hidden` | Home page selection and order; `hidden` keeps the entry off the site. |
+| `slug` | Read-only, from the repository name: `/work/<slug>`. |
+| `github`, `syncedAt`, `syncError` | Read-only snapshot from GitHub (languages, topics, stars, latest release, last 5 commits, commit count, activity) and sync state. |
+
+The snapshot is fetched on save when the entry is new or its repository
+changed, and refreshed by the `syncGitHub` job every 6 hours
+(`apps/cms/src/github/sync.ts`, one GraphQL request for all entries; needs
+`GITHUB_TOKEN`). A document is only written, and the web cache only
+invalidated, when its snapshot changed. Private or missing repositories get a
+`syncError` and stay off the site. The web app never calls GitHub.
 
 ### 3.6 Plugin collections
 
@@ -263,6 +288,8 @@ both apps, plus `bun run generate:types`.
 | `populateAuthors` | Posts `afterRead` | Fills `populatedAuthors` with `{ id, name }`. |
 | `revalidatePage` / `revalidateDelete` | Pages | Invalidates `/` or `/{slug}` (old path too on unpublish) with tags `pages`, `sitemap`. |
 | `revalidatePost` / `revalidateDelete` | Posts | Invalidates `/posts/{slug}` and `/posts` with tags `posts`, `sitemap`. |
+| `fillFromGitHub` | Projects `beforeChange` | Normalizes `repo`, sets `slug`, fetches the GitHub snapshot for new or re-pointed entries. |
+| `revalidateProject` / delete | Projects | Invalidates `/`, `/work`, `/work/{slug}` (old slug too) with tag `projects`. |
 | `revalidateSite` | Global | Paths `/`, `/posts`; tag `global_site`. |
 | `revalidateHeader` / `revalidateFooter` | Globals | Tag `global_header` / `global_footer`. |
 | `revalidateRedirects` | Redirects | Tag `redirects`. |

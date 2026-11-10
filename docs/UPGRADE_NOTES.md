@@ -2,6 +2,38 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## `/work`: GitHub repositories as threads — 2026-11-10
+
+**CMS**
+
+- New `projects` collection (admin label **Work**): one entry per public
+  repository, with a localized summary, brief and write-up, a status override,
+  Pinned and Hidden. The Translate button works on it too.
+- New scheduled task `syncGitHub` (every 6 hours, run by the existing hourly
+  jobs schedule) fetches all entries in one GitHub GraphQL request and writes
+  only the changed ones. Needs **`GITHUB_TOKEN`** on athena-cms: a
+  fine-grained token with public-repository read access only.
+
+**Web**
+
+- `/work` lists the entries by status (Working / Idle / Done): a session
+  picker in the CLI view (filter, ↑/↓, Enter, 1–9, `/`), a thread list in the
+  ADE view. `/work/<slug>` shows one repository as a thread: brief, write-up,
+  latest release, recent commits, details. Pinned entries replace the home
+  page's project list (the Site global's projects remain the fallback).
+- Relative times ("32m", "2 years ago") are written in the browser, so cached
+  pages never go stale.
+
+**Database (manual, push is off)**
+
+Run [`docs/sql/2026-11-10-work-projects.sql`](./sql/2026-11-10-work-projects.sql)
+after `2026-11-10-whoa-i18n.sql`, on the preview Neon branch and then
+production, **before** the CMS deploy. It adds the `projects` tables, the
+`syncGitHub` job enum value and Payload's job scheduling table/column; every
+statement is idempotent. Verified locally: applying it twice to a database
+built by the previous code gives the same schema as a fresh push of the new
+config (0 differences).
+
 ## whoa.me redesign, `site` global and en/ja/zh content — 2026-11-10
 
 **CMS**

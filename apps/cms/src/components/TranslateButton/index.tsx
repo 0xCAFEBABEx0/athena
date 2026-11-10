@@ -54,7 +54,9 @@ export const TranslateButton: React.FC = () => {
       }
       setState('done')
       setMessage(
-        `Saved 日本語 and 中文 drafts in ${body.seconds}s. Switch the locale at the top to review, then publish.`,
+        collectionSlug === 'projects'
+          ? `Saved 日本語 and 中文 in ${body.seconds}s. Switch the locale at the top to review.`
+          : `Saved 日本語 and 中文 drafts in ${body.seconds}s. Switch the locale at the top to review, then publish.`,
       )
     } catch {
       setState('error')

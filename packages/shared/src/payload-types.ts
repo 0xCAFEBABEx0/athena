@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     pages: Page;
     posts: Post;
+    projects: Project;
     media: Media;
     categories: Category;
     users: User;
@@ -86,6 +87,7 @@ export interface Config {
   collectionsSelect: {
     pages: PagesSelect<false> | PagesSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    projects: ProjectsSelect<false> | ProjectsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
@@ -107,11 +109,13 @@ export interface Config {
     site: Site;
     header: Header;
     footer: Footer;
+    'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
     site: SiteSelect<false> | SiteSelect<true>;
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
+    'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: 'en' | 'ja' | 'zh';
   widgets: {
@@ -120,6 +124,7 @@ export interface Config {
   user: User;
   jobs: {
     tasks: {
+      syncGitHub: TaskSyncGitHub;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -282,7 +287,6 @@ export interface Media {
     };
     [k: string]: unknown;
   } | null;
-  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -739,6 +743,78 @@ export interface Form {
   createdAt: string;
 }
 /**
+ * Repositories shown at /work. Only entries added here appear; tick Hidden to take one off the site.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "projects".
+ */
+export interface Project {
+  id: number;
+  /**
+   * GitHub repository as owner/name, e.g. 0xCAFEBABEx0/athena. Public repositories only.
+   */
+  repo: string;
+  /**
+   * Display name. Defaults to the repository name.
+   */
+  title?: string | null;
+  /**
+   * Live site. Defaults to the repository homepage.
+   */
+  liveUrl?: string | null;
+  /**
+   * One line for the list. Filled from GitHub on first save; edit freely.
+   */
+  description?: string | null;
+  /**
+   * What you set out to build, in your words. Shown as your message at the top of the thread.
+   */
+  brief?: string | null;
+  /**
+   * A short write-up of what it does and how. Shown as the reply.
+   */
+  notes?: string | null;
+  /**
+   * Auto: pushed in the last 30 days = Working, archived = Done, else Idle.
+   */
+  status: 'auto' | 'working' | 'idle' | 'done';
+  /**
+   * Lower comes first among the pinned entries.
+   */
+  order?: number | null;
+  /**
+   * Show on the home page.
+   */
+  pinned?: boolean | null;
+  /**
+   * Keep the entry but take it off the site.
+   */
+  hidden?: boolean | null;
+  /**
+   * URL: /work/<slug>, from the repository name.
+   */
+  slug?: string | null;
+  /**
+   * Last time GitHub data changed. Refreshed every 6 hours.
+   */
+  syncedAt?: string | null;
+  syncError?: string | null;
+  /**
+   * Snapshot from GitHub (read-only).
+   */
+  github?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
@@ -881,7 +957,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'schedulePublish';
+        taskSlug: 'inline' | 'syncGitHub' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -914,10 +990,19 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'schedulePublish') | null;
+  taskSlug?: ('inline' | 'syncGitHub' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
+  meta?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -935,6 +1020,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'posts';
         value: number | Post;
+      } | null)
+    | ({
+        relationTo: 'projects';
+        value: number | Project;
       } | null)
     | ({
         relationTo: 'media';
@@ -1174,12 +1263,33 @@ export interface PostsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "projects_select".
+ */
+export interface ProjectsSelect<T extends boolean = true> {
+  repo?: T;
+  title?: T;
+  liveUrl?: T;
+  description?: T;
+  brief?: T;
+  notes?: T;
+  status?: T;
+  order?: T;
+  pinned?: T;
+  hidden?: T;
+  slug?: T;
+  syncedAt?: T;
+  syncError?: T;
+  github?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
-  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1542,6 +1652,7 @@ export interface PayloadJobsSelect<T extends boolean = true> {
   queue?: T;
   waitUntil?: T;
   processing?: T;
+  meta?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1594,7 +1705,7 @@ export interface Site {
    */
   authorName?: string | null;
   /**
-   * Look that first-time visitors see. Visitors can switch with the CLI / Modern control; their choice is remembered in their browser.
+   * Look that first-time visitors see. Visitors can switch with the CLI / ADE control; their choice is remembered in their browser.
    */
   defaultView: 'cli' | 'modern';
   /**
@@ -1690,6 +1801,24 @@ export interface Footer {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats".
+ */
+export interface PayloadJobsStat {
+  id: number;
+  stats?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site_select".
  */
 export interface SiteSelect<T extends boolean = true> {
@@ -1766,6 +1895,16 @@ export interface FooterSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats_select".
+ */
+export interface PayloadJobsStatsSelect<T extends boolean = true> {
+  stats?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
 export interface CollectionsWidget {
@@ -1773,6 +1912,14 @@ export interface CollectionsWidget {
     [k: string]: unknown;
   };
   width: 'full';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskSyncGitHub".
+ */
+export interface TaskSyncGitHub {
+  input?: unknown;
+  output?: unknown;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

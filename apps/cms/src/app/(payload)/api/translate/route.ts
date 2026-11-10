@@ -16,7 +16,7 @@ export const maxDuration = 300
 const json = (body: unknown, status = 200) => Response.json(body, { status })
 
 /**
- * POST /api/translate  { "collection": "posts" | "pages", "id": 1, "locales"?: ["ja"] }
+ * POST /api/translate  { "collection": "posts" | "pages" | "projects", "id": 1, "locales"?: ["ja"] }
  *
  * Called by the admin "Translate" button with the editor's session cookie.
  * Saves the Japanese and Chinese translations as drafts.
@@ -37,7 +37,7 @@ export async function POST(request: Request): Promise<Response> {
   const collection = body?.collection
   const id = body?.id
   if (!TRANSLATABLE.includes(collection as Translatable)) {
-    return json({ error: 'collection must be posts or pages.' }, 400)
+    return json({ error: 'collection must be posts, pages or projects.' }, 400)
   }
   if (typeof id !== 'string' && typeof id !== 'number') return json({ error: 'Missing id.' }, 400)
   const requested = body?.locales

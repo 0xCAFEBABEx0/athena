@@ -253,6 +253,12 @@ minutes), not at the exact minute chosen. Each run processes at most 10 jobs
 (Payload's default `limit`), so if more are due at once the rest wait for later
 runs.
 
+The same runner queues **scheduled tasks**: `syncGitHub` (cron `0 */6 * * *`)
+refreshes the GitHub snapshot of every `projects` entry for `/work` and saves
+only the entries that changed, so a quiet run costs one GitHub request and no
+web re-render. With the preview schedule disabled, the preview CMS fetches
+GitHub only when an entry is saved.
+
 Keep the interval at hourly or longer: every run wakes the Neon compute, which
 then stays active for 5 minutes (scale to zero is fixed on the Neon Free plan),
 and all branches share the project's 100 CU-hours a month. Hourly costs at most

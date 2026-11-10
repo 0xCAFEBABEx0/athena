@@ -23,6 +23,12 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 - Site name, intro, links, projects and the default view are editable in the
   CMS (Site global).
 - A prompt-style favicon.
+- `/work`: GitHub repositories shown like threads in an agent app, grouped
+  as Working / Idle / Done from GitHub activity, with a searchable,
+  keyboard-driven picker in the CLI view. Each repository has its own page
+  with a brief, a write-up, the latest release and recent commits. Entries
+  are added, pinned, hidden and translated in the CMS; GitHub data refreshes
+  every 6 hours.
 
 ### Changed
 

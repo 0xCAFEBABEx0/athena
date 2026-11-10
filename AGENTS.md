@@ -54,6 +54,7 @@ apps/cms/src/
 ├── app/(payload)/            # Payload admin panel + API routes
 ├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only; rendering lives in apps/web
 ├── Site/ Header/ Footer/     # globals (Site = name, intro, links, projects shown by the web app)
+├── github/                   # sync.ts: GitHub snapshot for the projects (/work) collection
 ├── utilities/                # invalidateWeb.ts, generatePreviewPath.ts, env.ts, getURL.ts
 └── payload.config.ts         # Main Payload CMS configuration
 
@@ -62,7 +63,7 @@ apps/cms/config/next.config.mjs   # Real Next.js config (root next.config.mjs re
 apps/web/src/
 ├── pages/                    # [...slug], posts/*, search, sitemaps, 404, api/* endpoints
 ├── components/               # Block/hero renderers (blocks/, heros/, ...)
-├── lib/                      # cms.ts (REST client), site.ts (site global), richtext.ts, draft.ts, seo.ts, media.ts
+├── lib/                      # cms.ts (REST client), site.ts (site global), work.ts (/work entries), richtext.ts, draft.ts, seo.ts, media.ts
 ├── layouts/Layout.astro      # Theme init, meta tags, Header/Footer
 └── middleware.ts             # Redirects-collection handling
 
@@ -188,6 +189,7 @@ PREVIEW_SECRET=            # Shared with web: gates the draft cookie
 REVALIDATE_SECRET=         # Shared with web: bearer token for /api/invalidate
 BLOB_READ_WRITE_TOKEN=     # Vercel Blob storage token
 ANTHROPIC_API_KEY=         # Translate button (Claude); TRANSLATION_MODEL optional
+GITHUB_TOKEN=              # /work GitHub sync (fine-grained, public repos read-only)
 ```
 
 Web (`apps/web/.env` — see `apps/web/README.md`):

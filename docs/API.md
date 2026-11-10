@@ -166,8 +166,8 @@ There is no captcha, honeypot or rate limit.
 | `/admin` | Payload admin panel. |
 | `/api/{collection}`, `/api/globals/{slug}` | Payload REST API (all collections). |
 | `/api/graphql`, `/api/graphql-playground` | Payload GraphQL. |
-| `/api/payload-jobs/run` | Jobs runner. Vercel Schedules hourly (`0 * * * *` UTC, Hobby adds up to 15 min jitter); needs a logged-in user or `Authorization: Bearer ${CRON_SECRET}`. |
-| `POST /api/translate` | Body `{ collection: 'posts' \| 'pages', id, locales? }`. Logged-in users only. Translates the English version with Claude and saves `ja`/`zh` as drafts. `503` without `ANTHROPIC_API_KEY`, `422` if the reply is unusable, `502` on API errors. `maxDuration` 300 s. |
+| `/api/payload-jobs/run` | Jobs runner. Vercel Schedules hourly (`0 * * * *` UTC, Hobby adds up to 15 min jitter); needs a logged-in user or `Authorization: Bearer ${CRON_SECRET}`. Each run also queues due scheduled tasks (`syncGitHub`, every 6 hours). |
+| `POST /api/translate` | Body `{ collection: 'posts' \| 'pages' \| 'projects', id, locales? }`. Logged-in users only. Translates the English version with Claude and saves `ja`/`zh` as drafts (projects have no drafts: saved directly). `503` without `ANTHROPIC_API_KEY`, `422` if the reply is unusable, `502` on API errors. `maxDuration` 300 s. |
 | `/api/sentry-test` | Sentry smoke test route. |
 | `/` | Redirects to `/admin`. Any other non-admin, non-API path redirects (308) to the same path on `WEB_URL`. |
 
@@ -176,7 +176,7 @@ There is no captcha, honeypot or rate limit.
 | Constant | Value | Used by |
 |---|---|---|
 | `DRAFT_COOKIE` | `athena-draft` | `lib/draft.ts` |
-| `CACHE_TAGS` | `pages`, `posts`, `global_site`, `global_header`, `global_footer`, `redirects`, `sitemap` | CMS hooks, `/api/invalidate` |
+| `CACHE_TAGS` | `pages`, `posts`, `projects`, `global_site`, `global_header`, `global_footer`, `redirects`, `sitemap` | CMS hooks, `/api/invalidate` |
 | `COLLECTION_SLUGS` | REST collection slugs | both apps |
 | `IMAGE_SIZES` | Media rendition names | web media helpers |
 | `LOCALES`, `DEFAULT_LOCALE` | `en`, `ja`, `zh`; `en` | Payload localization, web routing |
@@ -199,6 +199,7 @@ both apps together.
 | `BLOB_READ_WRITE_TOKEN` | yes | | Vercel Blob. |
 | `ANTHROPIC_API_KEY` | for translation | | Claude API key for the Translate button. Unset = button answers 503. |
 | `TRANSLATION_MODEL` | optional | | Overrides the translation model (default `claude-opus-5-5`). |
+| `GITHUB_TOKEN` | for /work | | Fine-grained token with read access to public repositories only, for the `syncGitHub` job. Unset = entries show `syncError` and stay off `/work`. |
 | `CRON_SECRET` | yes | | Jobs runner auth for Vercel Schedules (sent as a bearer token, like Vercel Cron). |
 | `DEPLOY_ENV` | optional | | Overrides `VERCEL_ENV` for stage detection (Sentry environment). |
 | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | optional | | See [SENTRY_SETUP.md](./SENTRY_SETUP.md). |

@@ -20,6 +20,8 @@ import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
+import { Projects } from './collections/Projects'
+import { syncProjects } from './github/sync'
 import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
@@ -80,7 +82,7 @@ export default buildConfig({
         'postgresql://dummy:dummy@localhost:5432/dummy',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Users],
+  collections: [Pages, Posts, Projects, Media, Categories, Users],
   // The web frontend lives on its own origin and POSTs form submissions here.
   cors: [getServerSideURL(), getWebURL()].filter(Boolean),
   csrf: [getServerSideURL(), getWebURL()].filter(Boolean),
@@ -131,6 +133,18 @@ export default buildConfig({
         return authHeader === `Bearer ${secret}`
       },
     },
-    tasks: [],
+    tasks: [
+      {
+        // Refresh the GitHub data behind /work. The hourly Vercel Schedule
+        // hits /api/payload-jobs/run, which queues this when the cron is due.
+        slug: 'syncGitHub',
+        retries: 1,
+        schedule: [{ cron: '0 */6 * * *', queue: 'default' }],
+        handler: async ({ req }) => {
+          const output = await syncProjects(req.payload)
+          return { output }
+        },
+      },
+    ],
   },
 })
