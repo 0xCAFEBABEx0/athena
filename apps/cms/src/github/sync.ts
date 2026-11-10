@@ -25,6 +25,10 @@ export type GitHubSnapshot = {
   commitCount: number
   release: { tag: string; date: string; url: string } | null
   commits: { sha: string; message: string; date: string }[]
+  /** Open pull requests, shown as a small count beside the name. */
+  openPRs: number
+  /** The repository's social preview, only when one was uploaded (GitHub's generated card is skipped). */
+  image: string | null
   /** working | idle | done, from activity (the CMS `status` field can override). */
   activity: 'working' | 'idle' | 'done'
 }
@@ -48,6 +52,9 @@ const FIELDS = `
   languages(first: 6, orderBy: { field: SIZE, direction: DESC }) { totalSize edges { size node { name } } }
   repositoryTopics(first: 10) { nodes { topic { name } } }
   latestRelease { tagName publishedAt url }
+  pullRequests(states: OPEN) { totalCount }
+  openGraphImageUrl
+  usesCustomOpenGraphImage
   defaultBranchRef {
     target {
       ... on Commit {
@@ -69,6 +76,9 @@ type RepoNode = {
   languages: { totalSize: number; edges: { size: number; node: { name: string } }[] }
   repositoryTopics: { nodes: { topic: { name: string } }[] }
   latestRelease: { tagName: string; publishedAt: string | null; url: string } | null
+  pullRequests: { totalCount: number }
+  openGraphImageUrl: string | null
+  usesCustomOpenGraphImage: boolean
   defaultBranchRef: {
     target: {
       history?: {
@@ -118,6 +128,8 @@ const toSnapshot = (node: RepoNode, now: number): GitHubSnapshot => {
       message: commit.messageHeadline,
       date: commit.committedDate,
     })),
+    openPRs: node.pullRequests?.totalCount ?? 0,
+    image: node.usesCustomOpenGraphImage ? node.openGraphImageUrl : null,
     activity: activityOf(node, now),
   }
 }

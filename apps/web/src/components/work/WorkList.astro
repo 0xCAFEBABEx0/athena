@@ -26,7 +26,7 @@ const { items, picker = false, class: className } = Astro.props
 const locale = localeOf(Astro)
 const t = dict(locale)
 
-const STATUSES: WorkStatus[] = ['working', 'idle', 'done']
+const STATUSES: WorkStatus[] = ['waiting', 'working', 'idle', 'done']
 const groups = picker
   ? STATUSES.map((status) => ({ status, items: items.filter((item) => item.status === status) })).filter(
       (group) => group.items.length > 0,
@@ -73,7 +73,32 @@ const searchText = (item: WorkItem) =>
                       </span>
                     )}
                     {item.release && <span class="work-pill modern-only">{item.release.tag}</span>}
+                    {item.openPRs > 0 && (
+                      <span class="work-pill work-pill-pr modern-only" title={t.workOpenPRs(item.openPRs)}>
+                        <svg class="work-pr-icon" viewBox="0 0 16 16" aria-hidden="true">
+                          <circle cx="4" cy="3.5" r="1.75" />
+                          <circle cx="4" cy="12.5" r="1.75" />
+                          <circle cx="12" cy="12.5" r="1.75" />
+                          <path d="M4 5.25v5.5M12 10.75V7.5a2.5 2.5 0 0 0-2.5-2.5H7" />
+                        </svg>
+                        <span class="sr-only">{t.workOpenPRs(item.openPRs)}:</span>
+                        {item.openPRs}
+                      </span>
+                    )}
                   </span>
+                  {item.image && (
+                    <img
+                      class="work-thumb modern-only"
+                      src={item.image}
+                      alt=""
+                      width="128"
+                      height="64"
+                      loading="lazy"
+                      decoding="async"
+                      referrerpolicy="no-referrer"
+                      onerror="this.remove()"
+                    />
+                  )}
                   <span class="work-meta cli-only">
                     {item.pushedAt && (
                       <time datetime={item.pushedAt} data-relative>
@@ -84,6 +109,7 @@ const searchText = (item: WorkItem) =>
                       item.language,
                       item.commitCount ? t.workCommits(item.commitCount) : null,
                       item.release?.tag,
+                      item.openPRs ? t.workOpenPRs(item.openPRs) : null,
                       item.liveUrl ? displayHost(item.liveUrl) : null,
                     ]
                       .filter(Boolean)

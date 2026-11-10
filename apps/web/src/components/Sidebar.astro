@@ -26,7 +26,9 @@ const [navLinks, recent, work] = await Promise.all([
   getWork(Astro.request, locale),
 ])
 // Threads in the sidebar: what is in progress first, like an agent app.
-const sideWork = work.filter((item) => item.pinned || item.status === 'working').slice(0, 5)
+const sideWork = work
+  .filter((item) => item.pinned || item.status === 'waiting' || item.status === 'working')
+  .slice(0, 5)
 const links: CMSLinkData[] =
   navLinks.length > 0
     ? navLinks

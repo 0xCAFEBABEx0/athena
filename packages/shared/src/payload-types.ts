@@ -775,9 +775,9 @@ export interface Project {
    */
   notes?: string | null;
   /**
-   * Auto: pushed in the last 30 days = Working, archived = Done, else Idle.
+   * Auto: pushed in the last 30 days = Working, archived = Resolved, else Idle. Waiting on you is never automatic.
    */
-  status: 'auto' | 'working' | 'idle' | 'done';
+  status: 'auto' | 'waiting' | 'working' | 'idle' | 'done';
   /**
    * Lower comes first among the pinned entries.
    */

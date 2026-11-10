@@ -158,13 +158,16 @@ export const Projects: CollectionConfig<'projects'> = {
           required: true,
           options: [
             { label: 'Auto (from GitHub activity)', value: 'auto' },
+            { label: 'Waiting on you (try it / feedback wanted)', value: 'waiting' },
             { label: 'Working', value: 'working' },
             { label: 'Idle', value: 'idle' },
-            { label: 'Done', value: 'done' },
+            // Stored as `done`; shown as "Resolved" on the site.
+            { label: 'Resolved', value: 'done' },
           ],
           admin: {
             width: '50%',
-            description: 'Auto: pushed in the last 30 days = Working, archived = Done, else Idle.',
+            description:
+              'Auto: pushed in the last 30 days = Working, archived = Resolved, else Idle. Waiting on you is never automatic.',
           },
         },
         {

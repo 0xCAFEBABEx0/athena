@@ -154,10 +154,10 @@ off the site without deleting it (visitors' reads filter it out).
 | `repo` | Required, unique, `owner/name` (a pasted `https://github.com/` prefix is stripped). |
 | `title`, `liveUrl` | Optional; default to the repository name and homepage. |
 | `description`, `brief`, `notes` | Localized. One-line summary (filled from GitHub on first save), what the author set out to build (shown as the user's message of the thread), and the write-up (shown as the reply). The Translate button fills `ja`/`zh`. |
-| `status` | `auto` (default), `working`, `idle`, `done`. Auto: pushed in the last 30 days = working, archived = done, else idle. |
+| `status` | `auto` (default), `waiting`, `working`, `idle`, `done`. Shown as Waiting on you / Working / Idle / Resolved, in that order. Auto: pushed in the last 30 days = working, archived = done, else idle; `waiting` ("try it / feedback wanted") is only set by hand. |
 | `order`, `pinned`, `hidden` | Home page selection and order; `hidden` keeps the entry off the site. |
 | `slug` | Read-only, from the repository name: `/work/<slug>`. |
-| `github`, `syncedAt`, `syncError` | Read-only snapshot from GitHub (languages, topics, stars, latest release, last 5 commits, commit count, activity) and sync state. |
+| `github`, `syncedAt`, `syncError` | Read-only snapshot from GitHub (languages, topics, stars, latest release, last 5 commits, commit count, open pull requests, custom social preview image, activity) and sync state. |
 
 The snapshot is fetched on save when the entry is new or its repository
 changed, and refreshed by the `syncGitHub` job every 6 hours

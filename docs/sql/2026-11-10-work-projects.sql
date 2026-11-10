@@ -13,9 +13,12 @@ BEGIN
     RAISE EXCEPTION 'Run docs/sql/2026-11-10-whoa-i18n.sql first (type _locales is missing).';
   END IF;
   IF to_regtype('public.enum_projects_status') IS NULL THEN
-    CREATE TYPE "public"."enum_projects_status" AS ENUM('auto', 'working', 'idle', 'done');
+    CREATE TYPE "public"."enum_projects_status" AS ENUM('auto', 'waiting', 'working', 'idle', 'done');
   END IF;
 END $$;
+
+-- Added after the first run on preview: "Waiting on you".
+ALTER TYPE "public"."enum_projects_status" ADD VALUE IF NOT EXISTS 'waiting' BEFORE 'working';
 
 -- Job task slugs (Payload stores them as enums).
 ALTER TYPE "public"."enum_payload_jobs_task_slug" ADD VALUE IF NOT EXISTS 'syncGitHub';

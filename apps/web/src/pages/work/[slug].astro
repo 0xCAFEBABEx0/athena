@@ -42,6 +42,9 @@ const details = [
   ...(item.topics.length ? [{ label: t.workTopics, value: item.topics.map((x) => `#${x}`).join(' '), href: null }] : []),
   ...(item.createdAt ? [{ label: t.workStarted, value: formatDate(item.createdAt), href: null }] : []),
   ...(item.commitCount ? [{ label: t.workCommitsLabel, value: String(item.commitCount), href: null }] : []),
+  ...(item.openPRs
+    ? [{ label: t.workPullRequests, value: t.workOpenPRs(item.openPRs), href: `${item.repoUrl}/pulls` }]
+    : []),
 ]
 ---
 

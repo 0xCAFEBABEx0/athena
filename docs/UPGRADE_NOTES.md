@@ -16,7 +16,9 @@ A running log of notable dependency upgrades. Newest first.
 
 **Web**
 
-- `/work` lists the entries by status (Working / Idle / Done): a session
+- `/work` lists the entries by status (Waiting on you / Working / Idle /
+  Resolved), with an open-PR count and the repository's social preview image
+  when one was uploaded: a session
   picker in the CLI view (filter, ↑/↓, Enter, 1–9, `/`), a thread list in the
   ADE view. `/work/<slug>` shows one repository as a thread: brief, write-up,
   latest release, recent commits, details. Pinned entries replace the home
@@ -30,7 +32,8 @@ Run [`docs/sql/2026-11-10-work-projects.sql`](./sql/2026-11-10-work-projects.sql
 after `2026-11-10-whoa-i18n.sql`, on the preview Neon branch and then
 production, **before** the CMS deploy. It adds the `projects` tables, the
 `syncGitHub` job enum value and Payload's job scheduling table/column; every
-statement is idempotent. Verified locally: applying it twice to a database
+statement is idempotent, so re-run the whole file where an earlier version
+of it (without the `waiting` status) was applied. Verified locally: applying it twice to a database
 built by the previous code gives the same schema as a fresh push of the new
 config (0 differences).
 

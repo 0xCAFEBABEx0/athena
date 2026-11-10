@@ -7,7 +7,8 @@ import type { Locale } from './i18n'
  * "Work threads": each GitHub repository is shown like a thread in an agent
  * app. Status is derived from GitHub activity unless set in the CMS.
  */
-export type WorkStatus = 'working' | 'idle' | 'done'
+/** `done` is shown as "Resolved"; `waiting` ("Waiting on you") is only set in the CMS. */
+export type WorkStatus = 'waiting' | 'working' | 'idle' | 'done'
 
 export type WorkCommit = { sha: string; message: string; date: string }
 
@@ -35,6 +36,9 @@ export type WorkItem = {
   pushedAt: string
   release: { tag: string; date: string; url: string } | null
   commits: WorkCommit[]
+  openPRs: number
+  /** Custom social preview image of the repository, if one was uploaded. */
+  image: string | null
 }
 
 /** Shape of `projects.github`, written by the CMS sync (apps/cms/src/github/sync.ts). */
@@ -51,6 +55,8 @@ type GitHubSnapshot = {
   commitCount?: number
   release?: { tag: string; date: string; url: string } | null
   commits?: WorkCommit[]
+  openPRs?: number
+  image?: string | null
   activity?: WorkStatus
 }
 
@@ -90,9 +96,11 @@ const normalize = (doc: Project, gh: GitHubSnapshot, now: number): WorkItem => (
   pushedAt: gh.pushedAt ?? '',
   release: gh.release ?? null,
   commits: gh.commits ?? [],
+  openPRs: gh.openPRs ?? 0,
+  image: gh.image?.startsWith('https://') ? gh.image : null,
 })
 
-const STATUS_ORDER: Record<WorkStatus, number> = { working: 0, idle: 1, done: 2 }
+const STATUS_ORDER: Record<WorkStatus, number> = { waiting: 0, working: 1, idle: 2, done: 3 }
 
 const loadWork = async (locale: Locale): Promise<WorkItem[]> => {
   try {
