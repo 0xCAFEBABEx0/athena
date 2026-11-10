@@ -102,7 +102,7 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 | TC-P-04 | `GET /wp-login.php` twice | 404 text/plain; second response HIT |
 | TC-P-05 | `GET /no-such-page` twice | 404 page; second response HIT |
 | TC-P-06 | `GET /llms.txt`, `/og.png` | 200; llms.txt names the site and the current domain |
-| TC-P-07 | Warm-cache workflow run | Succeeds for the deployment's commit |
+| TC-P-07 | Warm-cache workflow run | Succeeds for the deployment's commit, with 200 responses (no "Cache not warmed" warning; Preview needs the `VERCEL_AUTOMATION_BYPASS_SECRET` repository secret) |
 | TC-P-08 | E2E suite with `E2E_BASE_URL` set to the deployment | All pass (TC-E-20 needs the footer rows deleted) |
 | TC-P-09 | Schema Markup Validator (validator.schema.org) on `/`, a post, a /work entry; Google Rich Results Test on the post | WebSite / BlogPosting / SoftwareSourceCode parsed without errors; the post is eligible as an Article |
 

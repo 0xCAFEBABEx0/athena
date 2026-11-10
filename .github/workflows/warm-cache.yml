@@ -25,10 +25,13 @@ jobs:
         env:
           ENVIRONMENT: ${{ github.event.deployment.environment }}
           SHA: ${{ github.event.deployment.sha }}
-          # Deployment URLs sit behind Vercel Authentication; the custom
-          # domains do not. Override with repository variables when they move.
+          # Override with repository variables when the domains move.
           PRODUCTION_WEB_URL: ${{ vars.PRODUCTION_WEB_URL || 'https://www.findb.uk' }}
           PREVIEW_WEB_URL: ${{ vars.PREVIEW_WEB_URL || 'https://preview.whoa.me' }}
+          # athena-web → Settings → Deployment Protection → Protection Bypass
+          # for Automation. Without it the protected preview answers 302 and
+          # the run only leaves a warning.
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           # Vercel reports the commit SHA as the ref, not the branch. Only
           # main (Production) and preview deploy (vercel.json whitelist).

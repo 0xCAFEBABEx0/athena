@@ -14,12 +14,29 @@ base="${1:?usage: warm-cache.sh <site-url> [commit-sha]}"
 base="${base%/}"
 sha="${2:-}"
 ua="athena-cache-warmer"
+# Preview sits behind Vercel Authentication: with the project's "Protection
+# Bypass for Automation" secret (repository secret
+# VERCEL_AUTOMATION_BYPASS_SECRET) the requests get through.
+headers=()
+if [ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]; then
+  headers=(-H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET")
+fi
+get() { curl -A "$ua" "${headers[@]}" "$@"; }
+
+# A login redirect (or a block) would make every request below useless, and
+# the wait would time out: say so and stop.
+probe=$(get -sS -o /dev/null -w '%{http_code} %{redirect_url}' "$base/" || true)
+code="${probe%% *}"
+if [ "$code" != "200" ]; then
+  echo "::warning title=Cache not warmed::$base/ answered ${probe:-no response} (Vercel Authentication? set the VERCEL_AUTOMATION_BYPASS_SECRET repository secret)"
+  exit 0
+fi
 
 if [ -n "$sha" ]; then
   short="${sha:0:7}"
   for _ in $(seq 1 36); do
     # The /status panel on every page prints the build's short commit.
-    if curl -fsS -A "$ua" "$base/" | grep -q "<dd>$short</dd>"; then
+    if get -fsS "$base/" | grep -q "<dd>$short</dd>"; then
       echo "Serving $short."
       break
     fi
@@ -30,8 +47,8 @@ fi
 urls=$(mktemp)
 trap 'rm -f "$urls"' EXIT
 
-for sitemap in $(curl -fsS -A "$ua" "$base/sitemap.xml" | grep -o '<loc>[^<]*</loc>' | sed -e 's/<loc>//' -e 's/<\/loc>//'); do
-  { curl -fsS -A "$ua" "$sitemap" | grep -o '<loc>[^<]*</loc>' | sed -e 's/<loc>//' -e 's/<\/loc>//' >> "$urls"; } || true
+for sitemap in $(get -fsS "$base/sitemap.xml" | grep -o '<loc>[^<]*</loc>' | sed -e 's/<loc>//' -e 's/<\/loc>//'); do
+  { get -fsS "$sitemap" | grep -o '<loc>[^<]*</loc>' | sed -e 's/<loc>//' -e 's/<\/loc>//' >> "$urls"; } || true
 done
 for prefix in "" /ja /zh; do
   echo "$base$prefix/search-index.json" >> "$urls"
@@ -43,5 +60,5 @@ echo "$base/404-not-a-page" >> "$urls"
 
 # Sitemaps list the canonical host; request the host we were given.
 sort -u "$urls" | sed -E "s#^https?://[^/]+#$base#" |
-  xargs -P 4 -n 1 curl -sS -A "$ua" -o /dev/null --max-time 30 \
+  xargs -P 4 -n 1 curl -sS -A "$ua" "${headers[@]}" -o /dev/null --max-time 30 \
     -w '%{http_code} %header{x-vercel-cache} %{time_total}s %{url}\n' || true
