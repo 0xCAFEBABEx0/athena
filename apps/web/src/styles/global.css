@@ -94,6 +94,19 @@
   --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, 'BIZ UDGothic', monospace;
 }
 
+/* Cross-document view transitions: a short crossfade between pages instead
+   of a blank flash (Chrome, Edge, Safari 18.2+; others just navigate). */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 120ms;
+  }
+}
+
 @layer base {
   h1,
   h2,

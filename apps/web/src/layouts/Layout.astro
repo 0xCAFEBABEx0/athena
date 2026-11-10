@@ -38,6 +38,27 @@ const description = meta?.description ?? site.description
 const ogImage = meta?.ogImage ?? `${webURL()}${DEFAULT_OG_IMAGE}`
 const url = meta?.url ?? `${webURL()}${Astro.originPathname}`
 
+// Chrome and Edge fetch a page once a link is hovered (or pressed on touch)
+// and keep it for the click. Unlike <link rel="prefetch">, this copy is used
+// even though pages are sent with `max-age=0, must-revalidate`. Pages come
+// from the Vercel cache, so this costs CDN hits, not renders. Other browsers
+// ignore the rules.
+const speculationRules = JSON.stringify({
+  prefetch: [
+    {
+      source: 'document',
+      where: {
+        and: [
+          { href_matches: '/*' },
+          { not: { href_matches: ['/api/*', '/admin', '/admin/*', '/*.xml', '/*/*.xml'] } },
+          { not: { selector_matches: '[target=_blank], [download]' } },
+        ],
+      },
+      eagerness: 'moderate',
+    },
+  ],
+})
+
 const draft = isDraft(Astro.cookies)
 if (draft) {
   // Keep draft renders out of the shared ISR/edge cache.
@@ -75,6 +96,7 @@ if (draft) {
       title={site.siteName}
       href={localizePath(locale, '/rss.xml')}
     />
+    <script type="speculationrules" is:inline set:html={speculationRules} />
     <SpeedInsights />
     <slot name="head" />
     <script is:inline>

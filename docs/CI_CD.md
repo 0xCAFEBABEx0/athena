@@ -127,7 +127,8 @@ repo, split by **Root Directory**:
 | `athena-cms` | `apps/cms` | `bun run build` (set in `vercel.json`) → `next build` (Turbopack) | `bun install --frozen-lockfile` |
 | `athena-web` | `apps/web` | `bun run build` → `astro build` | `bun install --frozen-lockfile` |
 
-- **Node.js**: 24 LTS (pinned to `24.22.1` via `.nvmrc`; on Vercel, `engines.node: "24.x"` in each app's `package.json` selects the 24.x runtime)
+- **Function runtime**: Bun 1.4 (`"bunVersion": "1.4.x"` in each `vercel.json`; Vercel's Bun runtime is in beta). Builds run under Bun too (`bun --bun next build`, `bun --bun astro build`). The app `package.json` files must not set `engines.node`, which would override `bunVersion`.
+- **Node.js**: 24 LTS (pinned to `24.22.1` via `.nvmrc`; the Vercel projects' Node setting is 24.x) for tooling and CI
 - **Package manager**: Bun `1.4.4`
 - The CMS builds with Turbopack. A client-side alias must live in
   `turbopack.resolveAlias` (the `webpack()` callback is ignored). See

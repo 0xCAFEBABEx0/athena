@@ -106,6 +106,9 @@ reviews:
         `scripts/vercel-ignore-build.sh`, which skips rebuilding
         `preview -> main` release merge commits and apps with no changes since
         the last deployment; it must exit 1 (build) whenever it is unsure.
+        Keep `"bunVersion": "1.4.x"`: functions run on Bun, and the app
+        `package.json` must not set `engines.node` (it overrides
+        `bunVersion`) while its build script keeps `bun --bun`.
     - path: '.github/workflows/**'
       instructions: |
         Node is pinned to 24.22.1 (`.nvmrc`) and Bun to the version in the

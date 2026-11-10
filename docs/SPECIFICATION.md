@@ -161,6 +161,7 @@ all managed by editors without code changes.
 | ID | Requirement | How it is met |
 |---|---|---|
 | NF-PERF-1 | Public pages are served from cache in the common case. | Vercel ISR plus cache tag `content`, invalidated by the publish webhook; 7-day expiration as a safety net. Popup search filters a cached index in the browser. |
+| NF-PERF-3 | Page-to-page navigation feels instant. | Speculation rules prefetch a page when a link is hovered or pressed (Chrome, Edge); a 120 ms cross-document view transition replaces the blank flash (off with reduced motion). The CLI / ADE and theme switches change attributes in place without a reload. |
 | NF-PERF-2 | Responsive images. | `srcset` from renditions, lazy loading, `decoding=async`. |
 | NF-AVAIL-1 | A CMS outage degrades the site rather than taking it down. | Cached HTML keeps serving; header/footer/redirects fail open; sitemaps return 503; standalone 500 page. |
 | NF-AVAIL-2 | A web outage never blocks publishing. | `invalidateWeb` logs and never throws; 5 s timeout. |

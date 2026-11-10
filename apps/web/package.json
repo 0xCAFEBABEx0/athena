@@ -5,9 +5,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
+    "dev": "bun --bun astro dev",
+    "build": "bun --bun astro build",
+    "preview": "bun --bun astro preview",
     "check": "astro check",
     "lint": "astro check",
     "test": "bun test src"
@@ -31,8 +31,5 @@
     "daisyui": "^5.7.50",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3"
-  },
-  "engines": {
-    "node": "24.x"
   }
 }

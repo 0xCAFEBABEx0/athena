@@ -29,3 +29,6 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 - Faster Vercel builds: apps with no changes are skipped, and the web
   functions no longer bundle sharp.
 - Higher text contrast in both themes.
+- Server functions of both apps run on Bun instead of Node.js.
+- Links are prefetched on hover, and pages crossfade on navigation, so
+  switching language or opening a post feels faster.
