@@ -7,7 +7,7 @@ A running log of notable dependency upgrades. Newest first.
 New `site` global (`apps/cms/src/Site/config.ts`): site name, author name,
 welcome line, intro, default description, social links and projects. The web
 app reads it for the home page, header, footer, page titles and `/rss.xml`, and
-falls back to defaults (`findb.uk`, no intro) while the table is missing.
+falls back to defaults (`whoa.me`, no intro) while the table is missing.
 
 Schema change (three new tables, nothing altered). Found by pushing the old and
 new configs into empty databases and diffing `pg_dump --schema-only`; the SQL
@@ -15,15 +15,15 @@ below produces an identical schema and is safe to run twice. Run it on the
 preview Neon branch and on production **before** the CMS deploy:
 
 ```sql
--- findb.uk: add the "site" global (site name, intro, links, projects).
+-- whoa.me: add the "site" global (site name, intro, links, projects).
 -- Safe to run more than once. Run on the preview Neon branch first, then production.
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS public.site (
   id serial PRIMARY KEY,
-  site_name varchar NOT NULL DEFAULT 'findb.uk',
+  site_name varchar NOT NULL DEFAULT 'whoa.me',
   author_name varchar,
-  welcome varchar DEFAULT 'findb.uk へようこそ',
+  welcome varchar DEFAULT 'whoa.me へようこそ',
   intro varchar,
   description varchar,
   updated_at timestamp(3) with time zone,

@@ -3,7 +3,7 @@ import type { Site } from '@athena/shared/payload-types'
 import { getGlobal } from './cms'
 
 /** Used when the CMS `site` global is empty or unreachable. */
-export const DEFAULT_SITE_NAME = 'findb.uk'
+export const DEFAULT_SITE_NAME = 'whoa.me'
 
 export type SiteData = {
   siteName: string

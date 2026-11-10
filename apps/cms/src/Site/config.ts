@@ -13,7 +13,7 @@ export const Site: GlobalConfig = {
     read: () => true,
   },
   admin: {
-    description: 'Name, intro, links and projects shown on the public site (www.findb.uk).',
+    description: 'Name, intro, links and projects shown on the public site (whoa.me).',
   },
   fields: [
     {
@@ -23,7 +23,7 @@ export const Site: GlobalConfig = {
           name: 'siteName',
           type: 'text',
           required: true,
-          defaultValue: 'findb.uk',
+          defaultValue: 'whoa.me',
           admin: { description: 'Header, page titles and RSS feed title.', width: '50%' },
         },
         {
@@ -36,7 +36,7 @@ export const Site: GlobalConfig = {
     {
       name: 'welcome',
       type: 'text',
-      defaultValue: 'findb.uk へようこそ',
+      defaultValue: 'whoa.me へようこそ',
       admin: { description: 'Small line at the top of the home-page intro box.' },
     },
     {

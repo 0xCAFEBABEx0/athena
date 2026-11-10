@@ -1578,7 +1578,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Name, intro, links and projects shown on the public site (www.findb.uk).
+ * Name, intro, links and projects shown on the public site (whoa.me).
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site".

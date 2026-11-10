@@ -157,9 +157,9 @@ Timestamps on. Create or rotate the web service account with
 
 | Field | Type | Used for |
 |---|---|---|
-| `siteName` | text, required, default `findb.uk` | Header brand, page titles, RSS title |
+| `siteName` | text, required, default `whoa.me` | Header brand, page titles, RSS title |
 | `authorName` | text | Home heading, copyright line |
-| `welcome` | text, default `findb.uk へようこそ` | First line of the home intro box |
+| `welcome` | text, default `whoa.me へようこそ` | First line of the home intro box |
 | `intro` | textarea | Sentence(s) under the name on the home page |
 | `description` | textarea | Default meta description, RSS description |
 | `socialLinks` | array (max 8) of `label`, `url` | Links in the home intro box |
