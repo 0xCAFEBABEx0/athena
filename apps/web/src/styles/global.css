@@ -5,6 +5,11 @@
    attribute the theme script already sets (no OS media query). */
 @plugin 'daisyui' {
   themes: false;
+  /* Only the components the site uses. Without a list daisyUI ships every
+     component whose name appears anywhere in the source ("table", "list",
+     "footer", "steps"...), about 60 KB of CSS nobody uses. Add a name here
+     before using a new component. */
+  include: properties, rootcolor, rootscrollgutter, rootscrolllock, scrollbar, svg, button, card, modal, menu, dropdown, tab, kbd, badge, input, select, textarea, checkbox, join, breadcrumbs, status, radius, typography;
 }
 
 /* Dark mode is driven by the data-theme attribute, not the OS media query. */
@@ -87,11 +92,34 @@
   --noise: 0;
 }
 
-@theme inline {
+/* Not `inline`: utilities read var(--font-*), so the Japanese and Chinese
+   pages below can swap in a different stack. */
+@theme {
   /* Latin glyphs from Geist; Japanese falls back to the OS gothic font. */
   --font-sans: 'Geist Sans', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP',
     'Yu Gothic UI', 'Yu Gothic', Meiryo, ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, 'BIZ UDGothic', monospace;
+}
+
+/* Geist draws "…" as one narrow cell, so in Japanese or Chinese text
+   ("だれ？…あ") the dots crowd the next character. On those pages the
+   ellipsis comes from the OS's CJK font, which sets it full width. The face
+   covers only U+2026; where none of these fonts exists it is skipped. */
+@font-face {
+  font-family: 'CJK Ellipsis';
+  src: local('Hiragino Sans W3'), local('HiraginoSans-W3'), local('Hiragino Kaku Gothic ProN W3'),
+    local('HiraKakuProN-W3'), local('Yu Gothic Regular'), local('YuGothic-Regular'),
+    local('Meiryo'), local('Noto Sans JP'), local('Noto Sans CJK JP'), local('NotoSansCJKjp-Regular'),
+    local('PingFang SC Regular'), local('PingFangSC-Regular'), local('Microsoft YaHei'),
+    local('Noto Sans CJK SC'), local('Source Han Sans'), local('WenQuanYi Zen Hei');
+  unicode-range: U+2026;
+}
+
+:root:lang(ja),
+:root:lang(zh) {
+  --font-sans: 'CJK Ellipsis', 'Geist Sans', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP',
+    'PingFang SC', 'Microsoft YaHei', 'Yu Gothic UI', 'Yu Gothic', Meiryo, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'CJK Ellipsis', 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, 'BIZ UDGothic', monospace;
 }
 
 /* Cross-document view transitions: a short crossfade between pages instead

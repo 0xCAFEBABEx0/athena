@@ -40,6 +40,13 @@ export default defineConfig({
   }),
   vite: {
     plugins: [tailwindcss()],
+    // Vite inlines files under 4 KB as base64 data URLs. For fonts that puts
+    // the bytes into the render-blocking stylesheet (base64 does not
+    // compress, and every @font-face pays it, used or not); served as files
+    // they are fetched only when needed and cached for a year.
+    build: {
+      assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined),
+    },
     // Site version, commit and environment for the header and /status panel.
     define: { __BUILD_INFO__: JSON.stringify(buildInfo()) },
   },

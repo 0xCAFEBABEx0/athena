@@ -1,9 +1,14 @@
 ---
-import '@fontsource/geist-sans/400.css'
-import '@fontsource/geist-sans/600.css'
-import '@fontsource/geist-sans/700.css'
-import '@fontsource/geist-mono/400.css'
-import '@fontsource/geist-mono/600.css'
+// Latin subsets only (Geist has no Japanese or Chinese; those fall back to
+// system fonts). Each file is one @font-face with a unicode-range, so a page
+// downloads only the files its text needs.
+import '@fontsource/geist-sans/latin-400.css'
+import '@fontsource/geist-sans/latin-600.css'
+import '@fontsource/geist-sans/latin-700.css'
+import '@fontsource/geist-mono/latin-400.css'
+import '@fontsource/geist-mono/latin-600.css'
+import '@fontsource/geist-mono/latin-ext-400.css'
+import '@fontsource/geist-mono/latin-ext-600.css'
 import '@/styles/global.css'
 
 import Footer from '@/components/Footer.astro'
