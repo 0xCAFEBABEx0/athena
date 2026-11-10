@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from 'astro/config'
+import { defineConfig, passthroughImageService } from 'astro/config'
 import vercel from '@astrojs/vercel'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -16,6 +16,11 @@ export default defineConfig({
   // Astro 7 defaults to JSX-style whitespace stripping ('jsx'), which drops the
   // spaces between inline elements. Keep the v6 HTML-aware behavior.
   compressHTML: true,
+  // Media are plain <img> tags pointing at Vercel Blob; nothing uses
+  // astro:assets. The passthrough service keeps sharp (about 20 MB of native
+  // binaries) out of both server functions, which shortens the build's
+  // function bundling, the deploy upload and cold starts.
+  image: { service: passthroughImageService() },
   adapter: vercel({
     webAnalytics: { enabled: true },
     isr: {

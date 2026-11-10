@@ -102,8 +102,10 @@ reviews:
       instructions: |
         `git.deploymentEnabled` is a whitelist: keep `"**": false` with only
         `main` and `preview` enabled, or every PR branch will deploy and
-        exhaust the Hobby build quota. Keep the `ignoreCommand` that skips
-        rebuilding `preview -> main` release merge commits.
+        exhaust the Hobby build quota. Keep `ignoreCommand` pointing at
+        `scripts/vercel-ignore-build.sh`, which skips rebuilding
+        `preview -> main` release merge commits and apps with no changes since
+        the last deployment; it must exit 1 (build) whenever it is unsure.
     - path: '.github/workflows/**'
       instructions: |
         Node is pinned to 24.22.1 (`.nvmrc`) and Bun to the version in the

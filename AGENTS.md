@@ -150,11 +150,19 @@ project's Root Directory) to avoid duplicate builds:
   `true`. Unspecified branches default to enabled, so listing only `development:
   false` still deploys every `cursor/*` PR branch and burns Hobby (1 concurrent
   build, 100 deploys/day). GitHub Actions still runs on PRs to `main`.
-- `ignoreCommand` skips Preview builds on the `preview` branch when HEAD is a
+- `ignoreCommand` runs `scripts/vercel-ignore-build.sh` (shared by both apps).
+  It skips Preview builds on the `preview` branch when HEAD is a
   `preview -> main` release merge commit (`Merge pull request #N from .../preview`):
   that exact tree was just built for Production, so rebuilding it after the
   post-release branch sync is redundant. Caveat: if `main` ever gets hotfix
   commits of its own, the staging URL lags until the next real `preview` push.
+  It also skips an app when nothing it depends on (its own folder,
+  `packages/`, root `package.json`, `bun.lock`, `.nvmrc`) changed since
+  `$VERCEL_GIT_PREVIOUS_SHA`, so a web-only change does not queue a CMS build
+  on Hobby's single build slot. If the comparison fails, it builds.
+- `apps/web` uses Astro's passthrough image service (no `astro:assets`), which
+  keeps sharp out of the server functions (26 MB -> 7 MB each). Switch it back
+  before using `<Image>`.
 
 ## Environment Variables
 
