@@ -34,19 +34,36 @@ export const Site: GlobalConfig = {
       ],
     },
     {
+      name: 'defaultView',
+      type: 'select',
+      required: true,
+      defaultValue: 'cli',
+      options: [
+        { label: 'CLI (terminal)', value: 'cli' },
+        { label: 'Modern (agent app)', value: 'modern' },
+      ],
+      admin: {
+        description:
+          'Look that first-time visitors see. Visitors can switch with the CLI / Modern control; their choice is remembered in their browser.',
+      },
+    },
+    {
       name: 'welcome',
       type: 'text',
-      defaultValue: 'whoa.me へようこそ',
+      defaultValue: 'Welcome to whoa.me',
+      localized: true,
       admin: { description: 'Small line at the top of the home-page intro box.' },
     },
     {
       name: 'intro',
       type: 'textarea',
+      localized: true,
       admin: { description: 'One or two sentences under your name on the home page.' },
     },
     {
       name: 'description',
       type: 'textarea',
+      localized: true,
       admin: {
         description: 'Default meta description for pages without their own (home, post list, RSS).',
       },
@@ -79,7 +96,7 @@ export const Site: GlobalConfig = {
             { name: 'url', type: 'text', admin: { width: '70%' } },
           ],
         },
-        { name: 'description', type: 'text' },
+        { name: 'description', type: 'text', localized: true },
       ],
     },
   ],

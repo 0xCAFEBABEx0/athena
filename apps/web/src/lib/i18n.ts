@@ -1,0 +1,263 @@
+import { DEFAULT_LOCALE, LOCALES, type Locale } from '@athena/shared/constants'
+
+export { DEFAULT_LOCALE, LOCALES, type Locale }
+
+/** `lang` / `hreflang` values. */
+export const LANG_TAG: Record<Locale, string> = { en: 'en', ja: 'ja', zh: 'zh-Hans' }
+
+/** Label shown in the language switcher. */
+export const LOCALE_LABEL: Record<Locale, string> = { en: 'EN', ja: '日本語', zh: '中文' }
+
+export const isLocale = (value: unknown): value is Locale =>
+  typeof value === 'string' && (LOCALES as readonly string[]).includes(value)
+
+/**
+ * Split a URL path into its locale and the unprefixed path:
+ * `/ja/posts/x` → { locale: 'ja', path: '/posts/x' }, `/posts/x` → en.
+ */
+export const splitLocale = (pathname: string): { locale: Locale; path: string } => {
+  // Astro can report `/posts/x/`; links and hreflang use the bare form.
+  const clean = pathname.length > 1 ? pathname.replace(/\/+$/, '') || '/' : pathname || '/'
+  const match = clean.match(/^\/([a-z]{2})(\/.*)?$/)
+  if (match && isLocale(match[1]) && match[1] !== DEFAULT_LOCALE) {
+    return { locale: match[1], path: match[2] || '/' }
+  }
+  return { locale: DEFAULT_LOCALE, path: clean }
+}
+
+/** Prefix an internal path for a locale. External URLs are returned as is. */
+export const localizePath = (locale: Locale, path: string): string => {
+  if (!path.startsWith('/') || path.startsWith('//')) return path
+  const bare = splitLocale(path).path
+  if (locale === DEFAULT_LOCALE) return bare
+  return bare === '/' ? `/${locale}` : `/${locale}${bare}`
+}
+
+/** The request's locale, set by the middleware. */
+export const localeOf = (astro: { locals: { locale?: Locale } }): Locale =>
+  astro.locals.locale ?? DEFAULT_LOCALE
+
+const en = {
+  nav: 'Main',
+  language: 'Language',
+  view: 'View',
+  home: 'home',
+  posts: 'posts',
+  search: 'Search posts',
+  searchHint: 'to search',
+  searchRun: 'to run',
+  searchTitle: 'Search',
+  searchResults: 'Results',
+  searchAll: 'Posts',
+  notFound: 'Nothing found',
+  noPosts: 'No posts yet',
+  recentPosts: 'Recent posts',
+  allPosts: 'All posts',
+  allPostsPage: (n: number) => `All posts (page ${n})`,
+  more: (n: number) => `… ${n} more`,
+  projects: 'Things I built',
+  related: 'Related posts',
+  summary: 'Summary',
+  minRead: (n: number) => `${n} min read`,
+  adjacent: 'Previous and next posts',
+  pagination: 'Pagination',
+  shortcutMove: 'move between posts',
+  shortcutTheme: 'toggle theme',
+  themeToggle: 'Toggle theme',
+  toDark: 'Switch to dark mode',
+  toLight: 'Switch to light mode',
+  draftBanner: 'Draft preview',
+  draftExit: 'Exit',
+  notFoundTitle: 'Page not found',
+  notFoundBody: 'The URL may have changed, or the page was removed.',
+  backHome: 'Back to home',
+  errorTitle: 'This page could not be shown',
+  errorBody: 'Please try again in a little while.',
+  untranslated: 'This post has not been translated yet, so it is shown in English.',
+  darkWord: 'Dark',
+  lightWord: 'Light',
+  viewCli: 'CLI',
+  viewModern: 'Modern',
+  toModern: 'Switch to the modern view',
+  toCli: 'Switch to the CLI view',
+  shortcutView: 'switch view',
+  shortcutSearch: 'search',
+  askRecent: 'What have you written recently?',
+  askProjects: 'What are you building?',
+  askAll: 'Show me every post.',
+  askSearch: (q: string) => `Find posts about “${q}”.`,
+  askSearchEmpty: 'What can I search for?',
+  askRead: (slug: string) => `Read: posts/${slug}`,
+  sidebar: 'Sidebar',
+  rss: 'RSS',
+  searchOpen: 'Search posts',
+  searchPlaceholder: 'Search posts…',
+  searchClose: 'Close search',
+  groupPosts: 'Posts',
+  groupPages: 'Pages',
+  resultCount: (n: number) => (n === 1 ? '1 result' : `${n} results`),
+  searchSelect: 'move',
+  searchOpenResult: 'open',
+  searchCloseKey: 'close',
+  searchLoading: 'Searching…',
+  searchFailed: 'Search is unavailable right now.',
+  searchSubmit: 'Search',
+  onThisPage: 'On this page',
+  details: 'Details',
+  published: 'Published',
+  writtenBy: 'By',
+  alsoIn: 'Also in',
+  keepReading: 'Keep reading',
+}
+
+export type Dictionary = typeof en
+
+const ja: Dictionary = {
+  nav: 'メイン',
+  language: '言語',
+  view: '表示',
+  home: 'home',
+  posts: 'posts',
+  search: '記事を検索',
+  searchHint: 'で検索',
+  searchRun: 'で実行',
+  searchTitle: '検索',
+  searchResults: '検索結果',
+  searchAll: '記事',
+  notFound: '見つかりませんでした',
+  noPosts: 'まだ記事がありません',
+  recentPosts: '最近の記事',
+  allPosts: 'すべての記事',
+  allPostsPage: (n) => `記事一覧（${n}ページ目）`,
+  more: (n) => `… 他 ${n} 件`,
+  projects: '作ったもの',
+  related: '関連する記事',
+  summary: '概要',
+  minRead: (n) => `${n}分で読めます`,
+  adjacent: '前後の記事',
+  pagination: 'ページ送り',
+  shortcutMove: '記事を移動',
+  shortcutTheme: 'テーマ切替',
+  themeToggle: 'テーマを切り替え',
+  toDark: 'ダークモードに切り替え',
+  toLight: 'ライトモードに切り替え',
+  draftBanner: '下書きプレビュー中',
+  draftExit: '終了',
+  notFoundTitle: 'ページが見つかりません',
+  notFoundBody: 'URL が変わったか、削除された可能性があります。',
+  backHome: 'ホームへ戻る',
+  errorTitle: 'ページを表示できませんでした',
+  errorBody: 'しばらくしてから、もう一度開いてください。',
+  untranslated: 'この記事はまだ翻訳されていないため、英語で表示しています。',
+  darkWord: 'ダーク',
+  lightWord: 'ライト',
+  viewCli: 'CLI',
+  viewModern: 'モダン',
+  toModern: 'モダン表示に切り替え',
+  toCli: 'CLI表示に切り替え',
+  shortcutView: '表示切替',
+  shortcutSearch: '検索',
+  askRecent: '最近は何を書いていますか？',
+  askProjects: '何を作っていますか？',
+  askAll: '記事をすべて見せて。',
+  askSearch: (q) => `「${q}」についての記事を探して。`,
+  askSearchEmpty: '何を検索できますか？',
+  askRead: (slug) => `読む: posts/${slug}`,
+  sidebar: 'サイドバー',
+  rss: 'RSS',
+  searchOpen: '記事を検索',
+  searchPlaceholder: '記事を検索…',
+  searchClose: '検索を閉じる',
+  groupPosts: '記事',
+  groupPages: 'ページ',
+  resultCount: (n) => `${n} 件`,
+  searchSelect: '移動',
+  searchOpenResult: '開く',
+  searchCloseKey: '閉じる',
+  searchLoading: '検索中…',
+  searchFailed: 'いまは検索を使えません。',
+  searchSubmit: '検索',
+  onThisPage: 'このページの内容',
+  details: '詳細',
+  published: '公開日',
+  writtenBy: '著者',
+  alsoIn: '他の言語',
+  keepReading: '続けて読む',
+}
+
+const zh: Dictionary = {
+  nav: '主导航',
+  language: '语言',
+  view: '视图',
+  home: 'home',
+  posts: 'posts',
+  search: '搜索文章',
+  searchHint: '搜索',
+  searchRun: '执行',
+  searchTitle: '搜索',
+  searchResults: '搜索结果',
+  searchAll: '文章',
+  notFound: '没有找到',
+  noPosts: '还没有文章',
+  recentPosts: '最新文章',
+  allPosts: '全部文章',
+  allPostsPage: (n) => `全部文章（第 ${n} 页）`,
+  more: (n) => `… 还有 ${n} 篇`,
+  projects: '做过的东西',
+  related: '相关文章',
+  summary: '摘要',
+  minRead: (n) => `阅读约 ${n} 分钟`,
+  adjacent: '上一篇和下一篇',
+  pagination: '分页',
+  shortcutMove: '在文章间移动',
+  shortcutTheme: '切换主题',
+  themeToggle: '切换主题',
+  toDark: '切换到深色模式',
+  toLight: '切换到浅色模式',
+  draftBanner: '草稿预览中',
+  draftExit: '退出',
+  notFoundTitle: '页面不存在',
+  notFoundBody: '链接可能已更改，或页面已被删除。',
+  backHome: '返回首页',
+  errorTitle: '页面无法显示',
+  errorBody: '请稍后再试。',
+  untranslated: '这篇文章还没有翻译，因此以英文显示。',
+  darkWord: '深色',
+  lightWord: '浅色',
+  viewCli: 'CLI',
+  viewModern: '现代',
+  toModern: '切换到现代视图',
+  toCli: '切换到 CLI 视图',
+  shortcutView: '切换视图',
+  shortcutSearch: '搜索',
+  askRecent: '最近写了什么？',
+  askProjects: '在做什么？',
+  askAll: '列出所有文章。',
+  askSearch: (q) => `查找关于“${q}”的文章。`,
+  askSearchEmpty: '可以搜索什么？',
+  askRead: (slug) => `阅读：posts/${slug}`,
+  sidebar: '侧边栏',
+  rss: 'RSS',
+  searchOpen: '搜索文章',
+  searchPlaceholder: '搜索文章…',
+  searchClose: '关闭搜索',
+  groupPosts: '文章',
+  groupPages: '页面',
+  resultCount: (n) => `${n} 条结果`,
+  searchSelect: '移动',
+  searchOpenResult: '打开',
+  searchCloseKey: '关闭',
+  searchLoading: '搜索中…',
+  searchFailed: '搜索暂时不可用。',
+  searchSubmit: '搜索',
+  onThisPage: '本页内容',
+  details: '详情',
+  published: '发布于',
+  writtenBy: '作者',
+  alsoIn: '其他语言',
+  keepReading: '继续阅读',
+}
+
+const DICTIONARIES: Record<Locale, Dictionary> = { en, ja, zh }
+
+export const dict = (locale: Locale): Dictionary => DICTIONARIES[locale]

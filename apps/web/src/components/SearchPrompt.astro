@@ -1,30 +1,48 @@
 ---
-/** Search box shaped like an agent CLI's input line. "/" focuses it (see Layout). */
+import { dict, localeOf, localizePath } from '@/lib/i18n'
+
+/**
+ * Keyword search box. CLI view: an agent CLI's input line (`❯ …`). Modern
+ * view: the chat composer pinned to the bottom of the column. Either way it
+ * submits to /search; the popup search is the "/" and ⌘K shortcut.
+ */
 type Props = {
   value?: string
   autofocus?: boolean
   class?: string
 }
 
+const locale = localeOf(Astro)
+const t = dict(locale)
 const { value = '', autofocus = false, class: className } = Astro.props
 ---
 
-<form action="/search" method="get" role="search" class:list={['font-mono', className]}>
-  <label class="input input-lg h-12 w-full gap-3 bg-base-200 font-mono text-sm focus-within:border-primary focus-within:outline-none">
-    <span class="text-primary" aria-hidden="true">❯</span>
-    <span class="sr-only">記事を検索</span>
-    <input
-      type="search"
-      name="q"
-      value={value}
-      placeholder="記事を検索"
-      autocomplete="off"
-      autofocus={autofocus}
-      data-search-input
-      class="grow"
-    />
-    <span class="hidden items-center gap-1 text-xs text-base-content/60 sm:flex">
-      <kbd class="kbd kbd-sm">/</kbd> で検索 · <kbd class="kbd kbd-sm">Enter</kbd> で実行
-    </span>
-  </label>
-</form>
+<div class:list={['search-prompt', className]}>
+  <form action={localizePath(locale, '/search')} method="get" role="search" class="font-mono">
+    <label
+      class="search-prompt-box input input-lg h-12 w-full gap-3 bg-base-200 font-mono text-sm focus-within:border-primary focus-within:outline-none"
+    >
+      <span class="cli-only text-primary" aria-hidden="true">❯</span>
+      <span class="sr-only">{t.search}</span>
+      <input
+        type="search"
+        name="q"
+        value={value}
+        placeholder={t.searchPlaceholder}
+        autocomplete="off"
+        autofocus={autofocus}
+        data-search-input
+        class="grow"
+      />
+      <span class="cli-only hidden items-center gap-1 text-xs text-base-content/60 sm:flex">
+        <kbd class="kbd kbd-sm">/</kbd>
+        {t.searchHint} · <kbd class="kbd kbd-sm">Enter</kbd>
+        {t.searchRun}
+      </span>
+      <button type="submit" class="modern-only modern-send" aria-label={t.searchSubmit}>↑</button>
+    </label>
+  </form>
+  <p class="modern-only modern-hint font-mono">
+    / {t.shortcutSearch} · j/k {t.shortcutMove} · t {t.shortcutTheme} · v {t.shortcutView}
+  </p>
+</div>

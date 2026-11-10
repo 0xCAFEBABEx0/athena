@@ -1,0 +1,259 @@
+---
+/**
+ * Popup search (⌘K / Ctrl+K, "/" or any [data-search-open] button). Keyword
+ * search only: results come from /api/search, which asks the CMS search
+ * index. Enter with nothing selected opens the full /search page.
+ */
+import { dict, localeOf, localizePath } from '@/lib/i18n'
+
+const locale = localeOf(Astro)
+const t = dict(locale)
+const strings = {
+  posts: t.groupPosts,
+  pages: t.groupPages,
+  loading: t.searchLoading,
+  failed: t.searchFailed,
+  empty: t.notFound,
+  count: [t.resultCount(0), t.resultCount(1), t.resultCount(2)],
+}
+---
+
+<dialog
+  class="modal items-start pt-[10vh] sm:pt-[14vh]"
+  aria-label={t.searchTitle}
+  data-search-dialog
+  data-locale={locale}
+  data-strings={JSON.stringify(strings)}
+>
+  <div
+    class="modal-box w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-2xl border border-base-300 p-0 shadow-2xl"
+  >
+    <form
+      action={localizePath(locale, '/search')}
+      method="get"
+      role="search"
+      class="flex items-center gap-3 border-b border-base-300 px-5 py-3.5"
+      data-search-form
+    >
+      <span class="text-lg text-base-content/50" aria-hidden="true">⌕</span>
+      <label class="sr-only" for="search-dialog-input">{t.searchOpen}</label>
+      <input
+        id="search-dialog-input"
+        type="search"
+        name="q"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder={t.searchPlaceholder}
+        class="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-base-content/50"
+        role="combobox"
+        aria-expanded="true"
+        aria-controls="search-dialog-results"
+        aria-autocomplete="list"
+        data-search-query
+      />
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm btn-square text-base-content/60"
+        aria-label={t.searchClose}
+        data-search-close
+      >
+        ✕
+      </button>
+    </form>
+    <div
+      id="search-dialog-results"
+      role="listbox"
+      aria-label={t.searchResults}
+      class="max-h-[min(60vh,28rem)] overflow-y-auto p-2"
+      data-search-results
+    >
+    </div>
+    <div
+      class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-base-300 px-5 py-2.5 font-mono text-xs text-base-content/60"
+    >
+      <span class="hidden sm:inline">↑↓ {t.searchSelect}</span>
+      <span class="hidden sm:inline">↵ {t.searchOpenResult}</span>
+      <span class="hidden sm:inline">esc {t.searchCloseKey}</span>
+      <span class="ms-auto" aria-live="polite" data-search-status></span>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button tabindex="-1">{t.searchClose}</button>
+  </form>
+</dialog>
+
+<script>
+  import type { SearchHit, SearchResponse } from '@/pages/api/search'
+
+  type Strings = {
+    posts: string
+    pages: string
+    loading: string
+    failed: string
+    empty: string
+    count: [string, string, string]
+  }
+
+  const dialog = document.querySelector<HTMLDialogElement>('[data-search-dialog]')
+  const input = dialog?.querySelector<HTMLInputElement>('[data-search-query]')
+  const list = dialog?.querySelector<HTMLElement>('[data-search-results]')
+  const status = dialog?.querySelector<HTMLElement>('[data-search-status]')
+  const form = dialog?.querySelector<HTMLFormElement>('[data-search-form]')
+
+  if (dialog && input && list && status && form) {
+    const locale = dialog.dataset.locale ?? 'en'
+    const strings = JSON.parse(dialog.dataset.strings ?? '{}') as Strings
+    const countLabel = (n: number) =>
+      n === 1 ? strings.count[1] : strings.count[2].replace('2', String(n))
+
+    let options: HTMLAnchorElement[] = []
+    let active = -1
+    let controller: AbortController | null = null
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    const select = (index: number) => {
+      options.forEach((option, i) => option.setAttribute('aria-selected', String(i === index)))
+      active = index
+      const current = options[index]
+      if (current) {
+        input.setAttribute('aria-activedescendant', current.id)
+        current.scrollIntoView({ block: 'nearest' })
+      } else {
+        input.removeAttribute('aria-activedescendant')
+      }
+    }
+
+    const icon = { posts: '▤', pages: '◎' } as const
+
+    const render = (data: SearchResponse) => {
+      list.replaceChildren()
+      options = []
+      for (const group of ['posts', 'pages'] as const) {
+        const hits: SearchHit[] = data[group]
+        if (hits.length === 0) continue
+        const label = document.createElement('p')
+        label.className = 'px-3 pb-1 pt-2 text-xs text-base-content/60'
+        label.textContent = strings[group]
+        label.setAttribute('role', 'presentation')
+        list.append(label)
+        for (const hit of hits) {
+          const option = document.createElement('a')
+          option.href = hit.href
+          option.id = `search-hit-${options.length}`
+          option.setAttribute('role', 'option')
+          option.setAttribute('aria-selected', 'false')
+          option.className = 'search-hit'
+          const glyph = document.createElement('span')
+          glyph.className = 'search-hit-icon'
+          glyph.setAttribute('aria-hidden', 'true')
+          glyph.textContent = icon[group]
+          const title = document.createElement('span')
+          title.className = 'min-w-0 flex-1 truncate'
+          title.textContent = hit.title
+          option.append(glyph, title)
+          if (hit.tag) {
+            const tag = document.createElement('span')
+            tag.className =
+              'badge badge-outline badge-sm hidden shrink-0 font-mono text-base-content/60 sm:inline-flex'
+            tag.textContent = `#${hit.tag}`
+            option.append(tag)
+          }
+          const enter = document.createElement('span')
+          enter.className = 'search-hit-enter'
+          enter.setAttribute('aria-hidden', 'true')
+          enter.textContent = '↵'
+          option.append(enter)
+          const index = options.length
+          option.addEventListener('mousemove', () => {
+            if (active !== index) select(index)
+          })
+          options.push(option)
+          list.append(option)
+        }
+      }
+      const total = options.length
+      if (total === 0) {
+        const empty = document.createElement('p')
+        empty.className = 'px-3 py-6 text-center text-sm text-base-content/60'
+        empty.textContent = strings.empty
+        list.append(empty)
+      }
+      status.textContent = countLabel(total)
+      select(total > 0 ? 0 : -1)
+    }
+
+    const search = async (q: string) => {
+      controller?.abort()
+      controller = new AbortController()
+      status.textContent = strings.loading
+      try {
+        const params = new URLSearchParams({ q, locale })
+        const res = await fetch(`/api/search?${params}`, { signal: controller.signal })
+        if (!res.ok) throw new Error(String(res.status))
+        render((await res.json()) as SearchResponse)
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        list.replaceChildren()
+        options = []
+        select(-1)
+        status.textContent = strings.failed
+      }
+    }
+
+    const open = (query?: string) => {
+      if (dialog.open) return
+      if (typeof query === 'string') input.value = query
+      dialog.showModal()
+      input.focus()
+      input.select()
+      void search(input.value)
+    }
+
+    input.addEventListener('input', () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => void search(input.value), 140)
+    })
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if (options.length === 0) return
+        event.preventDefault()
+        const step = event.key === 'ArrowDown' ? 1 : -1
+        select((active + step + options.length) % options.length)
+      } else if (event.key === 'Escape') {
+        // A search input swallows the first Escape (it clears the value).
+        event.preventDefault()
+        dialog.close()
+      } else if (event.key === 'Enter' && !event.isComposing) {
+        const current = options[active]
+        if (current) {
+          event.preventDefault()
+          window.location.href = current.href
+        }
+      }
+    })
+
+    dialog.querySelector('[data-search-close]')?.addEventListener('click', () => dialog.close())
+
+    // Enter with nothing selected submits to the full /search page.
+    form.addEventListener('submit', () => dialog.close())
+
+    document.addEventListener('click', (event) => {
+      const trigger = (event.target as Element | null)?.closest('[data-search-open]')
+      if (!trigger) return
+      event.preventDefault()
+      open()
+    })
+
+    document.addEventListener('keydown', (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        if (dialog.open) dialog.close()
+        else open()
+      }
+    })
+
+    // The "/" shortcut in Layout calls this.
+    ;(window as Window & { __openSearch?: (query?: string) => void }).__openSearch = open
+  }
+</script>

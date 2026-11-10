@@ -1,51 +1,142 @@
 ---
-import type { Header } from '@athena/shared/payload-types'
-
 import CMSLink from '@/components/CMSLink.astro'
 import ThemeToggle from '@/components/ThemeToggle.astro'
-import { getGlobal } from '@/lib/cms'
+import ViewToggle from '@/components/ViewToggle.astro'
+import { LOCALES, LOCALE_LABEL, dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
+import { getHeaderNav } from '@/lib/nav'
 import type { SiteData } from '@/lib/site'
 
+/**
+ * Both headers render on every page and CSS shows one: the CLI header
+ * (`❯_ site  home posts  en [modern] [dark]`) or the modern top bar
+ * (breadcrumb + CLI|Modern and EN|日本語|中文 controls).
+ */
 type Props = {
   site: SiteData
 }
 
 const { site } = Astro.props
+const locale = localeOf(Astro)
+const t = dict(locale)
 
-let navItems: NonNullable<Header['navItems']> = []
-try {
-  const header = await getGlobal<Header>('header')
-  navItems = header?.navItems || []
-} catch (error) {
-  // CMS outage must not 500 every page; Layout still renders without nav.
-  console.error('[header] failed to load nav', error)
-}
-
+const navLinks = await getHeaderNav(Astro.request, locale)
 // Until nav is set up in the CMS, keep the two routes every visitor needs.
 const fallbackNav: CMSLinkData[] = [
-  { type: 'custom', url: '/', label: 'home' },
-  { type: 'custom', url: '/posts', label: 'posts' },
+  { type: 'custom', url: '/', label: t.home },
+  { type: 'custom', url: '/posts', label: t.posts },
 ]
-const links: CMSLinkData[] = navItems.length > 0 ? navItems.map(({ link }) => link) : fallbackNav
+const links = navLinks.length > 0 ? navLinks : fallbackNav
 
-const { pathname } = Astro.url
+// Compare unprefixed paths so /ja/posts marks "posts" as current.
+const current = splitLocale(Astro.originPathname).path
 const isCurrent = (href: string | null): boolean => {
   if (!href || !href.startsWith('/')) return false
-  if (href === '/') return pathname === '/'
-  return pathname === href || pathname.startsWith(`${href}/`)
+  const path = splitLocale(href).path
+  if (path === '/') return current === '/'
+  return current === path || current.startsWith(`${path}/`)
 }
+const languages = LOCALES.map((code) => ({
+  code,
+  label: LOCALE_LABEL[code],
+  href: localizePath(code, current),
+}))
+const crumbs = current.split('/').filter(Boolean)
+const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
 ---
 
-<header class="container flex flex-wrap items-center justify-between gap-x-4 pt-5">
+<header class="cli-header container flex flex-wrap items-center justify-between gap-x-4 pt-5">
   <a
     class="inline-flex min-h-11 items-center gap-2 font-mono text-sm font-semibold text-base-content no-underline"
-    href="/"
+    href={localizePath(locale, '/')}
   >
     <span class="text-primary" aria-hidden="true">❯_</span>{site.siteName}
   </a>
-  <nav class="flex flex-wrap items-center" aria-label="メイン">
-    {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link))} />)}
+  <nav class="flex flex-wrap items-center" aria-label={t.nav}>
+    {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
+    <details class="dropdown dropdown-end" data-language-menu>
+      <summary
+        class="inline-flex min-h-11 cursor-pointer list-none items-center px-2 font-mono text-sm text-base-content/60 hover:text-base-content"
+        aria-label={t.language}
+      >
+        {locale}
+      </summary>
+      <ul
+        class="menu dropdown-content z-20 mt-1 w-32 rounded-box border border-base-300 bg-base-100 p-1 font-mono text-sm"
+      >
+        {
+          languages.map((lang) => (
+            <li>
+              <a
+                href={lang.href}
+                hreflang={lang.code}
+                lang={lang.code}
+                class:list={[{ 'menu-active': lang.code === locale }]}
+                aria-current={lang.code === locale ? 'true' : undefined}
+              >
+                <span class="w-5 text-base-content/50">{lang.code}</span>
+                {lang.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </details>
+    <ViewToggle />
     <ThemeToggle />
   </nav>
+</header>
+
+<header class="modern-topbar">
+  <a class="modern-brand-compact" href={localizePath(locale, '/')}>
+    <span class="modern-avatar" aria-hidden="true">{initial}</span>
+    <span class="sr-only">{site.siteName}</span>
+  </a>
+  <nav class="modern-crumbs breadcrumbs min-w-0 py-0 text-[13.5px] text-base-content/60" aria-label="Breadcrumb">
+    <ul>
+      <li><a href={localizePath(locale, '/')}>{site.siteName}</a></li>
+      {
+        crumbs.length === 0 ? (
+          <li aria-current="page">{t.home}</li>
+        ) : (
+          crumbs.map((crumb, index) =>
+            index === crumbs.length - 1 ? (
+              <li aria-current="page" class="min-w-0 truncate">{crumb}</li>
+            ) : (
+              <li>
+                <a href={localizePath(locale, `/${crumbs.slice(0, index + 1).join('/')}`)}>{crumb}</a>
+              </li>
+            ),
+          )
+        )
+      }
+    </ul>
+  </nav>
+  <div class="ms-auto flex shrink-0 items-center gap-2">
+    <button
+      type="button"
+      class="btn btn-ghost btn-sm btn-square lg:hidden"
+      aria-label={t.searchOpen}
+      data-search-open
+    >
+      ⌕
+    </button>
+    <ViewToggle variant="segmented" />
+    <div class="tabs tabs-box tabs-xs" role="group" aria-label={t.language}>
+      {
+        languages.map((lang) => (
+          <a
+            href={lang.href}
+            hreflang={lang.code}
+            lang={lang.code}
+            class:list={['tab', { 'tab-active': lang.code === locale }]}
+            aria-current={lang.code === locale ? 'true' : undefined}
+          >
+            <span class="hidden sm:inline">{lang.code === 'en' ? 'EN' : lang.label}</span>
+            <span class="sm:hidden">{lang.code.toUpperCase()}</span>
+          </a>
+        ))
+      }
+    </div>
+  </div>
 </header>

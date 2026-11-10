@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro'
 
 import { getAllSlugs } from '@/lib/cms'
 import { webURL } from '@/lib/env'
-import { sitemapResponse, sitemapXML, type SitemapEntry } from '@/lib/sitemap'
+import { localizedEntries, sitemapResponse, sitemapXML, type SitemapEntry } from '@/lib/sitemap'
 
 export const GET: APIRoute = async ({ url }) => {
   const base = url.origin || webURL()
@@ -12,12 +12,11 @@ export const GET: APIRoute = async ({ url }) => {
     const docs = await getAllSlugs('pages')
 
     const entries: SitemapEntry[] = [
-      ...docs.map((doc) => ({
-        loc: doc.slug === 'home' ? `${base}/` : `${base}/${doc.slug}`,
-        lastmod: doc.updatedAt,
-      })),
-      { loc: `${base}/search`, lastmod: now },
-      { loc: `${base}/posts`, lastmod: now },
+      ...docs.flatMap((doc) =>
+        localizedEntries(base, doc.slug === 'home' ? '/' : `/${doc.slug}`, doc.updatedAt),
+      ),
+      ...localizedEntries(base, '/search', now),
+      ...localizedEntries(base, '/posts', now),
     ]
 
     return sitemapResponse(sitemapXML(entries))

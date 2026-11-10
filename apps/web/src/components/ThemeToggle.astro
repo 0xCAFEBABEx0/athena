@@ -1,46 +1,53 @@
 ---
+import { dict, localeOf } from '@/lib/i18n'
+
 /**
  * Light/dark toggle, persisted in localStorage under the same
  * 'payload-theme' key the cms admin uses (see the theme script in Layout).
- * The label shows the theme you switch to, like a terminal flag: [dark].
+ * The label names the theme you switch to: `[dark]` in the CLI header,
+ * "Dark" in the modern sidebar. CSS picks the label from data-theme, so any
+ * number of toggles stay in sync.
  */
+type Props = {
+  variant?: 'flag' | 'word'
+}
+
+const { variant = 'flag' } = Astro.props
+const t = dict(localeOf(Astro))
+const toDark = variant === 'flag' ? '[dark]' : t.darkWord
+const toLight = variant === 'flag' ? '[light]' : t.lightWord
 ---
 
 <button
   type="button"
-  id="theme-toggle"
-  class="btn btn-ghost btn-sm min-h-11 px-2 font-mono font-normal text-base-content/60 hover:text-base-content"
-  aria-label="テーマを切り替え"
+  class:list={[
+    'btn btn-ghost btn-sm font-normal text-base-content/60 hover:text-base-content',
+    variant === 'flag' ? 'min-h-11 px-2 font-mono' : 'px-2 font-mono text-xs',
+  ]}
+  data-theme-toggle
 >
-  <span class="theme-label-light">[dark]</span>
-  <span class="theme-label-dark hidden">[light]</span>
+  <span class="theme-when-light" aria-hidden="true">{toDark}</span>
+  <span class="theme-when-dark" aria-hidden="true">{toLight}</span>
+  <span class="sr-only theme-when-light">{t.toDark}</span>
+  <span class="sr-only theme-when-dark">{t.toLight}</span>
 </button>
 
-<script is:inline>
-  ;(function () {
-    var key = 'payload-theme'
-    var button = document.getElementById('theme-toggle')
-    if (!button) return
+<script>
+  const KEY = 'payload-theme'
 
-    var sync = function () {
-      var dark = document.documentElement.getAttribute('data-theme') === 'dark'
-      button.querySelector('.theme-label-light').classList.toggle('hidden', dark)
-      button.querySelector('.theme-label-dark').classList.toggle('hidden', !dark)
-      button.setAttribute('aria-label', dark ? 'ライトモードに切り替え' : 'ダークモードに切り替え')
+  const toggle = () => {
+    const root = document.documentElement
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+    try {
+      window.localStorage.setItem(KEY, next)
+    } catch {
+      /* private mode: the theme still switches for this page */
     }
+    root.setAttribute('data-theme', next)
+  }
 
-    window.__toggleTheme = function () {
-      var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
-      try {
-        window.localStorage.setItem(key, next)
-      } catch (_err) {
-        /* private mode: theme still switches for this page */
-      }
-      document.documentElement.setAttribute('data-theme', next)
-      sync()
-    }
-
-    button.addEventListener('click', window.__toggleTheme)
-    sync()
-  })()
+  ;(window as Window & { __toggleTheme?: () => void }).__toggleTheme = toggle
+  document.addEventListener('click', (event) => {
+    if ((event.target as Element | null)?.closest('[data-theme-toggle]')) toggle()
+  })
 </script>

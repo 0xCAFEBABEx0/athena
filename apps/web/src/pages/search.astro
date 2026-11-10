@@ -1,4 +1,5 @@
 ---
+import { dict, localeOf, localizePath } from '@/lib/i18n'
 import Layout from '@/layouts/Layout.astro'
 import PostList from '@/components/PostList.astro'
 import Prompt from '@/components/Prompt.astro'
@@ -7,10 +8,13 @@ import { searchPosts } from '@/lib/cms'
 import { routeMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
 
-const site = await getSite(Astro.request)
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+const site = await getSite(Astro.request, locale)
 const query = (Astro.url.searchParams.get('q') ?? '').trim()
-const results = await searchPosts(query)
-const meta = routeMeta('検索', '/search', site)
+const results = await searchPosts(query, locale)
+const meta = routeMeta(t.searchTitle, lp('/search'), site)
 
 // A blank query lists everything; the command line shows what ran.
 const command = query ? `grep -ri "${query}" posts/` : 'ls posts'
@@ -18,15 +22,18 @@ const command = query ? `grep -ri "${query}" posts/` : 'ls posts'
 
 <Layout meta={meta}>
   <div class="container pt-10">
-    <h1 class="sr-only">記事を検索</h1>
+    <h1 class="sr-only">{t.search}</h1>
     <SearchPrompt value={query} autofocus={!query} />
     <div class="mt-10">
-      <Prompt command={command} heading={query ? '検索結果' : '記事'} count={results.totalDocs} />
+      <Prompt
+        command={command}
+        question={query ? t.askSearch(query) : t.askSearchEmpty}
+        heading={query ? t.searchResults : t.searchAll} count={results.totalDocs} />
       {
         results.docs.length > 0 ? (
           <PostList class="mt-1.5" posts={results.docs} />
         ) : (
-          <p class="mt-2 pl-5 font-mono text-sm text-base-content/60">⎿ 見つかりませんでした</p>
+          <p class="mt-2 pl-5 font-mono text-sm text-base-content/60">⎿ {t.notFound}</p>
         )
       }
     </div>

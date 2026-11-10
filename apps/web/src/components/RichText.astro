@@ -1,6 +1,7 @@
 ---
 import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
 
+import { localeOf } from '@/lib/i18n'
 import { richTextToHTML } from '@/lib/richtext'
 
 type Props = {
@@ -12,7 +13,7 @@ type Props = {
 
 const { data, enableGutter = true, enableProse = true, class: className } = Astro.props
 
-const html = data ? richTextToHTML(data) : ''
+const html = data ? richTextToHTML(data, localeOf(Astro)) : ''
 
 // Prose tuned for Japanese body text: looser leading, accent links, mono code.
 const prose = [

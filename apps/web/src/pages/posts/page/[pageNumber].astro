@@ -1,10 +1,14 @@
 ---
+import { dict, localeOf, localizePath } from '@/lib/i18n'
 import Layout from '@/layouts/Layout.astro'
 import PostsArchive from '@/components/PostsArchive.astro'
 import { getPosts } from '@/lib/cms'
 import { routeMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
 
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
 const pageNumber = Number(Astro.params.pageNumber)
 
 if (!Number.isInteger(pageNumber) || pageNumber < 1) {
@@ -12,17 +16,17 @@ if (!Number.isInteger(pageNumber) || pageNumber < 1) {
 }
 
 if (pageNumber === 1) {
-  return Astro.redirect('/posts', 301)
+  return Astro.redirect(lp('/posts'), 301)
 }
 
-const posts = await getPosts({ page: pageNumber })
+const posts = await getPosts({ page: pageNumber }, { locale })
 
 if (posts.totalPages > 0 && pageNumber > posts.totalPages) {
   return Astro.rewrite('/404')
 }
 
-const site = await getSite(Astro.request)
-const meta = routeMeta(`記事一覧（${pageNumber}ページ目）`, `/posts/page/${pageNumber}`, site)
+const site = await getSite(Astro.request, locale)
+const meta = routeMeta(t.allPostsPage(pageNumber), lp(`/posts/page/${pageNumber}`), site)
 ---
 
 <Layout meta={meta}>

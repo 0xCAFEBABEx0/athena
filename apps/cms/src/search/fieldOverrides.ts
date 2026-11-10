@@ -22,11 +22,13 @@ export const searchFields: Field[] = [
         type: 'text',
         name: 'title',
         label: 'Title',
+        localized: true,
       },
       {
         type: 'text',
         name: 'description',
         label: 'Description',
+        localized: true,
       },
       {
         name: 'image',

@@ -6,8 +6,10 @@ import { getPage } from '@/lib/cms'
 import { isDraft } from '@/lib/draft'
 import { buildMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
+import { localeOf, localizePath } from '@/lib/i18n'
 
 const draft = isDraft(Astro.cookies)
+const locale = localeOf(Astro)
 const slugParam = Astro.params.slug
 
 // Page slugs are single-segment; deeper paths are handled by the redirects
@@ -19,19 +21,19 @@ if (slugParam && slugParam.includes('/')) {
 // The home page is pages/index.astro (site settings + recent posts); the old
 // CMS "home" page is no longer routed.
 if (!slugParam || slugParam === 'home') {
-  return Astro.redirect('/', 301)
+  return Astro.redirect(localizePath(locale, '/'), 301)
 }
 
 const slug = slugParam
-const page = await getPage(slug, { draft })
+const page = await getPage(slug, { draft, locale })
 
 if (!page) {
   return Astro.rewrite('/404')
 }
 
 const { hero, layout } = page
-const site = await getSite(Astro.request)
-const meta = buildMeta(page, `/${slug}`, site)
+const site = await getSite(Astro.request, locale)
+const meta = buildMeta(page, localizePath(locale, `/${slug}`), site)
 ---
 
 <Layout meta={meta}>

@@ -1,4 +1,5 @@
 ---
+import { localeOf } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
 
 type Props = CMSLinkData & {
@@ -20,7 +21,7 @@ const {
 } = Astro.props
 const appearance = appearanceProp ?? 'inline'
 
-const href = linkHref({ ...link, label, newTab })
+const href = linkHref({ ...link, label, newTab }, localeOf(Astro))
 
 const sizeClasses: Record<string, string> = {
   sm: 'btn-sm',

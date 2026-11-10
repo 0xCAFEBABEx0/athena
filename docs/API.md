@@ -9,6 +9,14 @@ data shapes behind these endpoints see [CONTENT_MODEL.md](./CONTENT_MODEL.md).
 
 All `/api/*` routes are excluded from ISR caching.
 
+### `GET /api/search?q=&locale=`
+
+Keyword search for the popup (⌘K or `/`). Returns
+`{ "posts": [{ "title", "href", "tag" }], "pages": [{ "title", "href" }] }`:
+up to 8 posts from the `search` collection (outside English, translated hits
+first, then English ones) and up to 5 pages whose title matches. `hrefs`
+carry the locale prefix. `Cache-Control: s-maxage=60`; `503` if the CMS fails.
+
 ### `GET /api/preview`
 
 Entry point for draft preview. Target of the admin **Preview** button and of
@@ -65,7 +73,8 @@ Response `200`:
 
 | Route | Source | Notes |
 |---|---|---|
-| `/` and `/{slug}` | `[...slug].astro` | Page by slug (`home` for `/`). Multi-segment paths → 404. Draft-aware. |
+| `/` | `index.astro` | Home: `site` global intro, recent posts, projects. |
+| `/{slug}` | `[...slug].astro` | Page by slug (`/home` redirects to `/`). Multi-segment paths → 404. Draft-aware. |
 | `/posts` | `posts/index.astro` | Page 1 of posts, 12 per page, newest `publishedAt` first. |
 | `/posts/page/{n}` | `posts/page/[pageNumber].astro` | `n` must be a positive integer within range, otherwise 404. |
 | `/posts/{slug}` | `posts/[slug].astro` | Post detail with related posts. Draft-aware. |
@@ -74,11 +83,18 @@ Response `200`:
 | `/pages-sitemap.xml`, `/posts-sitemap.xml` | | Published slugs with `lastmod = updatedAt`. `503` with `no-store` if the CMS fails. |
 | `/robots.txt` | `robots.txt.ts` | Allow all, disallow `/api/`, link the sitemap index. |
 | `/llms.txt` | `public/llms.txt` | Static site summary for LLM crawlers. |
+| `/rss.xml` | `rss.xml.ts` | 30 newest posts. |
 | `/404`, `/500` | | `500` is standalone and does not call the CMS. |
+
+Every route except `/api/*` and the sitemaps also exists under `/ja` and
+`/zh` (`/ja/posts/x`). English has no prefix. Content falls back to English
+where a translation is missing.
 
 ### Middleware
 
-`src/middleware.ts` runs before content routes. If the pathname equals a
+`src/middleware.ts` runs before content routes. It strips a `/ja` or `/zh`
+prefix, stores the language in `Astro.locals.locale` and rewrites to the
+unprefixed route (ISR still caches by the original URL). If the path equals a
 `redirects.from` value it answers `301` to the resolved target. Skipped for
 `/api/*`, `/_*` and any path containing `.`.
 
@@ -132,6 +148,7 @@ There is no captcha, honeypot or rate limit.
 | `/api/{collection}`, `/api/globals/{slug}` | Payload REST API (all collections). |
 | `/api/graphql`, `/api/graphql-playground` | Payload GraphQL. |
 | `/api/payload-jobs/run` | Jobs runner. Vercel Schedules hourly (`0 * * * *` UTC, Hobby adds up to 15 min jitter); needs a logged-in user or `Authorization: Bearer ${CRON_SECRET}`. |
+| `POST /api/translate` | Body `{ collection: 'posts' \| 'pages', id, locales? }`. Logged-in users only. Translates the English version with Claude and saves `ja`/`zh` as drafts. `503` without `ANTHROPIC_API_KEY`, `422` if the reply is unusable, `502` on API errors. `maxDuration` 300 s. |
 | `/api/sentry-test` | Sentry smoke test route. |
 | `/` | Redirects to `/admin`. Any other non-admin, non-API path redirects (308) to the same path on `WEB_URL`. |
 
@@ -143,6 +160,7 @@ There is no captcha, honeypot or rate limit.
 | `CACHE_TAGS` | `pages`, `posts`, `global_site`, `global_header`, `global_footer`, `redirects`, `sitemap` | CMS hooks, `/api/invalidate` |
 | `COLLECTION_SLUGS` | REST collection slugs | both apps |
 | `IMAGE_SIZES` | Media rendition names | web media helpers |
+| `LOCALES`, `DEFAULT_LOCALE` | `en`, `ja`, `zh`; `en` | Payload localization, web routing |
 
 Changing any of these is a contract change between the two deployments: ship
 both apps together.
@@ -160,6 +178,8 @@ both apps together.
 | `PAYLOAD_API_KEY` | | yes | `web-frontend` API key for draft reads. |
 | `CMS_PROTECTION_BYPASS` | | optional | Vercel protection bypass for server-side fetches. |
 | `BLOB_READ_WRITE_TOKEN` | yes | | Vercel Blob. |
+| `ANTHROPIC_API_KEY` | for translation | | Claude API key for the Translate button. Unset = button answers 503. |
+| `TRANSLATION_MODEL` | optional | | Overrides the translation model (default `claude-opus-5-5`). |
 | `CRON_SECRET` | yes | | Jobs runner auth for Vercel Schedules (sent as a bearer token, like Vercel Cron). |
 | `DEPLOY_ENV` | optional | | Overrides `VERCEL_ENV` for stage detection (Sentry environment). |
 | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | optional | | See [SENTRY_SETUP.md](./SENTRY_SETUP.md). |

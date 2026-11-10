@@ -1,4 +1,5 @@
 ---
+import { dict, localeOf, localizePath } from '@/lib/i18n'
 import Layout from '@/layouts/Layout.astro'
 import PostList from '@/components/PostList.astro'
 import Prompt from '@/components/Prompt.astro'
@@ -11,12 +12,15 @@ import type { Post } from '@athena/shared/payload-types'
 
 const RECENT = 8
 
-const site = await getSite(Astro.request)
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+const site = await getSite(Astro.request, locale)
 
 let posts: Post[] = []
 let totalPosts = 0
 try {
-  const result = await getPosts({ page: 1, limit: RECENT })
+  const result = await getPosts({ page: 1, limit: RECENT }, { locale })
   posts = result.docs
   totalPosts = result.totalDocs
 } catch (error) {
@@ -25,19 +29,28 @@ try {
 
 const updated = formatDate(posts[0]?.publishedAt)
 const more = Math.max(0, totalPosts - posts.length)
-const meta = routeMeta(null, '/', site)
+const meta = routeMeta(null, lp('/'), site)
+const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
 ---
 
 <Layout meta={meta}>
   <div class="container">
-    <section class="card card-border mt-7 border-primary" aria-labelledby="intro-name">
+    <section class="home-intro card card-border mt-7 border-primary" aria-labelledby="intro-name">
+      <span class="modern-only modern-avatar mt-0.5" aria-hidden="true">{initial}</span>
       <div class="card-body gap-0 px-6 py-5 md:px-7">
-        {site.welcome && <p class="font-mono text-[13px] text-primary">✳ {site.welcome}</p>}
+        {
+          site.welcome && (
+            <p class="home-welcome font-mono text-[13px] text-primary">
+              <span class="cli-only" aria-hidden="true">✳ </span>
+              {site.welcome}
+            </p>
+          )
+        }
         <h1 id="intro-name" class="heading-display mt-3.5 text-2xl leading-snug md:text-[26px]">
           {site.authorName || site.siteName}
         </h1>
         {site.intro && <p class="mt-1.5 whitespace-pre-line leading-loose text-base-content/85">{site.intro}</p>}
-        <p class="mt-4 font-mono text-[13px] leading-loose text-base-content/60">
+        <p class="home-meta mt-4 font-mono text-[13px] leading-loose text-base-content/60">
           <span class="whitespace-nowrap">~/{site.siteName}</span>
           <span aria-hidden="true"> · </span>
           <span class="whitespace-nowrap">{totalPosts} posts</span>
@@ -52,7 +65,7 @@ const meta = routeMeta(null, '/', site)
         </p>
         {
           site.socialLinks.length > 0 && (
-            <ul class="flex flex-wrap gap-x-4 font-mono text-[13px]">
+            <ul class="home-links flex flex-wrap gap-x-4 font-mono text-[13px]">
               {site.socialLinks.map((link) => (
                 <li>
                   <a class="link-term" href={link.url} rel="me noopener">
@@ -67,28 +80,28 @@ const meta = routeMeta(null, '/', site)
     </section>
 
     <section class="mt-10" aria-labelledby="recent">
-      <Prompt command="ls posts --sort=date" heading="最近の記事" count={posts.length} id="recent" />
+      <Prompt command="ls posts --sort=date" question={t.askRecent} heading={t.recentPosts} count={posts.length} id="recent" />
       {
         posts.length > 0 ? (
           <PostList class="mt-1.5" posts={posts} />
         ) : (
-          <p class="mt-2 pl-5 font-mono text-sm text-base-content/60">⎿ まだ記事がありません</p>
+          <p class="mt-2 pl-5 font-mono text-sm text-base-content/60">⎿ {t.noPosts}</p>
         )
       }
-      <p class="mt-2.5 pl-5 font-mono text-[13px] text-base-content/60">
-        {more > 0 && <span>… 他 {more} 件 · </span>}
-        <a class="link-term" href="/posts">すべての記事</a>
+      <p class="list-more mt-2.5 pl-5 font-mono text-[13px] text-base-content/60">
+        {more > 0 && <span>{t.more(more)} · </span>}
+        <a class="link-term" href={lp('/posts')}>{t.allPosts}</a>
       </p>
     </section>
 
     {
       site.projects.length > 0 && (
         <section class="mt-9" aria-labelledby="projects">
-          <Prompt command="ls projects" heading="作ったもの" count={site.projects.length} id="projects" />
-          <ul class="mt-1.5 list-none pl-5 leading-relaxed">
+          <Prompt command="ls projects" question={t.askProjects} heading={t.projects} count={site.projects.length} id="projects" />
+          <ul class="project-list mt-1.5 list-none pl-5 leading-relaxed">
             {site.projects.map((project, index) => (
-              <li class="flex gap-2 py-1">
-                <span class="w-4 shrink-0 font-mono text-base-content/60" aria-hidden="true">
+              <li class="project-item flex gap-2 py-1">
+                <span class="cli-only w-4 shrink-0 font-mono text-base-content/60" aria-hidden="true">
                   {index === 0 ? '⎿' : ''}
                 </span>
                 <span>
@@ -107,9 +120,9 @@ const meta = routeMeta(null, '/', site)
     }
 
     <SearchPrompt class="mt-11" />
-    <p class="mt-2 hidden flex-wrap gap-x-4 font-mono text-xs text-base-content/60 sm:flex">
-      <span><kbd class="kbd kbd-xs">j</kbd> <kbd class="kbd kbd-xs">k</kbd> 記事を移動</span>
-      <span><kbd class="kbd kbd-xs">t</kbd> テーマ切替</span>
+    <p class="cli-only mt-2 hidden flex-wrap gap-x-4 font-mono text-xs text-base-content/60 sm:flex">
+      <span><kbd class="kbd kbd-xs">j</kbd> <kbd class="kbd kbd-xs">k</kbd> {t.shortcutMove}</span>
+      <span><kbd class="kbd kbd-xs">t</kbd> {t.shortcutTheme}</span>
     </p>
   </div>
 </Layout>

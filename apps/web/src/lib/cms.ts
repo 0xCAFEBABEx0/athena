@@ -1,5 +1,7 @@
 import { stringify } from 'qs-esm'
 
+import { DEFAULT_LOCALE, type Locale } from '@athena/shared/constants'
+
 import type {
   Footer,
   Header,
@@ -32,6 +34,11 @@ type FetchOptions = {
    * Payload only serves drafts to authenticated users. Server-side only.
    */
   draft?: boolean
+  /**
+   * Content locale. Untranslated fields fall back to English, so a Japanese
+   * page is never empty.
+   */
+  locale?: Locale
 }
 
 export class CmsRequestError extends Error {
@@ -131,10 +138,17 @@ const cmsHeaders = (draft: boolean): Headers => {
 const cmsFetch = async <T>(
   path: string,
   query: Record<string, unknown> = {},
-  { draft = false }: FetchOptions = {},
+  { draft = false, locale }: FetchOptions = {},
 ): Promise<T> => {
   // Payload REST expects qs-encoded nested params for where/select objects.
-  const qs = stringify({ ...query, ...(draft ? { draft: 'true' } : {}) }, { addQueryPrefix: true })
+  const qs = stringify(
+    {
+      ...query,
+      ...(draft ? { draft: 'true' } : {}),
+      ...(locale ? { locale, 'fallback-locale': DEFAULT_LOCALE } : {}),
+    },
+    { addQueryPrefix: true },
+  )
   const origin = cmsURL()
   const url = `${origin}/api${path}${qs}`
 
@@ -207,40 +221,56 @@ export const getPosts = async (
 /** The posts published just before and after `publishedAt` (for prev/next links). */
 export const getAdjacentPosts = async (
   publishedAt: string,
+  opts: FetchOptions = {},
 ): Promise<{ prev: Post | null; next: Post | null }> => {
   const select = { title: true, slug: true, publishedAt: true }
   const [older, newer] = await Promise.all([
-    cmsFetch<PaginatedDocs<Post>>('/posts', {
-      depth: 0,
-      limit: 1,
-      sort: '-publishedAt',
-      select,
-      where: { publishedAt: { less_than: publishedAt } },
-    }),
-    cmsFetch<PaginatedDocs<Post>>('/posts', {
-      depth: 0,
-      limit: 1,
-      sort: 'publishedAt',
-      select,
-      where: { publishedAt: { greater_than: publishedAt } },
-    }),
+    cmsFetch<PaginatedDocs<Post>>(
+      '/posts',
+      {
+        depth: 0,
+        limit: 1,
+        sort: '-publishedAt',
+        select,
+        where: { publishedAt: { less_than: publishedAt } },
+      },
+      opts,
+    ),
+    cmsFetch<PaginatedDocs<Post>>(
+      '/posts',
+      {
+        depth: 0,
+        limit: 1,
+        sort: 'publishedAt',
+        select,
+        where: { publishedAt: { greater_than: publishedAt } },
+      },
+      opts,
+    ),
   ])
   return { prev: older.docs[0] ?? null, next: newer.docs[0] ?? null }
 }
 
 /** Posts for the Archive block (populateBy=collection), optionally category-filtered. */
-export const getArchivePosts = async ({
-  categoryIds = [],
-  limit = 3,
-}: {
-  categoryIds?: (number | string)[]
-  limit?: number
-}): Promise<Post[]> => {
-  const result = await cmsFetch<PaginatedDocs<Post>>('/posts', {
-    depth: 1,
-    limit,
-    ...(categoryIds.length > 0 ? { where: { categories: { in: categoryIds } } } : {}),
-  })
+export const getArchivePosts = async (
+  {
+    categoryIds = [],
+    limit = 3,
+  }: {
+    categoryIds?: (number | string)[]
+    limit?: number
+  },
+  opts: FetchOptions = {},
+): Promise<Post[]> => {
+  const result = await cmsFetch<PaginatedDocs<Post>>(
+    '/posts',
+    {
+      depth: 1,
+      limit,
+      ...(categoryIds.length > 0 ? { where: { categories: { in: categoryIds } } } : {}),
+    },
+    opts,
+  )
   return result.docs
 }
 
@@ -249,25 +279,64 @@ export const getGlobal = async <T extends Header | Footer | Site>(
   opts: FetchOptions = {},
 ): Promise<T> => cmsFetch<T>(`/globals/${slug}`, { depth: 1 }, opts)
 
-export const searchPosts = async (q: string): Promise<PaginatedDocs<Search>> => {
+const searchIn = async (q: string, locale: Locale): Promise<PaginatedDocs<Search>> => {
   const like = q.trim()
-  return cmsFetch<PaginatedDocs<Search>>('/search', {
-    depth: 1,
-    limit: 12,
-    select: { title: true, slug: true, categories: true, meta: true },
-    ...(like
-      ? {
-          where: {
-            or: [
-              { title: { like } },
-              { 'meta.description': { like } },
-              { 'meta.title': { like } },
-              { slug: { like } },
-            ],
-          },
-        }
-      : {}),
-  })
+  return cmsFetch<PaginatedDocs<Search>>(
+    '/search',
+    {
+      depth: 1,
+      limit: 12,
+      select: { title: true, slug: true, categories: true, meta: true },
+      ...(like
+        ? {
+            where: {
+              or: [
+                { title: { like } },
+                { 'meta.description': { like } },
+                { 'meta.title': { like } },
+                { slug: { like } },
+              ],
+            },
+          }
+        : {}),
+    },
+    { locale },
+  )
+}
+
+/**
+ * Search posts. Outside English, untranslated posts are only indexed in
+ * English, so both indexes are searched and merged (translated hits first).
+ */
+export const searchPosts = async (
+  q: string,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<PaginatedDocs<Search>> => {
+  if (locale === DEFAULT_LOCALE) return searchIn(q, locale)
+  const [local, english] = await Promise.all([searchIn(q, locale), searchIn(q, DEFAULT_LOCALE)])
+  const seen = new Set(local.docs.map((doc) => doc.slug))
+  const docs = [...local.docs, ...english.docs.filter((doc) => !seen.has(doc.slug))].slice(0, 12)
+  return { ...local, docs, totalDocs: docs.length }
+}
+
+/** Pages whose title matches (for the popup search). The home page is skipped. */
+export const searchPages = async (
+  q: string,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<Pick<Page, 'slug' | 'title'>[]> => {
+  const like = q.trim()
+  if (!like) return []
+  const result = await cmsFetch<PaginatedDocs<Page>>(
+    '/pages',
+    {
+      depth: 0,
+      limit: 5,
+      select: { title: true, slug: true },
+      where: { and: [{ title: { like } }, { slug: { not_equals: 'home' } }] },
+    },
+    { locale },
+  )
+  return result.docs
 }
 
 export const getRedirects = async (): Promise<Redirect[]> => {

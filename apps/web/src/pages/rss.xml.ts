@@ -3,17 +3,22 @@ import type { APIRoute } from 'astro'
 import { getPosts } from '@/lib/cms'
 import { webURL } from '@/lib/env'
 import { escapeHTML } from '@/lib/richtext'
+import { LANG_TAG, localeOf, localizePath } from '@/lib/i18n'
 import { getSite } from '@/lib/site'
 
 /** RSS 2.0 feed of the 30 newest published posts. */
-export const GET: APIRoute = async ({ request }) => {
-  const [site, posts] = await Promise.all([getSite(request), getPosts({ page: 1, limit: 30 })])
+export const GET: APIRoute = async ({ request, locals }) => {
+  const locale = localeOf({ locals })
+  const [site, posts] = await Promise.all([
+    getSite(request, locale),
+    getPosts({ page: 1, limit: 30 }, { locale }),
+  ])
   const origin = webURL()
 
   const items = posts.docs
     .filter((post) => post.slug)
     .map((post) => {
-      const link = `${origin}/posts/${post.slug}`
+      const link = `${origin}${localizePath(locale, `/posts/${post.slug}`)}`
       return [
         '<item>',
         `<title>${escapeHTML(post.title ?? '')}</title>`,
@@ -32,10 +37,10 @@ export const GET: APIRoute = async ({ request }) => {
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
 <title>${escapeHTML(site.siteName)}</title>
-<link>${escapeHTML(origin)}/</link>
+<link>${escapeHTML(origin)}${localizePath(locale, '/')}</link>
 <description>${escapeHTML(site.description ?? site.intro ?? site.siteName)}</description>
-<language>ja</language>
-<atom:link href="${escapeHTML(origin)}/rss.xml" rel="self" type="application/rss+xml" />
+<language>${LANG_TAG[locale]}</language>
+<atom:link href="${escapeHTML(origin)}${localizePath(locale, '/rss.xml')}" rel="self" type="application/rss+xml" />
 ${items}
 </channel>
 </rss>

@@ -2,64 +2,41 @@
 
 A running log of notable dependency upgrades. Newest first.
 
-## `site` global and terminal-style redesign (web) — 2026-11-10
+## whoa.me redesign, `site` global and en/ja/zh content — 2026-11-10
 
-New `site` global (`apps/cms/src/Site/config.ts`): site name, author name,
-welcome line, intro, default description, social links and projects. The web
-app reads it for the home page, header, footer, page titles and `/rss.xml`, and
-falls back to defaults (`whoa.me`, no intro) while the table is missing.
+**CMS**
 
-Schema change (three new tables, nothing altered). Found by pushing the old and
-new configs into empty databases and diffing `pg_dump --schema-only`; the SQL
-below produces an identical schema and is safe to run twice. Run it on the
-preview Neon branch and on production **before** the CMS deploy:
+- New `site` global (`apps/cms/src/Site/config.ts`): site name, author name,
+  default view (CLI or modern), welcome line, intro, description, social
+  links and projects. The web app falls back to defaults while it is missing.
+- Payload localization is on: `en` (default), `ja`, `zh`, with fallback to
+  English. Localized: post/page titles, content, layouts, hero, SEO meta,
+  category titles, nav labels, form labels, the site intro texts.
+- Translate button in the post/page sidebar (`/api/translate`): Claude
+  translates the English version and saves ja/zh as drafts for review. Needs
+  `ANTHROPIC_API_KEY` on athena-cms (`TRANSLATION_MODEL` optional).
 
-```sql
--- whoa.me: add the "site" global (site name, intro, links, projects).
--- Safe to run more than once. Run on the preview Neon branch first, then production.
-BEGIN;
+**Web**
 
-CREATE TABLE IF NOT EXISTS public.site (
-  id serial PRIMARY KEY,
-  site_name varchar NOT NULL DEFAULT 'whoa.me',
-  author_name varchar,
-  welcome varchar DEFAULT 'whoa.me へようこそ',
-  intro varchar,
-  description varchar,
-  updated_at timestamp(3) with time zone,
-  created_at timestamp(3) with time zone
-);
+- `/`, `/ja/…`, `/zh/…` routes (middleware strips the prefix), hreflang,
+  per-language RSS and sitemaps, UI strings in `src/lib/i18n.ts`.
+- CLI ⇄ modern view switch (`v`, stored in localStorage `athena-view`),
+  popup search (⌘K / `/`, `GET /api/search`).
 
-CREATE TABLE IF NOT EXISTS public.site_social_links (
-  _order integer NOT NULL,
-  _parent_id integer NOT NULL,
-  id varchar PRIMARY KEY,
-  label varchar NOT NULL,
-  url varchar NOT NULL,
-  CONSTRAINT site_social_links_parent_id_fk FOREIGN KEY (_parent_id) REFERENCES public.site(id) ON DELETE CASCADE
-);
+**Database (manual, push is off)**
 
-CREATE TABLE IF NOT EXISTS public.site_projects (
-  _order integer NOT NULL,
-  _parent_id integer NOT NULL,
-  id varchar PRIMARY KEY,
-  name varchar NOT NULL,
-  url varchar,
-  description varchar,
-  CONSTRAINT site_projects_parent_id_fk FOREIGN KEY (_parent_id) REFERENCES public.site(id) ON DELETE CASCADE
-);
+Run [`docs/sql/2026-11-10-whoa-i18n.sql`](./sql/2026-11-10-whoa-i18n.sql) on
+the preview Neon branch, then production, **before** the CMS deploy. It
+creates the site tables, the `*_locales` tables and `_locale` columns, copies
+every existing value in as English, then drops the old columns, all in one
+transaction. A second run only prints a notice; if a `site` table already
+exists it stops without changing anything.
 
-CREATE INDEX IF NOT EXISTS site_social_links_order_idx ON public.site_social_links (_order);
-CREATE INDEX IF NOT EXISTS site_social_links_parent_id_idx ON public.site_social_links (_parent_id);
-CREATE INDEX IF NOT EXISTS site_projects_order_idx ON public.site_projects (_order);
-CREATE INDEX IF NOT EXISTS site_projects_parent_id_idx ON public.site_projects (_parent_id);
-
-COMMIT;
-```
-
-The web redesign itself needs no schema change: Tailwind v4 + daisyUI v5 themes
-were replaced in `apps/web/src/styles/global.css`, cards became one-line post
-rows, and `/` is now `pages/index.astro` instead of the CMS page `home`.
+Verified locally: a database seeded by the previous code plus this script has
+the same columns, indexes, constraints and enums as a fresh push of the new
+config (0 differences), and the existing posts, pages, forms, nav labels and
+search entries read back intact in English. This replaces the earlier
+site-only SQL, which was never run.
 
 ## Dependabot round 1, Biome, TypeScript 7 (cms) — 2026-11-03
 

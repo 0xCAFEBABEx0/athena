@@ -25,6 +25,7 @@ import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { Site } from './Site/config'
 import { plugins } from './plugins'
+import { DEFAULT_LOCALE } from '@athena/shared/constants'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL, getWebURL } from './utilities/getURL'
 import { getLoggerConfig } from './utilities/workersLogger'
@@ -84,6 +85,17 @@ export default buildConfig({
   cors: [getServerSideURL(), getWebURL()].filter(Boolean),
   csrf: [getServerSideURL(), getWebURL()].filter(Boolean),
   globals: [Site, Header, Footer],
+  // English is written first; Japanese and Chinese are translated copies
+  // (see endpoints/translate). Untranslated fields fall back to English.
+  localization: {
+    locales: [
+      { code: 'en', label: 'English' },
+      { code: 'ja', label: '日本語' },
+      { code: 'zh', label: '中文（简体）' },
+    ],
+    defaultLocale: DEFAULT_LOCALE,
+    fallback: true,
+  },
   plugins: [
     ...plugins,
     vercelBlobStorage({

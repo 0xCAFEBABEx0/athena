@@ -1,29 +1,23 @@
 ---
-import type { Footer } from '@athena/shared/payload-types'
-
 import CMSLink from '@/components/CMSLink.astro'
-import { getGlobal } from '@/lib/cms'
+import { getFooterNav } from '@/lib/nav'
 import type { SiteData } from '@/lib/site'
+import { localeOf, localizePath } from '@/lib/i18n'
 
 type Props = {
   site: SiteData
 }
 
 const { site } = Astro.props
+const locale = localeOf(Astro)
 
-let navItems: NonNullable<Footer['navItems']> = []
-try {
-  const footer = await getGlobal<Footer>('footer')
-  navItems = footer?.navItems || []
-} catch (error) {
-  console.error('[footer] failed to load nav', error)
-}
+const navLinks = await getFooterNav(Astro.request, locale)
 
 const path = Astro.originPathname === '/' ? '~' : `~${Astro.originPathname.replace(/\/$/, '')}`
 const year = new Date().getFullYear()
 ---
 
-<footer class="container mt-auto pb-8 pt-14">
+<footer class="site-footer container mt-auto pb-8 pt-14">
   <div
     class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-base-300 pt-3.5 font-mono text-xs text-base-content/60"
   >
@@ -35,11 +29,11 @@ const year = new Date().getFullYear()
     </span>
     <span class="inline-flex flex-wrap items-center gap-x-4 gap-y-1">
       {
-        navItems.map(({ link }) => (
+        navLinks.map((link) => (
           <CMSLink class="text-base-content/60 no-underline hover:text-base-content" {...link} />
         ))
       }
-      <a class="text-base-content/60 no-underline hover:text-base-content" href="/rss.xml">rss</a>
+      <a class="text-base-content/60 no-underline hover:text-base-content" href={localizePath(locale, '/rss.xml')}>rss</a>
       <span>© {year} {site.authorName || site.siteName}</span>
     </span>
   </div>

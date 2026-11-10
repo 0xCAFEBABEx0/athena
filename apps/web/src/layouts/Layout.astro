@@ -8,9 +8,12 @@ import '@/styles/global.css'
 
 import Footer from '@/components/Footer.astro'
 import Header from '@/components/Header.astro'
+import SearchDialog from '@/components/SearchDialog.astro'
+import Sidebar from '@/components/Sidebar.astro'
 import { isDraft } from '@/lib/draft'
 import { DEFAULT_OG_IMAGE, type PageMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
+import { LANG_TAG, LOCALES, dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 import { webURL } from '@/lib/env'
 import SpeedInsights from '@vercel/speed-insights/astro'
 
@@ -19,12 +22,20 @@ type Props = {
 }
 
 const { meta } = Astro.props
-const site = await getSite(Astro.request)
+const locale = localeOf(Astro)
+const t = dict(locale)
+const site = await getSite(Astro.request, locale)
+// The unprefixed path, shared by every language version of this page.
+const barePath = splitLocale(Astro.originPathname).path
+const alternates = LOCALES.map((code) => ({
+  hreflang: LANG_TAG[code],
+  href: `${webURL()}${localizePath(code, barePath)}`,
+}))
 
 const title = meta?.title ?? site.siteName
 const description = meta?.description ?? site.description
 const ogImage = meta?.ogImage ?? `${webURL()}${DEFAULT_OG_IMAGE}`
-const url = meta?.url ?? `${webURL()}${Astro.url.pathname}`
+const url = meta?.url ?? `${webURL()}${Astro.originPathname}`
 
 const draft = isDraft(Astro.cookies)
 if (draft) {
@@ -34,7 +45,11 @@ if (draft) {
 ---
 
 <!doctype html>
-<html lang="ja">
+<html
+  lang={LANG_TAG[locale]}
+  data-view={site.defaultView}
+  data-search-path={localizePath(locale, '/search')}
+>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -49,7 +64,15 @@ if (draft) {
     <meta name="twitter:card" content="summary_large_image" />
     <link href="/favicon.ico" rel="icon" sizes="32x32" />
     <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
-    <link rel="alternate" type="application/rss+xml" title={site.siteName} href="/rss.xml" />
+    <link rel="canonical" href={url} />
+    {alternates.map((alt) => <link rel="alternate" hreflang={alt.hreflang} href={alt.href} />)}
+    <link rel="alternate" hreflang="x-default" href={`${webURL()}${barePath}`} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={site.siteName}
+      href={localizePath(locale, '/rss.xml')}
+    />
     <SpeedInsights />
     <slot name="head" />
     <script is:inline>
@@ -75,6 +98,17 @@ if (draft) {
         }
 
         document.documentElement.setAttribute('data-theme', themeToSet)
+
+        // CLI or modern look, chosen by the visitor (ViewToggle) or the
+        // site default already on <html data-view>.
+        try {
+          var view = window.localStorage.getItem('athena-view')
+          if (view === 'cli' || view === 'modern') {
+            document.documentElement.setAttribute('data-view', view)
+          }
+        } catch (_err) {
+          /* storage blocked: keep the default */
+        }
       })()
     </script>
   </head>
@@ -82,20 +116,29 @@ if (draft) {
     {
       draft && (
         <div class="relative z-30 flex items-center justify-center gap-3 bg-warning px-4 py-2 font-mono text-sm text-warning-content">
-          下書きプレビュー中
-          <a class="underline" href={`/api/exit-preview?path=${Astro.url.pathname}`}>
-            終了
+          {t.draftBanner}
+          <a
+            class="underline"
+            href={`/api/exit-preview?path=${encodeURIComponent(Astro.originPathname)}`}
+          >
+            {t.draftExit}
           </a>
         </div>
       )
     }
-    <Header site={site} />
-    <main>
-      <slot />
-    </main>
-    <Footer site={site} />
+    <div class="app-shell">
+      <Sidebar site={site} />
+      <div class="app-main">
+        <Header site={site} />
+        <main class="app-content">
+          <slot />
+        </main>
+        <Footer site={site} />
+      </div>
+    </div>
+    <SearchDialog />
     <script is:inline>
-      // Terminal-style shortcuts: "/" search, j/k move through post lists, t theme.
+      // Shortcuts: "/" search, j/k move through post lists, t theme, v view.
       ;(function () {
         document.addEventListener('keydown', function (event) {
           if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return
@@ -107,10 +150,9 @@ if (draft) {
           }
 
           if (event.key === '/') {
-            var input = document.querySelector('[data-search-input]')
             event.preventDefault()
-            if (input) input.focus()
-            else window.location.href = '/search'
+            if (window.__openSearch) window.__openSearch()
+            else window.location.href = document.documentElement.dataset.searchPath || '/search'
           } else if (event.key === 'j' || event.key === 'k') {
             var rows = Array.prototype.slice.call(document.querySelectorAll('[data-post-row]'))
             if (rows.length === 0) return
@@ -122,6 +164,8 @@ if (draft) {
             rows[next].focus()
           } else if (event.key === 't' && window.__toggleTheme) {
             window.__toggleTheme()
+          } else if (event.key === 'v' && window.__toggleView) {
+            window.__toggleView()
           }
         })
       })()

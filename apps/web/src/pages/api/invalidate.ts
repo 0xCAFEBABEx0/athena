@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro'
 import { CACHE_TAGS, type CacheTag } from '@athena/shared/constants'
 
 import { env, webURL } from '@/lib/env'
+import { LOCALES, localizePath } from '@/lib/i18n'
 
 /**
  * Cache-invalidation webhook called by the CMS on publish/unpublish
@@ -45,6 +46,12 @@ export const POST: APIRoute = async ({ request }) => {
   )
   for (const tag of body.tags ?? []) {
     for (const path of TAG_PATH_MAP[tag] ?? []) paths.add(path)
+  }
+  // Every page exists once per language (/posts/x, /ja/posts/x, /zh/posts/x);
+  // sitemaps live at the root only.
+  for (const path of [...paths]) {
+    if (path.endsWith('sitemap.xml')) continue
+    for (const locale of LOCALES) paths.add(localizePath(locale, path))
   }
 
   const revalidated: string[] = []

@@ -102,7 +102,7 @@ export interface Config {
   db: {
     defaultIDType: number;
   };
-  fallbackLocale: null;
+  fallbackLocale: ('false' | 'none' | 'null') | false | null | ('en' | 'ja' | 'zh') | ('en' | 'ja' | 'zh')[];
   globals: {
     site: Site;
     header: Header;
@@ -113,7 +113,7 @@ export interface Config {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
   };
-  locale: null;
+  locale: 'en' | 'ja' | 'zh';
   widgets: {
     collections: CollectionsWidget;
   };
@@ -1594,6 +1594,10 @@ export interface Site {
    */
   authorName?: string | null;
   /**
+   * Look that first-time visitors see. Visitors can switch with the CLI / Modern control; their choice is remembered in their browser.
+   */
+  defaultView: 'cli' | 'modern';
+  /**
    * Small line at the top of the home-page intro box.
    */
   welcome?: string | null;
@@ -1691,6 +1695,7 @@ export interface Footer {
 export interface SiteSelect<T extends boolean = true> {
   siteName?: T;
   authorName?: T;
+  defaultView?: T;
   welcome?: T;
   intro?: T;
   description?: T;

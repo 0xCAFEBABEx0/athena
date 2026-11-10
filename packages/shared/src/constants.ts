@@ -40,3 +40,12 @@ export const CACHE_TAGS = {
 } as const
 
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS]
+
+/**
+ * Content locales. English is the default (unprefixed URLs, Payload's
+ * `defaultLocale`); Japanese and Simplified Chinese live under `/ja` and `/zh`
+ * and fall back to English field by field until translated.
+ */
+export const LOCALES = ['en', 'ja', 'zh'] as const
+export type Locale = (typeof LOCALES)[number]
+export const DEFAULT_LOCALE: Locale = 'en'

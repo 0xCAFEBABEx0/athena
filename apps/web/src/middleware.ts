@@ -3,6 +3,7 @@ import { defineMiddleware } from 'astro:middleware'
 import type { Redirect } from '@athena/shared/payload-types'
 
 import { getRedirects } from '@/lib/cms'
+import { DEFAULT_LOCALE, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
 
 // Per-instance cache; redirects rarely change and a publish re-renders pages
@@ -19,11 +20,17 @@ const loadRedirects = async (): Promise<Redirect[]> => {
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const { pathname } = context.url
+  // `/ja/…` and `/zh/…` render the same routes as the English paths: strip
+  // the prefix, remember the locale, and rewrite. ISR still caches by the
+  // original (prefixed) URL.
+  const { locale, path: pathname } = splitLocale(context.url.pathname)
+  context.locals.locale = locale
+  const render = () =>
+    locale === DEFAULT_LOCALE ? next() : next(`${pathname}${context.url.search}`)
 
   // Only content routes can be redirected.
   if (pathname.startsWith('/api/') || pathname.startsWith('/_') || pathname.includes('.')) {
-    return next()
+    return render()
   }
 
   let redirects: Redirect[] = []
@@ -31,7 +38,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     redirects = await loadRedirects()
   } catch {
     // CMS unreachable: serve the page rather than failing the request.
-    return next()
+    return render()
   }
 
   const match = redirects.find((redirect) => redirect.from === pathname)
@@ -41,8 +48,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
         ? linkHref({ type: 'reference', reference: match.to.reference } as CMSLinkData)
         : match.to.url
 
-    if (dest) return context.redirect(dest, 301)
+    if (dest) return context.redirect(localizePath(locale, dest), 301)
   }
 
-  return next()
+  return render()
 })

@@ -1,13 +1,17 @@
 ---
+import { dict, localeOf, localizePath } from '@/lib/i18n'
 import Layout from '@/layouts/Layout.astro'
 import PostsArchive from '@/components/PostsArchive.astro'
 import { getPosts } from '@/lib/cms'
 import { routeMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
 
-const site = await getSite(Astro.request)
-const posts = await getPosts({ page: 1 })
-const meta = routeMeta('記事一覧', '/posts', site)
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+const site = await getSite(Astro.request, locale)
+const posts = await getPosts({ page: 1 }, { locale })
+const meta = routeMeta(t.allPosts, lp('/posts'), site)
 ---
 
 <Layout meta={meta}>

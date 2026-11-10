@@ -5,6 +5,7 @@ import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical
 import CollectionArchive from '@/components/CollectionArchive.astro'
 import RichText from '@/components/RichText.astro'
 import { getArchivePosts } from '@/lib/cms'
+import { localeOf } from '@/lib/i18n'
 
 type Props = ArchiveBlockProps & { id?: string | null }
 
@@ -18,7 +19,7 @@ if (populateBy === 'collection') {
   const categoryIds = (categories ?? []).map((category) =>
     typeof category === 'object' ? category.id : category,
   )
-  posts = await getArchivePosts({ categoryIds, limit })
+  posts = await getArchivePosts({ categoryIds, limit }, { locale: localeOf(Astro) })
 } else if (selectedDocs?.length) {
   posts = selectedDocs
     .map((post) => (typeof post.value === 'object' ? post.value : null))

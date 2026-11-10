@@ -63,7 +63,11 @@ all managed by editors without code changes.
 - **F-SRCH-1** `/search?q=term` returns up to 12 published posts whose title,
   meta title, meta description or slug contains the term.
 - **F-SRCH-2** An empty query lists the first 12 indexed posts; no matches
-  shows "見つかりませんでした"
+  shows "Nothing found" (translated).
+- **F-SRCH-3** Popup search: ⌘K / Ctrl+K, `/`, or the search button opens a
+  dialog. Typing searches posts and page titles (keyword match, no AI);
+  ↑/↓ select, Enter opens, Esc closes, Enter with nothing selected opens
+  `/search`. The dialog fits the screen down to 320 px wide.
 
 ### 2.5 Forms
 
@@ -80,9 +84,17 @@ all managed by editors without code changes.
 - **F-NAV-1** Header and footer show up to 6 links each from the Header and
   Footer globals. With no Header links set, the header shows `home` and
   `posts`. The footer always links to `/rss.xml`.
-- **F-NAV-3** Keyboard shortcuts outside text fields: `/` focuses the search
-  box (or opens `/search`), `j`/`k` move through post rows, `t` toggles the
-  theme.
+- **F-NAV-3** Keyboard shortcuts outside text fields: `/` opens the popup
+  search, `j`/`k` move through post rows, `t` toggles the theme, `v` switches
+  between the CLI and modern views.
+- **F-VIEW-1** Two looks for the same content: CLI (terminal-style) and
+  modern (agent-app style: sidebar, question bubbles, ✓ step pills, composer
+  search box, "On this page" panel on posts at ≥1280 px). The site default
+  comes from the `site` global; the visitor's choice is stored in
+  `localStorage['athena-view']` and applied before paint.
+- **F-I18N-1** English at `/…`, Japanese at `/ja/…`, Chinese at `/zh/…`.
+  UI strings are translated; content falls back to English per field. Pages
+  declare `hreflang` alternates, and each language has its own RSS feed.
 - **F-NAV-2** If the CMS cannot be reached, header and footer render without
   links instead of failing the page.
 - **F-THEME-1** Light and dark themes. Initial theme comes from
@@ -132,6 +144,9 @@ all managed by editors without code changes.
   and a search-result preview.
 - **F-ED-9** Media uploads accept a focal point; seven renditions are created
   automatically.
+- **F-ED-11** Translate (post/page sidebar): Claude translates the English
+  version into Japanese and Chinese and saves them as drafts. Code, inline
+  code and slugs are left as they are.
 - **F-ED-10** Seeding demo content from the dashboard replaces existing
   content. It is meant for empty development databases only.
 

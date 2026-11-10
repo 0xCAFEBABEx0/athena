@@ -1,0 +1,113 @@
+---
+/**
+ * Left sidebar of the modern view (agent-app layout): brand, search, nav,
+ * recent posts and the author row. Hidden in the CLI view and below `lg`.
+ */
+import ThemeToggle from '@/components/ThemeToggle.astro'
+import { dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
+import { linkHref, type CMSLinkData } from '@/lib/links'
+import { getHeaderNav, getRecentPosts } from '@/lib/nav'
+import type { SiteData } from '@/lib/site'
+
+type Props = {
+  site: SiteData
+}
+
+const { site } = Astro.props
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+
+const [navLinks, recent] = await Promise.all([
+  getHeaderNav(Astro.request, locale),
+  getRecentPosts(Astro.request, locale),
+])
+const links: CMSLinkData[] =
+  navLinks.length > 0
+    ? navLinks
+    : [
+        { type: 'custom', url: '/', label: t.home },
+        { type: 'custom', url: '/posts', label: t.posts },
+      ]
+
+const current = splitLocale(Astro.originPathname).path
+const isCurrent = (href: string | null): boolean => {
+  if (!href || !href.startsWith('/')) return false
+  const path = splitLocale(href).path
+  if (path === '/') return current === '/'
+  return current === path || current.startsWith(`${path}/`)
+}
+const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
+const authorInitial = (site.authorName.match(/[\p{L}\p{N}]/u)?.[0] ?? initial).toUpperCase()
+---
+
+<aside class="modern-sidebar" aria-label={t.sidebar}>
+  <a class="flex items-center gap-2.5 rounded-field px-2 py-1.5 font-semibold no-underline" href={lp('/')}>
+    <span class="modern-avatar" aria-hidden="true">{initial}</span>
+    {site.siteName}
+  </a>
+
+  <button type="button" class="modern-search-button" data-search-open>
+    <span class="text-primary" aria-hidden="true">⌕</span>
+    {t.searchOpen}
+    <kbd class="kbd kbd-sm ms-auto font-mono">/</kbd>
+  </button>
+
+  <nav aria-label={t.nav}>
+    <ul class="menu w-full p-0 text-[14px]">
+      {
+        links.map((link) => {
+          const href = linkHref(link, locale)
+          return (
+            href && (
+              <li>
+                <a
+                  href={href}
+                  class:list={[{ 'menu-active': isCurrent(href) }]}
+                  aria-current={isCurrent(href) ? 'page' : undefined}
+                  target={link.newTab ? '_blank' : undefined}
+                  rel={link.newTab ? 'noopener noreferrer' : undefined}
+                >
+                  {link.label}
+                </a>
+              </li>
+            )
+          )
+        })
+      }
+      <li><a href={lp('/rss.xml')}>{t.rss}</a></li>
+    </ul>
+  </nav>
+
+  {
+    recent.length > 0 && (
+      <section class="mt-5 min-h-0" aria-labelledby="sidebar-recent">
+        <h2 id="sidebar-recent" class="px-3 pb-1.5 text-xs font-medium text-base-content/60">
+          {t.recentPosts}
+        </h2>
+        <ul class="menu w-full p-0 text-[13.5px]">
+          {recent.map((post) => {
+            const href = lp(`/posts/${post.slug}`)
+            return (
+              <li>
+                <a
+                  href={href}
+                  class:list={['block truncate', { 'menu-active': current === `/posts/${post.slug}` }]}
+                  title={post.title}
+                >
+                  {post.title}
+                </a>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+    )
+  }
+
+  <div class="mt-auto flex items-center gap-2.5 border-t border-base-300 px-2 pt-3 text-[13.5px]">
+    <span class="modern-avatar modern-avatar-soft" aria-hidden="true">{authorInitial}</span>
+    <span class="min-w-0 flex-1 truncate">{site.authorName || site.siteName}</span>
+    <ThemeToggle variant="word" />
+  </div>
+</aside>

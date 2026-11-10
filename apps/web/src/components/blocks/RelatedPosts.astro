@@ -1,4 +1,5 @@
 ---
+import { dict, localeOf } from '@/lib/i18n'
 import type { Post } from '@athena/shared/payload-types'
 
 import PostList from '@/components/PostList.astro'
@@ -9,10 +10,11 @@ type Props = {
   class?: string
 }
 
+const t = dict(localeOf(Astro))
 const { docs = [], class: className } = Astro.props
 ---
 
 <section class={className} aria-labelledby="related-posts">
-  <Prompt heading="関連する記事" count={docs.length} id="related-posts" />
+  <Prompt heading={t.related} count={docs.length} id="related-posts" />
   <PostList class="mt-1.5" posts={docs} />
 </section>

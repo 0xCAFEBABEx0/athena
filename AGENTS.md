@@ -168,6 +168,7 @@ WEB_URL=                   # Astro frontend origin; unset = no invalidation webh
 PREVIEW_SECRET=            # Shared with web: gates the draft cookie
 REVALIDATE_SECRET=         # Shared with web: bearer token for /api/invalidate
 BLOB_READ_WRITE_TOKEN=     # Vercel Blob storage token
+ANTHROPIC_API_KEY=         # Translate button (Claude); TRANSLATION_MODEL optional
 ```
 
 Web (`apps/web/.env` — see `apps/web/README.md`):
@@ -211,7 +212,12 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
     Neon branch** (schema push is off there). Write idempotent SQL and record it
     in `docs/UPGRADE_NOTES.md` (procedure: `docs/DATABASE.md`). The web app
     falls back to defaults while the `site` table is missing.
-13. **Never enable Vercel Deployment Protection on athena-cms Production.** It
+13. **Content is localized** (`en` default, `ja`, `zh`). Localized fields live
+    in `*_locales` tables, so adding `localized: true` to an existing field is
+    a schema change (see pitfall 12). The web app passes `locale` +
+    `fallback-locale=en` on every CMS fetch and must keep `/ja`/`/zh` links
+    via `localizePath` (`apps/web/src/lib/i18n.ts`).
+14. **Never enable Vercel Deployment Protection on athena-cms Production.** It
     302s `/api/*` to Vercel SSO, and athena-web HTML routes 500. Protect
     Preview only; Payload already gates `/admin`. If Production must stay
     protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches

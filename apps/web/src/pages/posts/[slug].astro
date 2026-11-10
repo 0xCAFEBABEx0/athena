@@ -1,4 +1,5 @@
 ---
+import { dict, localeOf, localizePath } from '@/lib/i18n'
 import type { Post } from '@athena/shared/payload-types'
 import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
 
@@ -6,22 +7,28 @@ import Layout from '@/layouts/Layout.astro'
 import PostHero from '@/components/heros/PostHero.astro'
 import RelatedPosts from '@/components/blocks/RelatedPosts.astro'
 import RichText from '@/components/RichText.astro'
+import SearchPrompt from '@/components/SearchPrompt.astro'
 import { getAdjacentPosts, getPost } from '@/lib/cms'
 import { isDraft } from '@/lib/draft'
 import { readingMinutes } from '@/lib/format'
-import { richTextToHTML } from '@/lib/richtext'
+import { renderRichText } from '@/lib/richtext'
+import { LOCALES, LOCALE_LABEL } from '@/lib/i18n'
+import { formatAuthors, formatDate } from '@/lib/format'
 import { buildMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
 
 const draft = isDraft(Astro.cookies)
 const slug = Astro.params.slug ?? ''
-const post = await getPost(slug, { draft })
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+const post = await getPost(slug, { draft, locale })
 
 if (!post) {
   return Astro.rewrite('/404')
 }
 
-const site = await getSite(Astro.request)
+const site = await getSite(Astro.request, locale)
 
 const relatedPosts = (post.relatedPosts ?? []).filter(
   (related): related is Post => typeof related === 'object' && related !== null,
@@ -30,18 +37,34 @@ const relatedPosts = (post.relatedPosts ?? []).filter(
 let adjacent: { prev: Post | null; next: Post | null } = { prev: null, next: null }
 if (post.publishedAt) {
   try {
-    adjacent = await getAdjacentPosts(post.publishedAt)
+    adjacent = await getAdjacentPosts(post.publishedAt, { locale })
   } catch (error) {
     console.error('[post] failed to load adjacent posts', error)
   }
 }
 
 const content = post.content as unknown as SerializedEditorState
-const plainText = content ? richTextToHTML(content).replace(/<[^>]+>/g, ' ') : ''
-const meta = buildMeta(post, `/posts/${slug}`, site)
+const { html, toc } = content ? renderRichText(content, locale) : { html: '', toc: [] }
+const plainText = html.replace(/<[^>]+>/g, ' ')
+const meta = buildMeta(post, lp(`/posts/${slug}`), site)
+const authorText = formatAuthors(
+  (post.populatedAuthors ?? []).filter(
+    (author): author is NonNullable<typeof author> => author !== null,
+  ),
+)
+const otherLanguages = LOCALES.filter((code) => code !== locale).map((code) => ({
+  code,
+  label: LOCALE_LABEL[code],
+  href: localizePath(code, `/posts/${slug}`),
+}))
 ---
 
 <Layout meta={meta}>
+  <div class="post-layout">
+  <div class="min-w-0">
+  <div class="modern-only container">
+    <div class="modern-ask mt-6"><p>{t.askRead(slug)}</p></div>
+  </div>
   <article class="container pb-4">
     <PostHero post={post} readingMinutes={readingMinutes(plainText)} />
     <RichText class="mt-9" data={content} enableGutter={false} />
@@ -50,12 +73,12 @@ const meta = buildMeta(post, `/posts/${slug}`, site)
   <div class="container">
     {relatedPosts.length > 0 && <RelatedPosts class="mt-12" docs={relatedPosts} />}
 
-    <nav class="mt-12 border-t border-base-300 pt-4 font-mono text-sm leading-loose" aria-label="前後の記事">
+    <nav class="post-adjacent mt-12 border-t border-base-300 pt-4 font-mono text-sm leading-loose" aria-label={t.adjacent}>
       {
         adjacent.prev && (
           <p class="flex gap-3">
             <span class="w-14 shrink-0 text-base-content/60">← prev</span>
-            <a class="link-term font-sans text-[15px]" href={`/posts/${adjacent.prev.slug}`}>
+            <a class="link-term font-sans text-[15px]" href={lp(`/posts/${adjacent.prev.slug}`)}>
               {adjacent.prev.title}
             </a>
           </p>
@@ -65,7 +88,7 @@ const meta = buildMeta(post, `/posts/${slug}`, site)
         adjacent.next && (
           <p class="flex gap-3">
             <span class="w-14 shrink-0 text-base-content/60">next →</span>
-            <a class="link-term font-sans text-[15px]" href={`/posts/${adjacent.next.slug}`}>
+            <a class="link-term font-sans text-[15px]" href={lp(`/posts/${adjacent.next.slug}`)}>
               {adjacent.next.title}
             </a>
           </p>
@@ -73,8 +96,62 @@ const meta = buildMeta(post, `/posts/${slug}`, site)
       }
       <p class="flex gap-3">
         <span class="w-14 shrink-0 text-base-content/60">↑</span>
-        <a class="link-term" href="/posts">すべての記事</a>
+        <a class="link-term" href={lp('/posts')}>{t.allPosts}</a>
       </p>
     </nav>
+    <SearchPrompt class="modern-only mt-6" />
+  </div>
+  </div>
+
+  <aside class="modern-only post-aside" aria-label={t.details}>
+    <div class="post-aside-card">
+      {
+        toc.length > 0 && (
+          <nav aria-label={t.onThisPage}>
+            <p class="mb-2 font-semibold">{t.onThisPage}</p>
+            <ul>
+              {toc.map((entry) => (
+                <li class:list={['post-toc-item', { 'ps-4': entry.level === 3 }]}>
+                  <a href={`#${entry.id}`} set:html={entry.text} />
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+      <p class:list={['mb-2 font-semibold', { 'mt-5': toc.length > 0 }]}>{t.details}</p>
+      <dl class="post-details">
+        {
+          post.publishedAt && (
+            <div>
+              <dt>{t.published}</dt>
+              <dd class="font-mono">{formatDate(post.publishedAt)}</dd>
+            </div>
+          )
+        }
+        {
+          authorText && (
+            <div>
+              <dt>{t.writtenBy}</dt>
+              <dd>{authorText}</dd>
+            </div>
+          )
+        }
+        <div>
+          <dt>{t.alsoIn}</dt>
+          <dd>
+            {otherLanguages.map((lang, index) => (
+              <>
+                {index > 0 && ' · '}
+                <a class="link-term" href={lang.href} hreflang={lang.code} lang={lang.code}>
+                  {lang.label}
+                </a>
+              </>
+            ))}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </aside>
   </div>
 </Layout>

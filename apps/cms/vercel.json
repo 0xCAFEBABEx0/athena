@@ -9,6 +9,9 @@
   "functions": {
     "src/app/(payload)/api/[...slug]/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/(payload)/api/translate/route.ts": {
+      "maxDuration": 300
     }
   },
   "build": {

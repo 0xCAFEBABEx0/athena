@@ -151,6 +151,18 @@ Timestamps on. Create or rotate the web service account with
 | SEO | (fields only) | `generateTitle` → `"{title} \| Payload Website Template"`; `generateURL` → `${CMS_URL}/{slug}`. |
 | Nested Docs | (fields only) | `categories`. |
 
+## 3.7 Localization
+
+`payload.config.ts` enables `localization` with `en` (default), `ja` and `zh`
+and English fallback. Localized fields: post/page `title`, post `content`,
+page `layout` and hero, SEO meta title/description, category `title`, nav
+link labels, form-builder labels, search entries and the `site` texts above.
+Slugs are shared by all languages and follow the English title.
+
+Editors write in English, then press **Translate** (post/page sidebar, English
+only). Claude translates the English draft and saves `ja`/`zh` as drafts;
+review each language and publish. See `src/translation/`.
+
 ## 4. Globals
 
 `site` holds what the public site shows about you (`Site/config.ts`):
@@ -159,11 +171,12 @@ Timestamps on. Create or rotate the web service account with
 |---|---|---|
 | `siteName` | text, required, default `whoa.me` | Header brand, page titles, RSS title |
 | `authorName` | text | Home heading, copyright line |
-| `welcome` | text, default `whoa.me へようこそ` | First line of the home intro box |
-| `intro` | textarea | Sentence(s) under the name on the home page |
-| `description` | textarea | Default meta description, RSS description |
+| `defaultView` | select `cli` / `modern`, default `cli` | Look shown until the visitor picks one |
+| `welcome` | text, localized, default `Welcome to whoa.me` | First line of the home intro box |
+| `intro` | textarea, localized | Sentence(s) under the name on the home page |
+| `description` | textarea, localized | Default meta description, RSS description |
 | `socialLinks` | array (max 8) of `label`, `url` | Links in the home intro box |
-| `projects` | array (max 12) of `name`, `url`, `description` | "作ったもの" list on the home page |
+| `projects` | array (max 12) of `name`, `url`, `description` (localized) | "Things I built" list on the home page |
 
 Hook: `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
 

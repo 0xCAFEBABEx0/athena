@@ -1,13 +1,17 @@
 ---
+import { dict, localeOf, localizePath } from '@/lib/i18n'
 type Props = {
   page: number
   totalPages: number
   class?: string
 }
 
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
 const { page, totalPages, class: className } = Astro.props
 
-const pageHref = (n: number) => (n === 1 ? '/posts' : `/posts/page/${n}`)
+const pageHref = (n: number) => lp(n === 1 ? '/posts' : `/posts/page/${n}`)
 
 // Current page with up to two neighbours on each side.
 const first = Math.max(1, page - 2)
@@ -17,7 +21,7 @@ const pages = Array.from({ length: last - first + 1 }, (_, i) => first + i)
 const item = 'join-item btn btn-sm font-mono font-normal'
 ---
 
-<nav class:list={['mt-8', className]} aria-label="ページ送り">
+<nav class:list={['mt-8', className]} aria-label={t.pagination}>
   <div class="join">
     {
       page > 1 ? (
