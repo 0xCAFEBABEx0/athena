@@ -87,7 +87,10 @@ reviews:
         Endpoints that gate drafts and cache invalidation. Verify the
         `PREVIEW_SECRET` / `REVALIDATE_SECRET` checks happen before any side
         effect, that comparisons do not leak secrets, and that the
-        `athena-draft` cookie stays HttpOnly. Astro skips underscore-prefixed
+        `athena-draft` and `__prerender_bypass` cookies stay HttpOnly (the
+        latter holds the derived ISR bypass token, never REVALIDATE_SECRET
+        itself). `/api/invalidate` must keep calling `invalidateContent()`
+        before it re-renders paths. Astro skips underscore-prefixed
         files, so endpoint file names must not start with `_`.
     - path: 'apps/web/src/lib/cms.ts'
       instructions: |

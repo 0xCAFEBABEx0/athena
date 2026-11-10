@@ -44,7 +44,7 @@ const { links, media, richText } = Astro.props
             resource={media}
           />
           {media.caption && (
-            <div class="mt-3 text-sm text-base-content/60">
+            <div class="mt-3 text-sm text-base-content/65">
               <RichText data={media.caption as unknown as SerializedEditorState} enableGutter={false} />
             </div>
           )}

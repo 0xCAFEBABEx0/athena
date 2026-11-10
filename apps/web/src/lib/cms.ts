@@ -319,24 +319,41 @@ export const searchPosts = async (
   return { ...local, docs, totalDocs: docs.length }
 }
 
-/** Pages whose title matches (for the popup search). The home page is skipped. */
-export const searchPages = async (
-  q: string,
+/**
+ * Everything the popup search filters in the browser: every published post
+ * (newest first) and page, with untranslated fields falling back to English.
+ */
+export const getSearchIndexDocs = async (
   locale: Locale = DEFAULT_LOCALE,
-): Promise<Pick<Page, 'slug' | 'title'>[]> => {
-  const like = q.trim()
-  if (!like) return []
-  const result = await cmsFetch<PaginatedDocs<Page>>(
-    '/pages',
-    {
-      depth: 0,
-      limit: 5,
-      select: { title: true, slug: true },
-      where: { and: [{ title: { like } }, { slug: { not_equals: 'home' } }] },
-    },
-    { locale },
-  )
-  return result.docs
+): Promise<{
+  posts: Pick<Post, 'slug' | 'title' | 'categories' | 'meta'>[]
+  pages: Pick<Page, 'slug' | 'title'>[]
+}> => {
+  const [posts, pages] = await Promise.all([
+    cmsFetch<PaginatedDocs<Post>>(
+      '/posts',
+      {
+        depth: 1,
+        limit: 0,
+        pagination: false,
+        sort: '-publishedAt',
+        select: { title: true, slug: true, categories: true, meta: true },
+      },
+      { locale },
+    ),
+    cmsFetch<PaginatedDocs<Page>>(
+      '/pages',
+      {
+        depth: 0,
+        limit: 0,
+        pagination: false,
+        select: { title: true, slug: true },
+        where: { slug: { not_equals: 'home' } },
+      },
+      { locale },
+    ),
+  ])
+  return { posts: posts.docs, pages: pages.docs }
 }
 
 export const getRedirects = async (): Promise<Redirect[]> => {

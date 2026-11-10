@@ -75,7 +75,7 @@ packages/shared/src/
 
 The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_URL`.
 
-- **Cache invalidation**: on publish/unpublish, `apps/cms/src/utilities/invalidateWeb.ts` POSTs `{ paths, tags }` to `${WEB_URL}/api/invalidate` with `Authorization: Bearer ${REVALIDATE_SECRET}`. The Astro endpoint re-renders the affected ISR-cached paths.
+- **Cache invalidation**: on publish/unpublish, `apps/cms/src/utilities/invalidateWeb.ts` POSTs `{ paths, tags }` to `${WEB_URL}/api/invalidate` with `Authorization: Bearer ${REVALIDATE_SECRET}`. The Astro endpoint marks the Vercel cache tag `content` stale (every cached page, feed, sitemap and `/search-index.json` carries it, added in `middleware.ts`) and re-renders the affected paths right away. ISR expiration is 7 days, only a safety net. The ISR bypass token is derived from `REVALIDATE_SECRET` (`apps/web/src/lib/isr-bypass.mjs`); draft preview sets it as the `__prerender_bypass` cookie.
 - **Draft preview**: the admin Preview button targets `${WEB_URL}/api/preview?slug&collection&path&previewSecret` (`generatePreviewPath.ts`). The endpoint validates `PREVIEW_SECRET`, sets the HttpOnly `athena-draft` cookie, and redirects; draft-aware pages then fetch with `draft=true` using the `web-frontend` service account's API key (`PAYLOAD_API_KEY`). Create/rotate that account with `apps/cms/src/scripts/create-web-service-account.ts`.
 - **Forms**: the web `FormBlock` posts JSON to `${CMS_URL}/api/form-submissions`; CMS CORS already allows the web origin.
 

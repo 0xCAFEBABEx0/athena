@@ -7,15 +7,26 @@ data shapes behind these endpoints see [CONTENT_MODEL.md](./CONTENT_MODEL.md).
 
 ## 1. Web App Endpoints (`apps/web/src/pages`)
 
-All `/api/*` routes are excluded from ISR caching.
+All `/api/*` routes and the `/search` page are excluded from ISR caching.
+Everything else carries the Vercel cache tag `content` (added by the
+middleware) and stays cached until `/api/invalidate` marks that tag stale.
 
-### `GET /api/search?q=&locale=`
+### `GET /search-index.json` (also `/ja/…`, `/zh/…`)
 
-Keyword search for the popup (⌘K or `/`). Returns
-`{ "posts": [{ "title", "href", "tag" }], "pages": [{ "title", "href" }] }`:
-up to 8 posts from the `search` collection (outside English, translated hits
-first, then English ones) and up to 5 pages whose title matches. `hrefs`
-carry the locale prefix. `Cache-Control: s-maxage=60`; `503` if the CMS fails.
+Data for the popup search (⌘K or `/`). Returns every published post (newest
+first) and page of that language, untranslated fields falling back to English:
+`{ "posts": [{ "title", "href", "tag", "text" }], "pages": [{ "title", "href", "text" }] }`.
+`text` holds the slug, summary and tags the browser also matches against.
+The popup loads it once per page view and filters locally, so typing sends no
+requests. ISR-cached like a page; `503` (`no-store`) if the CMS fails.
+
+### `GET /search?q=` (also `/ja/…`, `/zh/…`)
+
+Full search page, rendered from the CMS `search` collection. ISR drops the
+query string from its cache key, so this page is excluded from ISR and cached
+by Vercel's CDN per full URL instead
+(`Vercel-CDN-Cache-Control: max-age=31536000, stale-while-revalidate=86400`,
+cache tag `content`).
 
 ### `GET /api/preview`
 
@@ -57,16 +68,24 @@ Processing:
 2. Reject with `400` if the body is not JSON.
 3. Keep `paths` entries that are strings starting with `/`.
 4. Add paths for known tags: `sitemap` → `/pages-sitemap.xml`,
-   `/posts-sitemap.xml`; `posts` → `/posts`. Other tags (`global_header`,
-   `global_footer`, `redirects`, `pages`) add nothing and rely on the 300 s ISR
-   expiration.
-5. For each path, `GET ${WEB_URL}{path}` with `x-prerender-revalidate: <secret>`
-   (10 s timeout), which makes Vercel re-render and re-cache it.
+   `/posts-sitemap.xml`; `posts` → `/`, `/posts`, `/rss.xml`,
+   `/search-index.json`; `pages` → `/search-index.json`; `global_site` → `/`,
+   `/posts`, `/rss.xml`. Every path except the sitemaps is expanded to its
+   `/ja` and `/zh` copies.
+5. Call `invalidateByTag('content')` (`@vercel/functions`): every cached page,
+   feed, sitemap and search result is marked stale and re-renders once, in the
+   background, on its next request. This is how header, footer, site and
+   redirect changes reach every page. A `429` (purge rate limit) is retried
+   twice.
+6. For each path, `GET ${WEB_URL}{path}` with
+   `x-prerender-revalidate: <bypass token>` (10 s timeout), which makes Vercel
+   re-render and re-cache it right away. The bypass token is
+   `sha256("isr-bypass:" + REVALIDATE_SECRET)` (`src/lib/isr-bypass.mjs`).
 
 Response `200`:
 
 ```json
-{ "revalidated": ["/posts/hello"], "failed": [], "tags": ["posts", "sitemap"] }
+{ "invalidated": true, "revalidated": ["/posts/hello"], "failed": [], "tags": ["posts", "sitemap"] }
 ```
 
 ### Content routes
@@ -174,7 +193,7 @@ both apps together.
 | `CMS_URL` | yes | required on Vercel | CMS origin. `NEXT_PUBLIC_SERVER_URL` is a legacy alias in the CMS. |
 | `WEB_URL` | yes | yes | Web origin (custom domain). Unset in the CMS = no invalidation webhook, no public-URL redirects, preview targets `localhost:4321`. |
 | `PREVIEW_SECRET` | yes | yes | Must match. |
-| `REVALIDATE_SECRET` | yes | yes | Must match. Also the ISR bypass token. |
+| `REVALIDATE_SECRET` | yes | yes | Must match. The ISR bypass token is derived from it. |
 | `PAYLOAD_API_KEY` | | yes | `web-frontend` API key for draft reads. |
 | `CMS_PROTECTION_BYPASS` | | optional | Vercel protection bypass for server-side fetches. |
 | `BLOB_READ_WRITE_TOKEN` | yes | | Vercel Blob. |

@@ -50,7 +50,7 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
           {site.authorName || site.siteName}
         </h1>
         {site.intro && <p class="mt-1.5 whitespace-pre-line leading-loose text-base-content/85">{site.intro}</p>}
-        <p class="home-meta mt-4 font-mono text-[13px] leading-loose text-base-content/60">
+        <p class="home-meta mt-4 font-mono text-[13px] leading-loose text-base-content/65">
           <span class="whitespace-nowrap">~/{site.siteName}</span>
           <span aria-hidden="true"> · </span>
           <span class="whitespace-nowrap">{totalPosts} posts</span>
@@ -85,10 +85,10 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
         posts.length > 0 ? (
           <PostList class="mt-1.5" posts={posts} />
         ) : (
-          <p class="mt-2 pl-5 font-mono text-sm text-base-content/60">⎿ {t.noPosts}</p>
+          <p class="mt-2 pl-5 font-mono text-sm text-base-content/65">⎿ {t.noPosts}</p>
         )
       }
-      <p class="list-more mt-2.5 pl-5 font-mono text-[13px] text-base-content/60">
+      <p class="list-more mt-2.5 pl-5 font-mono text-[13px] text-base-content/65">
         {more > 0 && <span>{t.more(more)} · </span>}
         <a class="link-term" href={lp('/posts')}>{t.allPosts}</a>
       </p>
@@ -101,7 +101,7 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
           <ul class="project-list mt-1.5 list-none pl-5 leading-relaxed">
             {site.projects.map((project, index) => (
               <li class="project-item flex gap-2 py-1">
-                <span class="cli-only w-4 shrink-0 font-mono text-base-content/60" aria-hidden="true">
+                <span class="cli-only w-4 shrink-0 font-mono text-base-content/65" aria-hidden="true">
                   {index === 0 ? '⎿' : ''}
                 </span>
                 <span>
@@ -120,7 +120,7 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
     }
 
     <SearchPrompt class="mt-11" />
-    <p class="cli-only mt-2 hidden flex-wrap gap-x-4 font-mono text-xs text-base-content/60 sm:flex">
+    <p class="cli-only mt-2 hidden flex-wrap gap-x-4 font-mono text-xs text-base-content/65 sm:flex">
       <span><kbd class="kbd kbd-xs">j</kbd> <kbd class="kbd kbd-xs">k</kbd> {t.shortcutMove}</span>
       <span><kbd class="kbd kbd-xs">t</kbd> {t.shortcutTheme}</span>
     </p>

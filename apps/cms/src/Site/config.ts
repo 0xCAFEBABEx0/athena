@@ -40,11 +40,11 @@ export const Site: GlobalConfig = {
       defaultValue: 'cli',
       options: [
         { label: 'CLI (terminal)', value: 'cli' },
-        { label: 'Modern (agent app)', value: 'modern' },
+        { label: 'ADE (agent app)', value: 'modern' },
       ],
       admin: {
         description:
-          'Look that first-time visitors see. Visitors can switch with the CLI / Modern control; their choice is remembered in their browser.',
+          'Look that first-time visitors see. Visitors can switch with the CLI / ADE control; their choice is remembered in their browser.',
       },
     },
     {

@@ -25,7 +25,7 @@ const hasCount = typeof count === 'number'
 <div class:list={['prompt font-mono text-sm', className]}>
   {
     command && (
-      <p class="cli-only text-base-content/60">
+      <p class="cli-only text-base-content/65">
         <span class="text-primary" aria-hidden="true">❯</span> {command}
       </p>
     )
@@ -42,7 +42,7 @@ const hasCount = typeof count === 'number'
       <Tag id={id} class:list={['prompt-heading font-semibold text-base-content', command && 'mt-3']}>
         <span class="cli-only text-primary" aria-hidden="true">●</span>
         <span class="modern-only modern-check" aria-hidden="true">✓</span> {heading}
-        {hasCount && <span class="cli-only font-normal text-base-content/60"> ({count})</span>}
+        {hasCount && <span class="cli-only font-normal text-base-content/65"> ({count})</span>}
         {hasCount && <span class="modern-only font-normal"> · {count}</span>}
       </Tag>
     )

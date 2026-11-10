@@ -21,11 +21,11 @@
   --color-base-300: #dcd8cd;
   --color-base-content: #1f1e1b;
 
-  --color-primary: #c2551c;
+  --color-primary: #b34d17;
   --color-primary-content: #ffffff;
   --color-secondary: #76726a;
   --color-secondary-content: #ffffff;
-  --color-accent: #c2551c;
+  --color-accent: #b34d17;
   --color-accent-content: #ffffff;
   --color-neutral: #2e2c28;
   --color-neutral-content: #faf9f5;
@@ -448,7 +448,7 @@ html:not([data-theme='dark']) .theme-when-dark {
     height: auto;
     padding: 0.25rem 0.5rem;
     font-size: 0.78rem;
-    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   }
 
   .tabs-box > .tab-active,
@@ -566,7 +566,7 @@ html:not([data-theme='dark']) .theme-when-dark {
 
   .home-welcome {
     font-family: var(--font-sans);
-    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   }
 
   .home-intro h1 {
@@ -695,7 +695,7 @@ html:not([data-theme='dark']) .theme-when-dark {
 
   .post-details {
     line-height: 1.9;
-    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
 
     div {
       display: flex;

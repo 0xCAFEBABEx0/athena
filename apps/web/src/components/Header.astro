@@ -2,7 +2,7 @@
 import CMSLink from '@/components/CMSLink.astro'
 import ThemeToggle from '@/components/ThemeToggle.astro'
 import ViewToggle from '@/components/ViewToggle.astro'
-import { LOCALES, LOCALE_LABEL, dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
+import { LOCALES, LOCALE_LABEL, LOCALE_NAME, dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
 import { getHeaderNav } from '@/lib/nav'
 import type { SiteData } from '@/lib/site'
@@ -39,6 +39,7 @@ const isCurrent = (href: string | null): boolean => {
 const languages = LOCALES.map((code) => ({
   code,
   label: LOCALE_LABEL[code],
+  name: LOCALE_NAME[code],
   href: localizePath(code, current),
 }))
 const crumbs = current.split('/').filter(Boolean)
@@ -56,13 +57,13 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
     {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
     <details class="dropdown dropdown-end" data-language-menu>
       <summary
-        class="inline-flex min-h-11 cursor-pointer list-none items-center px-2 font-mono text-sm text-base-content/60 hover:text-base-content"
+        class="inline-flex min-h-11 cursor-pointer list-none items-center px-2 font-mono text-sm text-base-content/65 hover:text-base-content"
         aria-label={t.language}
       >
-        {locale}
+        {LOCALE_LABEL[locale]}
       </summary>
       <ul
-        class="menu dropdown-content z-20 mt-1 w-32 rounded-box border border-base-300 bg-base-100 p-1 font-mono text-sm"
+        class="menu dropdown-content z-20 mt-1 w-20 rounded-box border border-base-300 bg-base-100 p-1 font-mono text-sm"
       >
         {
           languages.map((lang) => (
@@ -73,8 +74,8 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
                 lang={lang.code}
                 class:list={[{ 'menu-active': lang.code === locale }]}
                 aria-current={lang.code === locale ? 'true' : undefined}
+                title={lang.name}
               >
-                <span class="w-5 text-base-content/50">{lang.code}</span>
                 {lang.label}
               </a>
             </li>
@@ -92,7 +93,7 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
     <span class="modern-avatar" aria-hidden="true">{initial}</span>
     <span class="sr-only">{site.siteName}</span>
   </a>
-  <nav class="modern-crumbs breadcrumbs min-w-0 py-0 text-[13.5px] text-base-content/60" aria-label="Breadcrumb">
+  <nav class="modern-crumbs breadcrumbs min-w-0 py-0 text-[13.5px] text-base-content/65" aria-label="Breadcrumb">
     <ul>
       <li><a href={localizePath(locale, '/')}>{site.siteName}</a></li>
       {
@@ -131,9 +132,9 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
             lang={lang.code}
             class:list={['tab', { 'tab-active': lang.code === locale }]}
             aria-current={lang.code === locale ? 'true' : undefined}
+            title={lang.name}
           >
-            <span class="hidden sm:inline">{lang.code === 'en' ? 'EN' : lang.label}</span>
-            <span class="sm:hidden">{lang.code.toUpperCase()}</span>
+            {lang.label}
           </a>
         ))
       }

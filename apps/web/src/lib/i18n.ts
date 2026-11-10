@@ -6,7 +6,11 @@ export { DEFAULT_LOCALE, LOCALES, type Locale }
 export const LANG_TAG: Record<Locale, string> = { en: 'en', ja: 'ja', zh: 'zh-Hans' }
 
 /** Label shown in the language switcher. */
-export const LOCALE_LABEL: Record<Locale, string> = { en: 'EN', ja: '日本語', zh: '中文' }
+/** Short label shown in language switchers (Master: EN / JP / ZH, not native names). */
+export const LOCALE_LABEL: Record<Locale, string> = { en: 'EN', ja: 'JP', zh: 'ZH' }
+
+/** Native language name, for accessible names and tooltips. */
+export const LOCALE_NAME: Record<Locale, string> = { en: 'English', ja: '日本語', zh: '中文' }
 
 export const isLocale = (value: unknown): value is Locale =>
   typeof value === 'string' && (LOCALES as readonly string[]).includes(value)
@@ -77,8 +81,8 @@ const en = {
   darkWord: 'Dark',
   lightWord: 'Light',
   viewCli: 'CLI',
-  viewModern: 'Modern',
-  toModern: 'Switch to the modern view',
+  viewModern: 'ADE',
+  toModern: 'Switch to the ADE view',
   toCli: 'Switch to the CLI view',
   shortcutView: 'switch view',
   shortcutSearch: 'search',
@@ -149,11 +153,11 @@ const ja: Dictionary = {
   errorTitle: 'ページを表示できませんでした',
   errorBody: 'しばらくしてから、もう一度開いてください。',
   untranslated: 'この記事はまだ翻訳されていないため、英語で表示しています。',
-  darkWord: 'ダーク',
-  lightWord: 'ライト',
+  darkWord: 'Dark',
+  lightWord: 'Light',
   viewCli: 'CLI',
-  viewModern: 'モダン',
-  toModern: 'モダン表示に切り替え',
+  viewModern: 'ADE',
+  toModern: 'ADE 表示に切り替え',
   toCli: 'CLI表示に切り替え',
   shortcutView: '表示切替',
   shortcutSearch: '検索',
@@ -222,11 +226,11 @@ const zh: Dictionary = {
   errorTitle: '页面无法显示',
   errorBody: '请稍后再试。',
   untranslated: '这篇文章还没有翻译，因此以英文显示。',
-  darkWord: '深色',
-  lightWord: '浅色',
+  darkWord: 'Dark',
+  lightWord: 'Light',
   viewCli: 'CLI',
-  viewModern: '现代',
-  toModern: '切换到现代视图',
+  viewModern: 'ADE',
+  toModern: '切换到 ADE 视图',
   toCli: '切换到 CLI 视图',
   shortcutView: '切换视图',
   shortcutSearch: '搜索',

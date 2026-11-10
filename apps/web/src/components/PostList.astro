@@ -29,12 +29,12 @@ const items = posts.filter((post) => post && post.slug)
           <a class="post-row" href={localizePath(locale, `/posts/${post.slug}`)} data-post-row>
             <span class="post-row-marker hidden sm:inline" aria-hidden="true">❯</span>
             {date && (
-              <time class="w-full shrink-0 font-mono sm:w-24 text-[13.5px] text-base-content/60" datetime={post.publishedAt ?? undefined}>
+              <time class="w-full shrink-0 font-mono sm:w-24 text-[13.5px] text-base-content/65" datetime={post.publishedAt ?? undefined}>
                 {date}
               </time>
             )}
             <span class="post-row-title min-w-0 flex-1 basis-full text-base leading-relaxed sm:basis-0">{post.title}</span>
-            {tag && <span class="post-row-tag hidden shrink-0 font-mono text-xs text-base-content/60 sm:inline">#{tag}</span>}
+            {tag && <span class="post-row-tag hidden shrink-0 font-mono text-xs text-base-content/65 sm:inline">#{tag}</span>}
           </a>
         </li>
       )

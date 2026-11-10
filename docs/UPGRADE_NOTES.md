@@ -20,8 +20,14 @@ A running log of notable dependency upgrades. Newest first.
 
 - `/`, `/ja/…`, `/zh/…` routes (middleware strips the prefix), hreflang,
   per-language RSS and sitemaps, UI strings in `src/lib/i18n.ts`.
-- CLI ⇄ modern view switch (`v`, stored in localStorage `athena-view`),
-  popup search (⌘K / `/`, `GET /api/search`).
+- CLI ⇄ ADE view switch (`v`, stored in localStorage `athena-view`; the value
+  is `modern` in code and in the CMS), popup search (⌘K / `/`, filters
+  `/search-index.json` in the browser).
+- Caching: every response carries the Vercel cache tag `content`;
+  `/api/invalidate` calls `invalidateByTag` on any CMS change. ISR expiration
+  went from 5 minutes to 7 days. `/search` left ISR (it ignored `?q=`) and is
+  CDN-cached per URL. Draft preview now sets `__prerender_bypass`, so editors
+  see drafts on pages that are already cached. No new env vars.
 
 **Database (manual, push is off)**
 

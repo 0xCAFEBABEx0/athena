@@ -32,7 +32,7 @@ const hasImage =
 ---
 
 <header>
-  <div class="cli-only breadcrumbs pt-8 font-mono text-[13px] text-base-content/60">
+  <div class="cli-only breadcrumbs pt-8 font-mono text-[13px] text-base-content/65">
     <ul>
       <li><a href={lp('/')}>~</a></li>
       <li><a href={lp('/posts')}>posts</a></li>
@@ -42,7 +42,7 @@ const hasImage =
 
   <h1 class="post-title heading-display mt-3 text-[26px] leading-snug md:text-3xl md:leading-snug">{title}</h1>
 
-  <p class="post-meta mt-3 flex flex-wrap gap-x-2 font-mono text-[13px] text-base-content/60">
+  <p class="post-meta mt-3 flex flex-wrap gap-x-2 font-mono text-[13px] text-base-content/65">
     {date && <time datetime={publishedAt ?? undefined}>{date}</time>}
     {readingMinutes && <span><span class="cli-only">· </span>{t.minRead(readingMinutes)}</span>}
     {authorText && <span><span class="cli-only">· </span>{authorText}</span>}
@@ -60,7 +60,7 @@ const hasImage =
             <span class="cli-only text-primary" aria-hidden="true">●</span> {t.summary}
           </p>
           <p class="flex gap-2 text-[15px] leading-relaxed text-base-content/85">
-            <span class="cli-only shrink-0 font-mono text-base-content/60" aria-hidden="true">⎿</span>
+            <span class="cli-only shrink-0 font-mono text-base-content/65" aria-hidden="true">⎿</span>
             <span class="modern-only modern-check mt-1" aria-hidden="true">✓</span>
             <span>{meta.description}</span>
           </p>

@@ -19,7 +19,7 @@ const year = new Date().getFullYear()
 
 <footer class="site-footer container mt-auto pb-8 pt-14">
   <div
-    class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-base-300 pt-3.5 font-mono text-xs text-base-content/60"
+    class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-base-300 pt-3.5 font-mono text-xs text-base-content/65"
   >
     <span class="inline-flex items-center gap-2">
       <span class="status status-success" aria-hidden="true"></span>
@@ -30,10 +30,10 @@ const year = new Date().getFullYear()
     <span class="inline-flex flex-wrap items-center gap-x-4 gap-y-1">
       {
         navLinks.map((link) => (
-          <CMSLink class="text-base-content/60 no-underline hover:text-base-content" {...link} />
+          <CMSLink class="text-base-content/65 no-underline hover:text-base-content" {...link} />
         ))
       }
-      <a class="text-base-content/60 no-underline hover:text-base-content" href={localizePath(locale, '/rss.xml')}>rss</a>
+      <a class="text-base-content/65 no-underline hover:text-base-content" href={localizePath(locale, '/rss.xml')}>rss</a>
       <span>© {year} {site.authorName || site.siteName}</span>
     </span>
   </div>

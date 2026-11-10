@@ -2,7 +2,7 @@
 import { dict, localeOf } from '@/lib/i18n'
 
 /**
- * CLI ⇄ Modern switch. The choice lives in localStorage ('athena-view') and
+ * CLI ⇄ ADE switch (the ADE look is 'modern' in code and in the CMS). The choice lives in localStorage ('athena-view') and
  * is applied before paint by the script in Layout, so one cached HTML page
  * serves both looks. `flag` is the CLI header button, `segmented` the modern
  * top bar control.
@@ -19,7 +19,7 @@ const t = dict(localeOf(Astro))
   variant === 'flag' ? (
     <button
       type="button"
-      class="btn btn-ghost btn-sm min-h-11 px-2 font-mono font-normal text-base-content/60 hover:text-base-content"
+      class="btn btn-ghost btn-sm min-h-11 px-2 font-mono font-normal text-base-content/65 hover:text-base-content"
       data-view-set="modern"
       aria-label={t.toModern}
     >

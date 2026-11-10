@@ -88,12 +88,21 @@ athena/
 `apps/web/astro.config.mjs` sets `output: 'server'`: every route is rendered on
 demand by a Vercel Function. Vercel ISR then caches the rendered response:
 
-- `isr.expiration: 300` — a cached page is served for up to five minutes before
-  Vercel re-renders it in the background.
-- `isr.bypassToken: REVALIDATE_SECRET` — a request carrying
-  `x-prerender-revalidate: <token>` forces a fresh render and re-caches it.
-  This is how targeted invalidation works (§3.3).
-- `isr.exclude: [/^\/api\/.+/]` — API endpoints are never cached.
+- Every cached response carries the Vercel cache tag `content` (the middleware
+  calls `addCacheTag`). `/api/invalidate` marks the tag stale on any CMS change,
+  so pages are served from cache until content actually changes (§3.3).
+- `isr.expiration: 604800` (7 days) — only a safety net for a missed webhook.
+  Keeping it long means pages rarely re-render, and so rarely wake the CMS and
+  its Neon database, while nothing changes.
+- `isr.bypassToken: sha256("isr-bypass:" + REVALIDATE_SECRET)` — a request
+  carrying `x-prerender-revalidate: <token>` forces a fresh render and
+  re-caches it (targeted invalidation, §3.3). Draft preview sets it as the
+  `__prerender_bypass` cookie so editors skip the cache.
+- `isr.exclude: [/^\/api\/.+/, '/search', '/ja/search', '/zh/search']` — API
+  endpoints are never cached. ISR drops the query string, so the search page
+  is cached by the CDN per full URL instead, under the same tag.
+- The popup search loads `/search-index.json` once and filters in the browser,
+  so typing sends no requests.
 
 Why server output instead of static: draft preview needs a per-request cookie
 check, and publishing must update the site within seconds without a rebuild.
@@ -161,9 +170,9 @@ sequenceDiagram
 - Collection and global hooks call `invalidateWeb()`
   (`apps/cms/src/utilities/invalidateWeb.ts`). It never throws; failures are
   logged. A publish therefore always succeeds even if the web app is down.
-- Pages and posts send concrete paths. Header, footer and redirects send only
-  tags, which cannot be mapped to a finite set of paths; those changes reach
-  the site through the 300 s ISR expiration.
+- Pages and posts send concrete paths, which are re-rendered at once. Every
+  change also invalidates the `content` cache tag, so header, footer, site and
+  redirect changes reach every page on its next request.
 - Hooks skip invalidation when `req.context.disableRevalidate` is set (used by
   seeding).
 

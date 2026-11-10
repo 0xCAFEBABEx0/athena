@@ -117,7 +117,7 @@ const htmlConverters = (locale: Locale, toc: TocEntry[]): HTMLConvertersFunction
       code: ({ node }) => {
         const { code, language } = node.fields as CodeBlockFields
         const lang = escapeHTML(language || 'text')
-        return `<figure class="not-prose my-6 overflow-hidden rounded-box border border-base-300"><figcaption class="flex items-center justify-between border-b border-base-300 bg-base-200 px-3.5 py-2 font-mono text-xs text-base-content/60"><span><span class="text-primary" aria-hidden="true">●</span> ${lang}</span></figcaption><pre class="m-0 overflow-x-auto bg-base-100 px-4 py-3.5 font-mono text-[13px] leading-relaxed"><code class="language-${lang}">${escapeHTML(code ?? '')}</code></pre></figure>`
+        return `<figure class="not-prose my-6 overflow-hidden rounded-box border border-base-300"><figcaption class="flex items-center justify-between border-b border-base-300 bg-base-200 px-3.5 py-2 font-mono text-xs text-base-content/65"><span><span class="text-primary" aria-hidden="true">●</span> ${lang}</span></figcaption><pre class="m-0 overflow-x-auto bg-base-100 px-4 py-3.5 font-mono text-[13px] leading-relaxed"><code class="language-${lang}">${escapeHTML(code ?? '')}</code></pre></figure>`
       },
       cta: ({ node }) => {
         const { links, richText } = node.fields as CallToActionBlock

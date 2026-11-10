@@ -171,7 +171,7 @@ review each language and publish. See `src/translation/`.
 |---|---|---|
 | `siteName` | text, required, default `whoa.me` | Header brand, page titles, RSS title |
 | `authorName` | text | Home heading, copyright line |
-| `defaultView` | select `cli` / `modern`, default `cli` | Look shown until the visitor picks one |
+| `defaultView` | select `cli` / `modern` (shown as ADE), default `cli` | Look shown until the visitor picks one |
 | `welcome` | text, localized, default `Welcome to whoa.me` | First line of the home intro box |
 | `intro` | textarea, localized | Sentence(s) under the name on the home page |
 | `description` | textarea, localized | Default meta description, RSS description |

@@ -2,14 +2,15 @@ import { defineMiddleware } from 'astro:middleware'
 
 import type { Redirect } from '@athena/shared/payload-types'
 
+import { tagAsContent } from '@/lib/cache'
 import { getRedirects } from '@/lib/cms'
 import { DEFAULT_LOCALE, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
 
-// Per-instance cache; redirects rarely change and a publish re-renders pages
-// anyway (the CMS pushes a 'redirects' tag through /api/invalidate, bounded
-// by the ISR expiration TTL).
-const TTL_MS = 60_000
+// Per-instance cache, kept short: it only coalesces the burst of renders that
+// follows a publish. Pages are cached at Vercel, so a render is rare, and a
+// long TTL could bake a just-changed redirect list into freshly cached pages.
+const TTL_MS = 5_000
 let cache: { redirects: Redirect[]; expires: number } | null = null
 
 const loadRedirects = async (): Promise<Redirect[]> => {
@@ -28,8 +29,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const render = () =>
     locale === DEFAULT_LOCALE ? next() : next(`${pathname}${context.url.search}`)
 
+  if (pathname.startsWith('/api/')) return render()
+
+  // Everything else (pages, feeds, sitemaps, the search index) is cached at
+  // Vercel until /api/invalidate marks this tag stale.
+  await tagAsContent()
+
   // Only content routes can be redirected.
-  if (pathname.startsWith('/api/') || pathname.startsWith('/_') || pathname.includes('.')) {
+  if (pathname.startsWith('/_') || pathname.includes('.')) {
     return render()
   }
 

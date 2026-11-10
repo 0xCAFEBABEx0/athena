@@ -86,12 +86,13 @@ all managed by editors without code changes.
   `posts`. The footer always links to `/rss.xml`.
 - **F-NAV-3** Keyboard shortcuts outside text fields: `/` opens the popup
   search, `j`/`k` move through post rows, `t` toggles the theme, `v` switches
-  between the CLI and modern views.
+  between the CLI and ADE views.
 - **F-VIEW-1** Two looks for the same content: CLI (terminal-style) and
-  modern (agent-app style: sidebar, question bubbles, ✓ step pills, composer
+  ADE (agent-app style, called `modern` in code and in the CMS: sidebar, question bubbles, ✓ step pills, composer
   search box, "On this page" panel on posts at ≥1280 px). The site default
   comes from the `site` global; the visitor's choice is stored in
-  `localStorage['athena-view']` and applied before paint.
+  `localStorage['athena-view']` and applied before paint. Switch labels
+  (CLI / ADE, Dark / Light, EN / JP / ZH) are English in every language.
 - **F-I18N-1** English at `/…`, Japanese at `/ja/…`, Chinese at `/zh/…`.
   UI strings are translated; content falls back to English per field. Pages
   declare `hreflang` alternates, and each language has its own RSS feed.
@@ -132,8 +133,8 @@ all managed by editors without code changes.
   Preview** shows it inside the admin at mobile (375), tablet (768) and desktop
   (1440) widths.
 - **F-ED-4** **Publish** makes the document public. The affected public URLs
-  are refreshed within seconds; listings and navigation that cannot be
-  targeted refresh within 5 minutes.
+  are refreshed within seconds; every other cached page refreshes on its next
+  request.
 - **F-ED-5** **Unpublish** or delete removes the document from the public site
   and refreshes its old URL.
 - **F-ED-6** **Schedule publish** queues a publish; it runs on the next hourly
@@ -154,7 +155,7 @@ all managed by editors without code changes.
 
 | ID | Requirement | How it is met |
 |---|---|---|
-| NF-PERF-1 | Public pages are served from cache in the common case. | Vercel ISR, 300 s expiration plus webhook re-render. |
+| NF-PERF-1 | Public pages are served from cache in the common case. | Vercel ISR plus cache tag `content`, invalidated by the publish webhook; 7-day expiration as a safety net. Popup search filters a cached index in the browser. |
 | NF-PERF-2 | Responsive images. | `srcset` from renditions, lazy loading, `decoding=async`. |
 | NF-AVAIL-1 | A CMS outage degrades the site rather than taking it down. | Cached HTML keeps serving; header/footer/redirects fail open; sitemaps return 503; standalone 500 page. |
 | NF-AVAIL-2 | A web outage never blocks publishing. | `invalidateWeb` logs and never throws; 5 s timeout. |
