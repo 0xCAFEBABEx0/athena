@@ -11,7 +11,7 @@ const locale = localeOf(Astro)
 const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
 const site = await getSite(Astro.locals, locale)
-const meta = routeMeta('404', Astro.originPathname, site)
+const meta = { ...routeMeta(t.notFoundTitle, Astro.originPathname, site), noindex: true }
 const path = lp(splitLocale(Astro.originPathname).path)
 
 Astro.response.status = 404

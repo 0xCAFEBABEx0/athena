@@ -12,7 +12,12 @@ const locale = localeOf(Astro)
 const t = dict(locale)
 const site = await getSite(Astro.locals, locale)
 const items = await getWork(Astro.locals, locale)
-const meta = routeMeta(t.workTitle, localizePath(locale, '/work'), site)
+const meta = routeMeta(
+  t.workTitle,
+  localizePath(locale, '/work'),
+  site,
+  t.workDescription(site.authorName || site.siteName),
+)
 ---
 
 <Layout meta={meta}>

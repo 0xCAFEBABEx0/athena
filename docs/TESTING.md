@@ -36,6 +36,12 @@ production build in `apps/web/.vercel/output`.
 | TC-U-16 | Hoo sprite | Four frames: sleep, awake, wave, wink |
 | TC-U-17 | Hoo sprite | Every frame is 30 × 27 |
 | TC-U-18 | Hoo sprite | One path per colour, valid path data |
+| TC-U-19 | SEO | Description falls back: SEO field → intro → welcome; none when all empty |
+| TC-U-20 | SEO | A route's own description beats the site one |
+| TC-U-21 | SEO | Summaries stop at 155 characters (on a word in English, at a character in CJK) |
+| TC-U-22 | SEO | A post without an SEO description uses its text (entities decoded); `og:type` article with dates |
+| TC-U-23 | SEO | JSON-LD: WebSite (author `sameAs` only http links), BlogPosting (`zh-Hans`), SoftwareSourceCode |
+| TC-U-24 | SEO | JSON-LD text cannot close its `<script>` |
 | (14 more) | i18n, cms | Existing `i18n.test.ts` and `cms.test.ts` |
 
 ## End-to-end tests (`apps/web/e2e`)
@@ -72,6 +78,14 @@ production build in `apps/web/.vercel/output`.
 | TC-E-28 | status | The panel stays open after changing the language |
 | TC-E-29 | layout | Phones: ADE top bar search ≥40px, tabs ≥36px; search inputs 16px |
 | TC-E-30 | files | Scanner paths (`/wp-login.php`, `/.env`) get a plain 404; real dotted routes still 200 |
+| TC-E-31 | seo | Indexable pages (home, lists, a post, a work entry; en/ja/zh): title unique per language, description 1–160 chars, self canonical = `og:url`, hreflang en/ja/zh-Hans/x-default, no robots tag |
+| TC-E-32 | seo | hreflang is reciprocal across the three versions, each lists itself under its own `lang`, `x-default` is the English URL |
+| TC-E-33 | seo | `/search`, `/search?q=`, `/ja/search`: `noindex, follow`, no canonical, no hreflang |
+| TC-E-34 | seo | 404 (en, ja): status 404, `noindex, follow`, no canonical / `og:url` / hreflang, localized title |
+| TC-E-35 | seo | Posts (en, ja): `og:type` article, `article:published_time`, BlogPosting whose headline is the h1, `inLanguage` = page lang, `url` = canonical |
+| TC-E-36 | seo | Home: WebSite JSON-LD (`url` = canonical, `name` = site name); /work entry: SoftwareSourceCode without "Other"; lists: none |
+| TC-E-37 | seo | `og:locale` en_US / ja_JP / zh_CN with the other two as alternates |
+| TC-E-38 | seo | Every URL in the pages and posts sitemaps answers 200, is indexable and canonical to itself; `/` listed, `/search` not; fixed routes have no `<lastmod>` |
 
 ## Deployment checks (Preview, then Production)
 
@@ -87,9 +101,11 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 | TC-P-06 | `GET /llms.txt`, `/og.png` | 200; llms.txt names the site and the current domain |
 | TC-P-07 | Warm-cache workflow run | Succeeds for the deployment's commit |
 | TC-P-08 | E2E suite with `E2E_BASE_URL` set to the deployment | All pass (TC-E-20 needs the footer rows deleted) |
+| TC-P-09 | Schema Markup Validator (validator.schema.org) on `/`, a post, a /work entry; Google Rich Results Test on the post | WebSite / BlogPosting / SoftwareSourceCode parsed without errors; the post is eligible as an Article |
 
 ## Results
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-10 | local dev (SEO changes), local build | 38/38 | 48/48 | First TC-E-31 run flagged `/ja` sharing the home title with `/` (the site name); language versions may share a title, so uniqueness is now checked per language. Found and fixed: `programmingLanguage` listed GitHub's "Other". |
 | 2026-11-10 | local dev (5aa41a2 + working tree), local build | 32/32 | 40/40 | Found and fixed: `/search` rewrote the `/status` suggestion text (attribute name clash); the 500 page still pulled every font subset. TC-P-* pending the preview deploy (needs the banner SQL). |

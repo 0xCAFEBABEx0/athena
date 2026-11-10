@@ -26,7 +26,12 @@ if (posts.totalPages > 0 && pageNumber > posts.totalPages) {
 }
 
 const site = await getSite(Astro.locals, locale)
-const meta = routeMeta(t.allPostsPage(pageNumber), lp(`/posts/page/${pageNumber}`), site)
+const meta = routeMeta(
+  t.allPostsPage(pageNumber),
+  lp(`/posts/page/${pageNumber}`),
+  site,
+  t.postsPageDescription(site.siteName, pageNumber),
+)
 ---
 
 <Layout meta={meta}>

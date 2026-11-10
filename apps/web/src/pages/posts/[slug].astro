@@ -14,7 +14,8 @@ import { readingMinutes } from '@/lib/format'
 import { renderRichText } from '@/lib/richtext'
 import { LOCALES, LOCALE_LABEL } from '@/lib/i18n'
 import { formatAuthors, formatDate } from '@/lib/format'
-import { buildMeta } from '@/lib/seo'
+import { htmlToText, postJsonLd, postMeta } from '@/lib/seo'
+import { webURL } from '@/lib/env'
 import { getSite } from '@/lib/site'
 
 const draft = isDraft(Astro.cookies)
@@ -45,13 +46,25 @@ if (post.publishedAt) {
 
 const content = post.content as unknown as SerializedEditorState
 const { html, toc } = content ? renderRichText(content, locale) : { html: '', toc: [] }
-const plainText = html.replace(/<[^>]+>/g, ' ')
-const meta = buildMeta(post, lp(`/posts/${slug}`), site)
-const authorText = formatAuthors(
-  (post.populatedAuthors ?? []).filter(
-    (author): author is NonNullable<typeof author> => author !== null,
-  ),
+const plainText = htmlToText(html)
+const authors = (post.populatedAuthors ?? []).filter(
+  (author): author is NonNullable<typeof author> => author !== null,
 )
+const authorText = formatAuthors(authors)
+const authorNames = authors.map((author) => author.name?.trim()).filter((name): name is string => Boolean(name))
+const baseMeta = postMeta(post, lp(`/posts/${slug}`), site, plainText)
+const meta = {
+  ...baseMeta,
+  jsonLd: [
+    postJsonLd(
+      baseMeta,
+      post.title,
+      authorNames.length ? authorNames : site.authorName ? [site.authorName] : [],
+      locale,
+      `${webURL()}${lp('/')}`,
+    ),
+  ],
+}
 const otherLanguages = LOCALES.filter((code) => code !== locale).map((code) => ({
   code,
   label: LOCALE_LABEL[code],

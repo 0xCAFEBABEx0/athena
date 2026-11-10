@@ -36,6 +36,8 @@ done
 for prefix in "" /ja /zh; do
   echo "$base$prefix/search-index.json" >> "$urls"
   echo "$base$prefix/rss.xml" >> "$urls"
+  # /search is noindex, so it is not in the sitemap.
+  echo "$base$prefix/search" >> "$urls"
 done
 echo "$base/404-not-a-page" >> "$urls"
 

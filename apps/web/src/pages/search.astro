@@ -32,7 +32,9 @@ const haystack = posts.map((post) =>
 // One cached page for every query: ISR keys the cache by path and ignores
 // ?q=, so the server renders every post and the browser hides the ones that
 // do not match. Typing a new query never reaches a function or the CMS.
-const meta = routeMeta(t.searchTitle, lp('/search'), site)
+// Search results are thin, query-dependent pages: Google asks sites to keep
+// them out of the index (links on them are still followed).
+const meta = { ...routeMeta(t.searchTitle, lp('/search'), site), noindex: true }
 const strings = {
   commandAll: 'ls posts',
   command: 'grep -ri "{q}" posts/',

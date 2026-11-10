@@ -13,7 +13,7 @@ const [site, posts] = await Promise.all([
   getSite(Astro.locals, locale),
   getPosts({ page: 1 }, { locale }),
 ])
-const meta = routeMeta(t.allPosts, lp('/posts'), site)
+const meta = routeMeta(t.allPosts, lp('/posts'), site, t.postsDescription(site.siteName))
 ---
 
 <Layout meta={meta}>

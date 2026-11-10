@@ -64,6 +64,12 @@ First versioned release: the portfolio and blog redesign for whoa.me.
   cached. Less CSS (about 60% smaller) and no inlined fonts.
 - Japanese and Chinese pages draw "…" full width, so it no longer crowds
   the next character.
+- Search metadata: every page has a description (posts without an SEO
+  description use their opening text), posts are marked as articles with
+  their dates, and the home page, posts and /work entries carry structured
+  data (schema.org). Search results and missing pages are kept out of
+  search engines, and the sitemap lists the home page and no longer lists
+  search or gives made-up change dates.
 - After each Vercel deployment of the web app, a GitHub Actions workflow
   requests every page once, so visitors do not wait for the first renders.
   `/work` pages are in the sitemap.

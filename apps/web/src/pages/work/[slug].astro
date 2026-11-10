@@ -9,7 +9,7 @@ import SearchPrompt from '@/components/SearchPrompt.astro'
 import RelativeTimes from '@/components/work/RelativeTimes.astro'
 import { dict, localeOf, localizePath } from '@/lib/i18n'
 import { formatDate } from '@/lib/format'
-import { routeMeta } from '@/lib/seo'
+import { routeMeta, workJsonLd } from '@/lib/seo'
 import { getSite } from '@/lib/site'
 import { displayHost, getWork } from '@/lib/work'
 
@@ -25,10 +25,13 @@ if (!item) {
 }
 
 const site = await getSite(Astro.locals, locale)
-const meta = {
-  ...routeMeta(item.title, lp(`/work/${item.slug}`), site),
-  description: item.description || site.description,
-}
+const baseMeta = routeMeta(
+  item.title,
+  lp(`/work/${item.slug}`),
+  site,
+  item.description || t.workItemDescription(item.title, site.authorName || site.siteName),
+)
+const meta = { ...baseMeta, jsonLd: [workJsonLd(item, baseMeta.url, site.authorName)] }
 // The conversation only appears once there is a write-up; the summary is
 // already the lede, so it is not repeated as the reply.
 const reply = item.notes

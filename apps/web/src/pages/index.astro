@@ -6,7 +6,8 @@ import Prompt from '@/components/Prompt.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
 import { getPosts } from '@/lib/cms'
 import { formatDate } from '@/lib/format'
-import { routeMeta } from '@/lib/seo'
+import { routeMeta, websiteJsonLd } from '@/lib/seo'
+import { webURL } from '@/lib/env'
 import { getSite } from '@/lib/site'
 import WorkList from '@/components/work/WorkList.astro'
 import CliBanner from '@/components/CliBanner.astro'
@@ -41,7 +42,10 @@ const updated = formatDate(posts[0]?.publishedAt)
 // Banner "Recent activity" (newest posts, pushes and releases).
 const activity = buildActivity(posts, work, lp)
 const more = Math.max(0, totalPosts - posts.length)
-const meta = routeMeta(null, lp('/'), site)
+const meta = {
+  ...routeMeta(null, lp('/'), site),
+  jsonLd: [websiteJsonLd(site, locale, `${webURL()}${lp('/')}`)],
+}
 const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
 ---
 

@@ -109,6 +109,18 @@ all managed by editors without code changes.
 - **F-I18N-1** English at `/…`, Japanese at `/ja/…`, Chinese at `/zh/…`.
   UI strings are translated; content falls back to English per field. Pages
   declare `hreflang` alternates, and each language has its own RSS feed.
+- **F-SEO-1** Search metadata follows Google Search Central
+  (`apps/web/src/lib/seo.ts`, `Layout.astro`): every indexable page has its
+  own title and a description of at most ~155 characters (SEO field, else
+  the post text, else the Site description → intro → welcome line; lists
+  and /work have localized descriptions), a self-referencing canonical,
+  `hreflang` for en / ja / zh-Hans plus `x-default`, and Open Graph with
+  `og:locale`. Posts are `og:type=article` with published/modified times.
+  JSON-LD: `WebSite` on the home page, `BlogPosting` on posts,
+  `SoftwareSourceCode` on /work entries. `/search`, 404 pages and drafts
+  are `noindex, follow` with no canonical or hreflang. The pages sitemap
+  always lists `/`, never `/search`, and gives `<lastmod>` only where the
+  date is real (CMS pages, /work entries from GitHub, posts).
 - **F-NAV-2** If the CMS cannot be reached, header and footer render without
   links instead of failing the page.
 - **F-THEME-1** Light and dark themes. Initial theme comes from
