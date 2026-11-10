@@ -29,8 +29,10 @@ const meta = {
   ...routeMeta(item.title, lp(`/work/${item.slug}`), site),
   description: item.description || site.description,
 }
+// The conversation only appears once there is a write-up; the summary is
+// already the lede, so it is not repeated as the reply.
+const reply = item.notes
 const brief = item.brief || t.workAskAbout(item.title)
-const reply = item.notes || item.description
 const moreCommits = Math.max(0, item.commitCount - item.commits.length)
 const languages = item.languages.filter((lang) => lang.share > 0)
 const details = [
