@@ -27,23 +27,8 @@ const memo = <T>(load: (locale: Locale) => Promise<T>) => {
   }
 }
 
-/**
- * Links to the CMS admin (`/admin`, on any host) are dropped from the public
- * nav even when an editor adds one: the site should not point visitors, or
- * scanners, at the login page.
- */
-const isAdminLink = (link: CMSLinkData): boolean => {
-  if (link.type === 'reference' || !link.url) return false
-  try {
-    const { pathname } = new URL(link.url, 'https://site.invalid')
-    return pathname === '/admin' || pathname.startsWith('/admin/')
-  } catch {
-    return false
-  }
-}
-
 const publicLinks = (items: { link: CMSLinkData }[] | null | undefined): CMSLinkData[] =>
-  (items ?? []).map(({ link }) => link).filter((link) => !isAdminLink(link))
+  (items ?? []).map(({ link }) => link)
 
 /** Header nav links. Never throws: a CMS outage renders the fallback nav. */
 export const getHeaderNav = memo(async (locale): Promise<CMSLinkData[]> => {

@@ -17,6 +17,8 @@ export type SiteData = {
   authorName: string
   welcome: string
   intro: string
+  /** Home page title after the site name; empty = the site name alone. */
+  tagline: string
   description: string | undefined
   /** Default share image (absolute URL), or null for the built-in one. */
   ogImage: string | null
@@ -44,6 +46,7 @@ export const normalizeSite = (site: Partial<Site> | null | undefined): SiteData 
   authorName: site?.authorName?.trim() || '',
   welcome: site?.welcome?.trim() || '',
   intro: site?.intro?.trim() || '',
+  tagline: site?.tagline?.trim() || '',
   description: site?.description?.trim() || undefined,
   ogImage: ogImageOf(site?.ogImage),
   socialLinks: (site?.socialLinks ?? [])

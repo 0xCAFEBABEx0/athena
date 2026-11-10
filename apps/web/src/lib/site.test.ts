@@ -7,6 +7,8 @@ describe('normalizeSite', () => {
     const site = normalizeSite(null)
     expect(site.siteName).toBe('whoa.me')
     expect(site.ogImage).toBeNull()
+    expect(site.tagline).toBe('')
+    expect(normalizeSite({ tagline: '  notes  ' }).tagline).toBe('notes')
     expect(site.banner).toEqual({ style: 'fetch', mascot: true, tips: [] })
   })
 

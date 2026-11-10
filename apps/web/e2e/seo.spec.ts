@@ -204,3 +204,13 @@ test('TC-E-38 sitemaps list only indexable 200 pages whose canonical is themselv
     expect(pathOf(head.canonical), path).toBe(path.replace(/\/$/, '') || '/')
   }
 })
+
+test('TC-E-40 home title is the site name, or "site name — tagline" from the CMS', async ({ page }) => {
+  for (const path of ['/', '/ja', '/zh']) {
+    const head = await readHead(page, path)
+    const name = (await page.locator('meta[property="og:site_name"]').getAttribute('content')) ?? ''
+    expect(head.title === name || head.title.startsWith(`${name} — `), `${path}: ${head.title}`).toBe(true)
+    expect(head.title.endsWith(' — '), path).toBe(false)
+    expect(await page.locator('meta[property="og:title"]').getAttribute('content')).toBe(head.title)
+  }
+})

@@ -21,6 +21,32 @@ A running log of notable dependency upgrades. Newest first.
   `test:e2e` (Playwright, `apps/web/e2e`, against `E2E_BASE_URL`). Case list:
   [`docs/TESTING.md`](./TESTING.md).
 
+## Search metadata and home tagline — 2026-11-10
+
+**CMS**
+
+- The `site` global gains **`tagline`** (text, localized): the home page
+  title becomes `<site name> — <tagline>` in tabs and search results. Empty =
+  the site name alone (as before).
+- The public nav no longer drops links to `/admin` in code; keep them out of
+  Globals → Header / Footer (Master's call: the CMS controls it).
+
+**Web**
+
+- Search metadata per Google Search Central (SPECIFICATION F-SEO-1):
+  descriptions everywhere, `noindex, follow` on `/search` and 404s, posts as
+  `og:type=article` with dates, `og:locale`, JSON-LD (WebSite, BlogPosting,
+  SoftwareSourceCode), and a pages sitemap with `/`, without `/search` and
+  without invented `<lastmod>` values.
+
+**Database (manual, push is off)**
+
+Run [`docs/sql/2026-11-10-site-tagline.sql`](./sql/2026-11-10-site-tagline.sql)
+(adds `site_locales.tagline`) after `2026-11-10-cli-banner.sql`, on the
+preview Neon branch and then production, **before** the CMS deploy.
+Idempotent; verified locally: applied twice to a copy without the column, it
+gives the same `site_locales` as a fresh push of the new config.
+
 ## CLI banner with Hoo the owl — 2026-11-10
 
 **CMS**

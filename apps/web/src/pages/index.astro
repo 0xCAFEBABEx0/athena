@@ -6,7 +6,7 @@ import Prompt from '@/components/Prompt.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
 import { getPosts } from '@/lib/cms'
 import { formatDate } from '@/lib/format'
-import { routeMeta, websiteJsonLd } from '@/lib/seo'
+import { homeTitle, routeMeta, websiteJsonLd } from '@/lib/seo'
 import { webURL } from '@/lib/env'
 import { getSite } from '@/lib/site'
 import WorkList from '@/components/work/WorkList.astro'
@@ -44,6 +44,7 @@ const activity = buildActivity(posts, work, lp)
 const more = Math.max(0, totalPosts - posts.length)
 const meta = {
   ...routeMeta(null, lp('/'), site),
+  title: homeTitle(site.siteName, site.tagline),
   jsonLd: [websiteJsonLd(site, locale, `${webURL()}${lp('/')}`)],
 }
 const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()

@@ -42,6 +42,7 @@ production build in `apps/web/.vercel/output`.
 | TC-U-22 | SEO | A post without an SEO description uses its text (entities decoded); `og:type` article with dates |
 | TC-U-23 | SEO | JSON-LD: WebSite (author `sameAs` only http links), BlogPosting (`zh-Hans`), SoftwareSourceCode |
 | TC-U-24 | SEO | JSON-LD text cannot close its `<script>` |
+| TC-U-25 | SEO | Home title is `site — tagline`, or the site name when the tagline is empty; the Site global trims it |
 | (14 more) | i18n, cms | Existing `i18n.test.ts` and `cms.test.ts` |
 
 ## End-to-end tests (`apps/web/e2e`)
@@ -86,6 +87,8 @@ production build in `apps/web/.vercel/output`.
 | TC-E-36 | seo | Home: WebSite JSON-LD (`url` = canonical, `name` = site name); /work entry: SoftwareSourceCode without "Other"; lists: none |
 | TC-E-37 | seo | `og:locale` en_US / ja_JP / zh_CN with the other two as alternates |
 | TC-E-38 | seo | Every URL in the pages and posts sitemaps answers 200, is indexable and canonical to itself; `/` listed, `/search` not; fixed routes have no `<lastmod>` |
+| TC-E-39 | files | No link to `/admin` in the header, sidebar or footer (`/`, `/ja/posts`); content check: keep such links out of Globals → Header / Footer |
+| TC-E-40 | seo | Home title (en/ja/zh) is the site name or `site name — tagline`, never a dangling ` — `; `og:title` matches |
 
 ## Deployment checks (Preview, then Production)
 
@@ -107,5 +110,6 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-10 | local dev (tagline set in en/ja, empty in zh), local build | 39/39 | 50/50 | `/admin` nav filter removed (Master: controlled in the CMS); TC-E-39 stays as a content check. |
 | 2026-11-10 | local dev (SEO changes), local build | 38/38 | 48/48 | First TC-E-31 run flagged `/ja` sharing the home title with `/` (the site name); language versions may share a title, so uniqueness is now checked per language. Found and fixed: `programmingLanguage` listed GitHub's "Other". |
 | 2026-11-10 | local dev (5aa41a2 + working tree), local build | 32/32 | 40/40 | Found and fixed: `/search` rewrote the `/status` suggestion text (attribute name clash); the 500 page still pulled every font subset. TC-P-* pending the preview deploy (needs the banner SQL). |

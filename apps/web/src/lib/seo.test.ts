@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   buildMeta,
   DEFAULT_OG_IMAGE,
+  homeTitle,
   htmlToText,
   jsonLdScript,
   postJsonLd,
@@ -113,5 +114,13 @@ describe('search metadata', () => {
 
   test('TC-U-24 JSON-LD cannot close its script element', () => {
     expect(jsonLdScript({ name: '</script><script>alert(1)</script>' })).not.toContain('</script')
+  })
+})
+
+describe('home title', () => {
+  test('TC-U-25 home title is "site — tagline", or the site name alone', () => {
+    expect(homeTitle('whoa.me', 'notes on building for the web')).toBe('whoa.me — notes on building for the web')
+    expect(homeTitle('whoa.me', '  ')).toBe('whoa.me')
+    expect(homeTitle('whoa.me', null)).toBe('whoa.me')
   })
 })

@@ -111,7 +111,8 @@ all managed by editors without code changes.
   declare `hreflang` alternates, and each language has its own RSS feed.
 - **F-SEO-1** Search metadata follows Google Search Central
   (`apps/web/src/lib/seo.ts`, `Layout.astro`): every indexable page has its
-  own title and a description of at most ~155 characters (SEO field, else
+  own title (the home page: site name, plus ` — <tagline>` when the Site
+  global sets one) and a description of at most ~155 characters (SEO field, else
   the post text, else the Site description → intro → welcome line; lists
   and /work have localized descriptions), a self-referencing canonical,
   `hreflang` for en / ja / zh-Hans plus `x-default`, and Open Graph with

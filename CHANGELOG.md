@@ -69,7 +69,8 @@ First versioned release: the portfolio and blog redesign for whoa.me.
   their dates, and the home page, posts and /work entries carry structured
   data (schema.org). Search results and missing pages are kept out of
   search engines, and the sitemap lists the home page and no longer lists
-  search or gives made-up change dates.
+  search or gives made-up change dates. The home page title can carry a
+  tagline after the site name (CMS, Site global).
 - After each Vercel deployment of the web app, a GitHub Actions workflow
   requests every page once, so visitors do not wait for the first renders.
   `/work` pages are in the sitemap.
@@ -94,5 +95,4 @@ First versioned release: the portfolio and blog redesign for whoa.me.
   Payload) in new databases, its share image, its static `/llms.txt`
   (now built from the CMS), its "| Payload Website Template" SEO title
   suffix and the Checkly example checks.
-- The Admin link in the footer. The public nav never links to the CMS admin,
-  even if an editor adds one.
+- The Admin link in the footer (new databases no longer get it).

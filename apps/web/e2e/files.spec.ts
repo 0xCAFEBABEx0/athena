@@ -32,6 +32,16 @@ test('TC-E-20 the footer has no Payload template links', async ({ page }) => {
   expect(hrefs.filter((href) => /payloadcms\.com|github\.com\/payloadcms/.test(href))).toEqual([])
 })
 
+test('TC-E-39 no link to the CMS admin in the header, sidebar or footer', async ({ page }) => {
+  for (const path of ['/', '/ja/posts']) {
+    await open(page, path)
+    const hrefs = await page
+      .locator('header a, footer a, nav a, aside a')
+      .evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).href))
+    expect(hrefs.filter((href) => /\/admin(\/|$|\?)/.test(new URL(href).pathname + new URL(href).search)), path).toEqual([])
+  }
+})
+
 test('TC-E-21 feeds and crawler files', async ({ request }) => {
   const rss = await request.get('/ja/rss.xml')
   expect(rss.status()).toBe(200)

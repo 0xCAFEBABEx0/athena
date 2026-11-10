@@ -200,7 +200,8 @@ review each language and publish. See `src/translation/`.
 | `defaultView` | select `cli` / `modern` (shown as ADE), default `cli` | Look shown until the visitor picks one |
 | `welcome` | text, localized, default `Welcome to whoa.me` | First line of the home intro box |
 | `intro` | textarea, localized | Sentence(s) under the name on the home page |
-| `description` | textarea, localized | Default meta description, RSS description |
+| `tagline` | text, localized | Home page title after the site name (`whoa.me — <tagline>`); empty = site name only |
+| `description` | textarea, localized | Home meta description, default for pages without their own, RSS description (empty = intro, then welcome) |
 | `ogImage` | upload → `media` | Default share image for pages without their own; empty = built-in `/og.png` |
 | `socialLinks` | array (max 8) of `label`, `url` | Links in the home intro box |
 | `projects` | array (max 12) of `name`, `url`, `description` (localized) | "Things I built" list on the home page |

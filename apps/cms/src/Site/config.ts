@@ -61,11 +61,21 @@ export const Site: GlobalConfig = {
       admin: { description: 'One or two sentences under your name on the home page.' },
     },
     {
+      name: 'tagline',
+      type: 'text',
+      localized: true,
+      admin: {
+        description:
+          'Home page title after the site name ("whoa.me — <tagline>"), shown in browser tabs and search results. Keep the whole title under about 60 characters. Empty = the site name only.',
+      },
+    },
+    {
       name: 'description',
       type: 'textarea',
       localized: true,
       admin: {
-        description: 'Default meta description for pages without their own (home, post list, RSS).',
+        description:
+          'Home page meta description (search-result snippet, about 155 characters), also used by pages without their own and the RSS feed. Empty = the intro, then the welcome line.',
       },
     },
     {

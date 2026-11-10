@@ -70,6 +70,10 @@ const ogImageURL = (image: unknown, site: SiteMeta): string => {
   return defaultOgImage(site)
 }
 
+/** Home page title: `Site name — tagline`, or the site name alone. */
+export const homeTitle = (siteName: string, tagline?: string | null): string =>
+  tagline?.trim() ? `${siteName} — ${tagline.trim()}` : siteName
+
 /** `Title | Site name`, or just the site name when there is no title. */
 export const pageTitle = (title: string | null | undefined, siteName: string): string =>
   title ? `${title} | ${siteName}` : siteName
