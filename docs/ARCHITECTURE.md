@@ -98,9 +98,12 @@ demand by a Vercel Function. Vercel ISR then caches the rendered response:
   carrying `x-prerender-revalidate: <token>` forces a fresh render and
   re-caches it (targeted invalidation, §3.3). Draft preview sets it as the
   `__prerender_bypass` cookie so editors skip the cache.
-- `isr.exclude: [/^\/api\/.+/, '/search', '/ja/search', '/zh/search']` — API
-  endpoints are never cached. ISR drops the query string, so the search page
-  is cached by the CDN per full URL instead, under the same tag.
+- `isr.exclude: [/^\/api\/.+/]` — API endpoints are never cached. ISR drops
+  the query string, so `/search` is one cached page that filters in the
+  browser.
+- Dotted paths that are not routes (`/wp-login.php`, `/.env`) get a plain 404
+  from the middleware without any CMS request; 404 pages are CDN-cached for a
+  day under the `content` tag.
 - The popup search loads `/search-index.json` once and filters in the browser,
   so typing sends no requests.
 
@@ -228,9 +231,9 @@ file extension skip the lookup.
 ### 3.7 Search
 
 The Search plugin keeps a `search` collection in sync with published posts
-(`beforeSync` copies slug, meta and categories). `/search?q=` queries it with a
-`like` match over title, meta title, meta description and slug, returning up to
-12 results.
+(`beforeSync` copies slug, meta and categories). The web app no longer queries
+it per request: `/search` and the popup both filter every post in the browser
+(`/search-index.json` for the popup, server-rendered rows for the page).
 
 ### 3.8 Media
 

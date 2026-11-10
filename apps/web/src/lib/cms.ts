@@ -8,7 +8,6 @@ import type {
   Page,
   Post,
   Redirect,
-  Search,
   Site,
 } from '@athena/shared/payload-types'
 
@@ -279,46 +278,6 @@ export const getGlobal = async <T extends Header | Footer | Site>(
   opts: FetchOptions = {},
 ): Promise<T> => cmsFetch<T>(`/globals/${slug}`, { depth: 1 }, opts)
 
-const searchIn = async (q: string, locale: Locale): Promise<PaginatedDocs<Search>> => {
-  const like = q.trim()
-  return cmsFetch<PaginatedDocs<Search>>(
-    '/search',
-    {
-      depth: 1,
-      limit: 12,
-      select: { title: true, slug: true, categories: true, meta: true },
-      ...(like
-        ? {
-            where: {
-              or: [
-                { title: { like } },
-                { 'meta.description': { like } },
-                { 'meta.title': { like } },
-                { slug: { like } },
-              ],
-            },
-          }
-        : {}),
-    },
-    { locale },
-  )
-}
-
-/**
- * Search posts. Outside English, untranslated posts are only indexed in
- * English, so both indexes are searched and merged (translated hits first).
- */
-export const searchPosts = async (
-  q: string,
-  locale: Locale = DEFAULT_LOCALE,
-): Promise<PaginatedDocs<Search>> => {
-  if (locale === DEFAULT_LOCALE) return searchIn(q, locale)
-  const [local, english] = await Promise.all([searchIn(q, locale), searchIn(q, DEFAULT_LOCALE)])
-  const seen = new Set(local.docs.map((doc) => doc.slug))
-  const docs = [...local.docs, ...english.docs.filter((doc) => !seen.has(doc.slug))].slice(0, 12)
-  return { ...local, docs, totalDocs: docs.length }
-}
-
 /**
  * Everything the popup search filters in the browser: every published post
  * (newest first) and page, with untranslated fields falling back to English.
@@ -326,7 +285,7 @@ export const searchPosts = async (
 export const getSearchIndexDocs = async (
   locale: Locale = DEFAULT_LOCALE,
 ): Promise<{
-  posts: Pick<Post, 'slug' | 'title' | 'categories' | 'meta'>[]
+  posts: Pick<Post, 'slug' | 'title' | 'categories' | 'meta' | 'publishedAt'>[]
   pages: Pick<Page, 'slug' | 'title'>[]
 }> => {
   const [posts, pages] = await Promise.all([
@@ -337,7 +296,7 @@ export const getSearchIndexDocs = async (
         limit: 0,
         pagination: false,
         sort: '-publishedAt',
-        select: { title: true, slug: true, categories: true, meta: true },
+        select: { title: true, slug: true, categories: true, meta: true, publishedAt: true },
       },
       { locale },
     ),

@@ -18,14 +18,7 @@ import { formatDate } from '@/lib/format'
 import { owlPaths, OWL_HEIGHT, OWL_WIDTH, type OwlFrame } from '@/lib/owl'
 import type { SiteData } from '@/lib/site'
 import RelativeTimes from '@/components/work/RelativeTimes.astro'
-
-export type BannerActivity = {
-  /** ISO timestamp. */
-  date: string
-  kind: 'post' | 'release' | 'push'
-  label: string
-  href: string
-}
+import type { BannerActivity } from '@/lib/activity'
 
 type Props = {
   site: SiteData

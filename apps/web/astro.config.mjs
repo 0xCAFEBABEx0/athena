@@ -27,10 +27,10 @@ export default defineConfig({
     // are counted only when shown.
     isr: {
       bypassToken: isrBypassToken(process.env.REVALIDATE_SECRET),
-      // ISR keys the cache by path and drops the query string, so the search
-      // page (?q=) must not use it; it is CDN-cached per URL instead. The
-      // /ja and /zh copies are matched by [...slug], so list them as URLs.
-      exclude: [/^\/api\/.+/, '/search', '/ja/search', '/zh/search'],
+      // ISR keys the cache by path and drops the query string: /search is
+      // one cached page for every ?q= (it filters in the browser), so new
+      // queries never reach a function or the CMS.
+      exclude: [/^\/api\/.+/],
       // Content changes reach the cache through /api/invalidate (cache tag
       // plus the changed paths). This TTL is only a safety net for a missed
       // webhook, kept long so pages rarely re-render (and wake the CMS and

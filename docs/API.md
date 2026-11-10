@@ -7,7 +7,7 @@ data shapes behind these endpoints see [CONTENT_MODEL.md](./CONTENT_MODEL.md).
 
 ## 1. Web App Endpoints (`apps/web/src/pages`)
 
-All `/api/*` routes and the `/search` page are excluded from ISR caching.
+All `/api/*` routes are excluded from ISR caching.
 Everything else carries the Vercel cache tag `content` (added by the
 middleware) and stays cached until `/api/invalidate` marks that tag stale.
 
@@ -22,11 +22,11 @@ requests. ISR-cached like a page; `503` (`no-store`) if the CMS fails.
 
 ### `GET /search?q=` (also `/ja/…`, `/zh/…`)
 
-Full search page, rendered from the CMS `search` collection. ISR drops the
-query string from its cache key, so this page is excluded from ISR and cached
-by Vercel's CDN per full URL instead
-(`Vercel-CDN-Cache-Control: max-age=31536000, stale-while-revalidate=86400`,
-cache tag `content`).
+Full search page. ISR drops the query string, so the page is rendered once per
+language with every published post (`data-search-text` on each row) and the
+browser hides the rows that do not match `?q=` (every word must appear in the
+title, slug, summary or tags). New queries and typing never reach a function
+or the CMS. Enter updates `?q=` with `history.replaceState`.
 
 ### `GET /api/preview`
 
@@ -97,7 +97,7 @@ Response `200`:
 | `/posts` | `posts/index.astro` | Page 1 of posts, 12 per page, newest `publishedAt` first. |
 | `/posts/page/{n}` | `posts/page/[pageNumber].astro` | `n` must be a positive integer within range, otherwise 404. |
 | `/posts/{slug}` | `posts/[slug].astro` | Post detail with related posts. Draft-aware. |
-| `/search?q=` | `search.astro` | Up to 12 matches from the `search` collection. |
+| `/search?q=` | `search.astro` | Every post, filtered in the browser (one ISR page per language). |
 | `/sitemap.xml` | `sitemap.xml.ts` | Index pointing at the two sitemaps below. |
 | `/pages-sitemap.xml`, `/posts-sitemap.xml` | | Published slugs with `lastmod = updatedAt`. `503` with `no-store` if the CMS fails. |
 | `/robots.txt` | `robots.txt.ts` | Allow all, disallow `/api/`, link the sitemap index. |
@@ -131,7 +131,6 @@ encoded with `qs-esm`.
 | `getAdjacentPosts(publishedAt)` | `GET /posts` ×2 | `limit=1`, `where[publishedAt][less_than / greater_than]`, `sort` ±publishedAt |
 | `getArchivePosts` | `GET /posts` | `depth=1`, `limit`, optional `where[categories][in]` |
 | `getGlobal(slug)` | `GET /globals/site`, `/globals/header` or `/globals/footer` | `depth=1` |
-| `searchPosts(q)` | `GET /search` | `limit=12`, `or` of `like` on title, meta.title, meta.description, slug |
 | `getRedirects()` | `GET /redirects` | `limit=0`, `pagination=false` |
 | `getAllSlugs(c)` | `GET /pages` or `/posts` | `limit=0`, `pagination=false`, `select` slug/updatedAt, `where[_status][equals]=published` |
 

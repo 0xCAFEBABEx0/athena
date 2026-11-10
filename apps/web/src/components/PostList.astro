@@ -12,20 +12,24 @@ export type PostListItem = {
 type Props = {
   posts: PostListItem[]
   class?: string
+  /** Per post, text a client-side filter matches against (search page). */
+  search?: string[]
 }
 
 const locale = localeOf(Astro)
-const { posts, class: className } = Astro.props
-const items = posts.filter((post) => post && post.slug)
+const { posts, class: className, search } = Astro.props
+const items = posts
+  .map((post, index) => ({ post, text: search?.[index] }))
+  .filter(({ post }) => post && post.slug)
 ---
 
 <ul class:list={['list-none pl-5', className]} data-post-list>
   {
-    items.map((post) => {
+    items.map(({ post, text }) => {
       const date = formatDate(post.publishedAt)
       const tag = categoryTitles(post.categories)[0]
       return (
-        <li>
+        <li data-search-text={text}>
           <a class="post-row" href={localizePath(locale, `/posts/${post.slug}`)} data-post-row>
             <span class="post-row-marker hidden sm:inline" aria-hidden="true">❯</span>
             {date && (

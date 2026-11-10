@@ -58,6 +58,12 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 - A page that is not cached yet renders faster: the layout's CMS requests
   (site settings, header and footer, recent posts, work) start together in
   the middleware instead of one after another.
+- `/search` filters in the browser from one cached page, so a new query
+  never waits for the server; requests for files that do not exist
+  (`/wp-login.php` and similar) are answered at once, and missing pages are
+  cached. Less CSS (about 60% smaller) and no inlined fonts.
+- Japanese and Chinese pages draw "…" full width, so it no longer crowds
+  the next character.
 - After each Vercel deployment of the web app, a GitHub Actions workflow
   requests every page once, so visitors do not wait for the first renders.
   `/work` pages are in the sitemap.

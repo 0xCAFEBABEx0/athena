@@ -10,7 +10,8 @@
     "preview": "bun --bun astro preview",
     "check": "astro check",
     "lint": "astro check",
-    "test": "bun test src"
+    "test": "bun test src",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@astrojs/vercel": "^11.0.20",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
     "daisyui": "^5.7.50",

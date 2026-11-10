@@ -17,3 +17,7 @@ node_modules
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Playwright
+apps/web/test-results/
+apps/web/playwright-report/

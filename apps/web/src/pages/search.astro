@@ -4,47 +4,105 @@ import Layout from '@/layouts/Layout.astro'
 import PostList from '@/components/PostList.astro'
 import Prompt from '@/components/Prompt.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
-import { searchPosts } from '@/lib/cms'
+import { getSearchIndexDocs } from '@/lib/cms'
+import { categoryTitles } from '@/lib/format'
 import { routeMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
 
 const locale = localeOf(Astro)
 const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
-const site = await getSite(Astro.locals, locale)
-const query = (Astro.url.searchParams.get('q') ?? '').trim()
-const results = await searchPosts(query, locale)
-
-// ISR caches by path only, so this page is excluded from it (astro.config.mjs)
-// and cached by Vercel's CDN per full URL (?q included) instead, under the
-// same cache tag as every page, until the next CMS change.
-Astro.response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate')
-Astro.response.headers.set(
-  'Vercel-CDN-Cache-Control',
-  'public, max-age=31536000, stale-while-revalidate=86400',
+const [site, docs] = await Promise.all([
+  getSite(Astro.locals, locale),
+  getSearchIndexDocs(locale).catch((error: unknown) => {
+    console.error('[search] failed to load posts', error)
+    return null
+  }),
+])
+const posts = (docs?.posts ?? []).filter((post) => post.slug)
+// What a query is matched against (lower case): every word of the query must
+// appear in it. The same fields as the popup search.
+const haystack = posts.map((post) =>
+  [post.title, post.slug, post.meta?.title, post.meta?.description, ...categoryTitles(post.categories)]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase(),
 )
-const meta = routeMeta(t.searchTitle, lp('/search'), site)
 
-// A blank query lists everything; the command line shows what ran.
-const command = query ? `grep -ri "${query}" posts/` : 'ls posts'
+// One cached page for every query: ISR keys the cache by path and ignores
+// ?q=, so the server renders every post and the browser hides the ones that
+// do not match. Typing a new query never reaches a function or the CMS.
+const meta = routeMeta(t.searchTitle, lp('/search'), site)
+const strings = {
+  commandAll: 'ls posts',
+  command: 'grep -ri "{q}" posts/',
+  askAll: t.askSearchEmpty,
+  ask: t.askSearch('{q}'),
+  headingAll: t.searchAll,
+  heading: t.searchResults,
+}
 ---
 
 <Layout meta={meta}>
-  <div class="container pt-10">
+  <div class="container pt-10" data-search-page data-strings={JSON.stringify(strings)}>
     <h1 class="sr-only">{t.search}</h1>
-    <SearchPrompt value={query} autofocus={!query} />
+    <SearchPrompt />
     <div class="mt-10">
-      <Prompt
-        command={command}
-        question={query ? t.askSearch(query) : t.askSearchEmpty}
-        heading={query ? t.searchResults : t.searchAll} count={results.totalDocs} />
-      {
-        results.docs.length > 0 ? (
-          <PostList class="mt-1.5" posts={results.docs} />
-        ) : (
-          <p class="mt-2 pl-5 font-mono text-sm text-base-content/65">⎿ {t.notFound}</p>
-        )
-      }
+      <Prompt command={strings.commandAll} question={strings.askAll} heading={strings.headingAll} count={posts.length} />
+      <PostList class="mt-1.5" posts={posts} search={haystack} />
+      <p class="mt-2 pl-5 font-mono text-sm text-base-content/65" hidden={posts.length > 0} data-search-empty>
+        ⎿ {t.notFound}
+      </p>
     </div>
   </div>
 </Layout>
+
+<script>
+  type Strings = Record<'commandAll' | 'command' | 'askAll' | 'ask' | 'headingAll' | 'heading', string>
+
+  const page = document.querySelector<HTMLElement>('[data-search-page]')
+  if (page) {
+    const strings = JSON.parse(page.dataset.strings ?? '{}') as Strings
+    const input = page.querySelector<HTMLInputElement>('[data-search-input]')
+    const rows = Array.from(page.querySelectorAll<HTMLElement>('[data-search-text]'))
+    const empty = page.querySelector<HTMLElement>('[data-search-empty]')
+    const command = page.querySelector<HTMLElement>('[data-prompt-line]')
+    const question = page.querySelector<HTMLElement>('[data-prompt-question]')
+    const heading = page.querySelector<HTMLElement>('[data-prompt-heading]')
+    const counts = Array.from(page.querySelectorAll<HTMLElement>('[data-prompt-count]'))
+
+    const apply = (raw: string) => {
+      const query = raw.trim()
+      const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+      let shown = 0
+      for (const row of rows) {
+        const match = words.every((word) => (row.dataset.searchText ?? '').includes(word))
+        row.hidden = !match
+        if (match) shown += 1
+      }
+      if (empty) empty.hidden = shown > 0
+      const fill = (template: string) => template.replace('{q}', query)
+      if (command) command.textContent = query ? fill(strings.command) : strings.commandAll
+      if (question) question.textContent = query ? fill(strings.ask) : strings.askAll
+      if (heading) heading.textContent = query ? strings.heading : strings.headingAll
+      for (const count of counts) count.textContent = String(shown)
+    }
+
+    const query = new URLSearchParams(window.location.search).get('q') ?? ''
+    if (input) {
+      input.value = query
+      if (!query) input.focus()
+      // Filter as you type; Enter keeps the URL in step without a reload.
+      input.addEventListener('input', () => apply(input.value))
+      input.form?.addEventListener('submit', (event) => {
+        if (input.value.trim().startsWith('/')) return
+        event.preventDefault()
+        const url = new URL(window.location.href)
+        if (input.value.trim()) url.searchParams.set('q', input.value.trim())
+        else url.searchParams.delete('q')
+        history.replaceState(null, '', url)
+      })
+    }
+    apply(query)
+  }
+</script>

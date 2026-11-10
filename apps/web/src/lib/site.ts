@@ -37,7 +37,8 @@ const ogImageOf = (image: Site['ogImage'] | undefined): string | null => {
   return url ? mediaUrl(url) : null
 }
 
-const normalize = (site: Partial<Site> | null | undefined): SiteData => ({
+/** Exported for tests. */
+export const normalizeSite = (site: Partial<Site> | null | undefined): SiteData => ({
   defaultView: site?.defaultView === 'modern' ? 'modern' : 'cli',
   siteName: site?.siteName?.trim() || DEFAULT_SITE_NAME,
   authorName: site?.authorName?.trim() || '',
@@ -79,10 +80,10 @@ export const getSite = (scope: object, locale: Locale): Promise<SiteData> => {
   let pending = byLocale.get(locale)
   if (!pending) {
     pending = getGlobal<Site>('site', { locale })
-      .then(normalize)
+      .then(normalizeSite)
       .catch((error: unknown) => {
         console.error('[site] failed to load site settings', error)
-        return normalize(null)
+        return normalizeSite(null)
       })
     byLocale.set(locale, pending)
   }

@@ -23,6 +23,30 @@ const loadRedirects = async (): Promise<Redirect[]> => {
   return redirects
 }
 
+// Routes whose path has a dot. Any other dotted path that reaches the
+// function (static files never do) is a scanner probing for /wp-login.php,
+// /.env and the like: answer 404 at once, without the CMS requests a page
+// render makes, and let the CDN keep the answer for a day.
+const DOTTED_ROUTES = new Set([
+  '/rss.xml',
+  '/sitemap.xml',
+  '/pages-sitemap.xml',
+  '/posts-sitemap.xml',
+  '/robots.txt',
+  '/llms.txt',
+  '/search-index.json',
+])
+
+const notFound = () =>
+  new Response('Not found\n', {
+    status: 404,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'public, max-age=0, must-revalidate',
+      'Vercel-CDN-Cache-Control': 'public, max-age=86400',
+    },
+  })
+
 export const onRequest = defineMiddleware(async (context, next) => {
   // `/ja/…` and `/zh/…` render the same routes as the English paths: strip
   // the prefix, remember the locale, and rewrite. ISR still caches by the
@@ -39,6 +63,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Everything else (pages, feeds, sitemaps, the search index) is cached at
   // Vercel until /api/invalidate marks this tag stale.
   await tagAsContent()
+
+  if (pathname.includes('.') && !pathname.startsWith('/_') && !DOTTED_ROUTES.has(pathname)) {
+    return notFound()
+  }
 
   // Only content routes can be redirected.
   if (pathname.startsWith('/_') || pathname.includes('.')) {

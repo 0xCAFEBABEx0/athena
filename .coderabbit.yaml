@@ -107,6 +107,16 @@ reviews:
         Layout.astro prerenders hovered links: any script that must run only
         when the page is shown (analytics, settings from localStorage) waits
         for `prerenderingchange` when `document.prerendering` is true.
+        The middleware answers dotted paths that are not in DOTTED_ROUTES
+        with a plain 404 and no CMS request; a new dotted route must be added
+        there.
+    - path: 'apps/web/src/{pages/search.astro,styles/global.css}'
+      instructions: |
+        /search is one ISR page per language (ISR ignores ?q=) and filters
+        in the browser; it must not read the query on the server or call the
+        CMS per query. global.css lists the daisyUI components it ships
+        (`include:`); a component used without being listed renders
+        unstyled.
     - path: '**/vercel.json'
       instructions: |
         `git.deploymentEnabled` is a whitelist: keep `"**": false` with only

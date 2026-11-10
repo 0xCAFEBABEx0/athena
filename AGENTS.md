@@ -41,6 +41,8 @@ bun run build:cms             # CMS production build (next build, Turbopack)
 bun run build:web             # Astro production build
 bun run lint                  # Biome (cms) + astro check (web)
 bun run typecheck             # tsc --noEmit (cms)
+bun run --filter @athena/web test      # Web unit tests (bun test)
+bun run --filter @athena/web test:e2e  # Web E2E (Playwright, E2E_BASE_URL; cases in docs/TESTING.md)
 bun run generate:types        # Regenerate Payload types -> packages/shared
 bun run generate:importmap    # Regenerate admin import map
 bun run deploy:preview        # Merge development -> preview and push
@@ -90,6 +92,9 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 - **CMS**: Server Components by default; add `'use client'` only when needed
 - **Dark mode**: Controlled by `data-theme="dark"` attribute, not OS media query (theme stored under the `payload-theme` localStorage key in both apps)
 - **Prefix unused vars** with `_` to suppress lint warnings
+- **daisyUI** ships only the components in the `include:` list in `apps/web/src/styles/global.css`; add a component there before using it
+- **Search** (`/search`) is one ISR page per language filtered in the browser; never read `?q=` on the server
+- **Tests**: add or update a case in `docs/TESTING.md` with each behavior change, and run both web suites before pushing
 - **Lint (cms)**: Biome (`apps/cms/biome.json`, `react` + `next` domains), not ESLint: typescript-eslint has no TypeScript 7 support. Suppress with `// biome-ignore lint/<group>/<rule>: reason`. Prettier still formats
 
 ## Payload CMS Patterns

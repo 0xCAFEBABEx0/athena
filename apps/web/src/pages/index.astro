@@ -9,7 +9,8 @@ import { formatDate } from '@/lib/format'
 import { routeMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
 import WorkList from '@/components/work/WorkList.astro'
-import CliBanner, { type BannerActivity } from '@/components/CliBanner.astro'
+import CliBanner from '@/components/CliBanner.astro'
+import { buildActivity } from '@/lib/activity'
 import { getWork } from '@/lib/work'
 import type { Post } from '@athena/shared/payload-types'
 
@@ -37,29 +38,8 @@ const pinnedWork = (
 
 const updated = formatDate(posts[0]?.publishedAt)
 
-// Banner "Recent activity": newest posts and, per project, its latest push or
-// release (whichever is newer), three in all.
-const activity: BannerActivity[] = [
-  ...posts
-    .filter((post) => post.slug && post.publishedAt)
-    .map((post) => ({
-      date: post.publishedAt as string,
-      kind: 'post' as const,
-      label: post.title ?? post.slug ?? '',
-      href: lp(`/posts/${post.slug}`),
-    })),
-  ...work.flatMap((item): BannerActivity[] => {
-    const href = lp(`/work/${item.slug}`)
-    const release = item.release?.date ? Date.parse(item.release.date) : Number.NaN
-    const push = item.pushedAt ? Date.parse(item.pushedAt) : Number.NaN
-    if (item.release && !Number.isNaN(release) && (Number.isNaN(push) || release >= push - 3600_000)) {
-      return [{ date: item.release.date, kind: 'release', label: `${item.title} ${item.release.tag}`, href }]
-    }
-    return Number.isNaN(push) ? [] : [{ date: item.pushedAt, kind: 'push', label: item.title, href }]
-  }),
-]
-  .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
-  .slice(0, 3)
+// Banner "Recent activity" (newest posts, pushes and releases).
+const activity = buildActivity(posts, work, lp)
 const more = Math.max(0, totalPosts - posts.length)
 const meta = routeMeta(null, lp('/'), site)
 const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()

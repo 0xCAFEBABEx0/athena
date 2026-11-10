@@ -60,10 +60,11 @@ all managed by editors without code changes.
 
 ### 2.4 Search
 
-- **F-SRCH-1** `/search?q=term` returns up to 12 published posts whose title,
-  meta title, meta description or slug contains the term.
-- **F-SRCH-2** An empty query lists the first 12 indexed posts; no matches
-  shows "Nothing found" (translated).
+- **F-SRCH-1** `/search?q=term` shows the published posts whose title, slug,
+  meta title, meta description or tags contain every word of the term. It is
+  one cached page per language, filtered in the browser as you type.
+- **F-SRCH-2** An empty query lists every post; no matches shows "Nothing
+  found" (translated).
 - **F-SRCH-3** Popup search: ⌘K / Ctrl+K, `/`, or the search button opens a
   dialog. Typing searches posts and page titles (keyword match, no AI);
   ↑/↓ select, Enter opens, Esc closes, Enter with nothing selected opens

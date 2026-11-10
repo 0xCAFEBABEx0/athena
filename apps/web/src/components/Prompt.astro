@@ -26,14 +26,14 @@ const hasCount = typeof count === 'number'
   {
     command && (
       <p class="cli-only text-base-content/65">
-        <span class="text-primary" aria-hidden="true">❯</span> {command}
+        <span class="text-primary" aria-hidden="true">❯</span> <span data-prompt-line>{command}</span>
       </p>
     )
   }
   {
     question && (
       <div class="modern-only modern-ask">
-        <p>{question}</p>
+        <p data-prompt-question>{question}</p>
       </div>
     )
   }
@@ -41,9 +41,9 @@ const hasCount = typeof count === 'number'
     heading && (
       <Tag id={id} class:list={['prompt-heading font-semibold text-base-content', command && 'mt-3']}>
         <span class="cli-only text-primary" aria-hidden="true">●</span>
-        <span class="modern-only modern-check" aria-hidden="true">✓</span> {heading}
-        {hasCount && <span class="cli-only font-normal text-base-content/65"> ({count})</span>}
-        {hasCount && <span class="modern-only font-normal"> · {count}</span>}
+        <span class="modern-only modern-check" aria-hidden="true">✓</span> <span data-prompt-heading>{heading}</span>
+        {hasCount && <span class="cli-only font-normal text-base-content/65"> (<span data-prompt-count>{count}</span>)</span>}
+        {hasCount && <span class="modern-only font-normal"> · <span data-prompt-count>{count}</span></span>}
       </Tag>
     )
   }

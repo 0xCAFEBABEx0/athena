@@ -2,6 +2,25 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## Performance and load: search, scanners, CSS, tests — 2026-11-10
+
+**Web**
+
+- `/search` is ISR-cached again (one page per language) and filters every
+  post in the browser; it no longer queries the CMS `search` collection per
+  `?q=`. `searchPosts` was removed from `lib/cms.ts`.
+- Middleware: dotted paths that are not routes get a plain 404 without CMS
+  requests (scanner traffic); `404.astro` sets
+  `Vercel-CDN-Cache-Control: max-age=86400` (not for drafts).
+- daisyUI `include:` list in `global.css` (add a component there before using
+  it); fonts are Latin-only and never inlined as base64. CSS: 52.5 KB -> 20.7
+  KB brotli.
+- `Prompt.astro` exposes `data-prompt-line`, `data-prompt-question`,
+  `data-prompt-heading`, `data-prompt-count` (used by `/search`).
+- Tests: `bun run --filter @athena/web test` (unit, `src/**/*.test.ts`) and
+  `test:e2e` (Playwright, `apps/web/e2e`, against `E2E_BASE_URL`). Case list:
+  [`docs/TESTING.md`](./TESTING.md).
+
 ## CLI banner with Hoo the owl — 2026-11-10
 
 **CMS**
