@@ -16,6 +16,7 @@ const strings = {
   failed: t.searchFailed,
   empty: t.notFound,
   count: [t.resultCount(0), t.resultCount(1), t.resultCount(2)],
+  statusCommand: t.statusCommand,
 }
 ---
 
@@ -93,6 +94,7 @@ const strings = {
     failed: string
     empty: string
     count: [string, string, string]
+    statusCommand: string
   }
 
   const dialog = document.querySelector<HTMLDialogElement>('[data-search-dialog]')
@@ -126,7 +128,7 @@ const strings = {
     const icon = { posts: '▤', pages: '◎' } as const
 
     // Slash commands (type "/status"): a little terminal easter egg.
-    const COMMANDS = [{ name: '/status', hint: 'version, build and settings' }] as const
+    const COMMANDS = [{ name: '/status', hint: strings.statusCommand }] as const
     const runCommand = (name: string) => {
       if (name !== '/status') return
       dialog.close()

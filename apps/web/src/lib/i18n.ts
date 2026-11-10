@@ -42,6 +42,14 @@ export const localeOf = (astro: { locals: { locale?: Locale } }): Locale =>
   astro.locals.locale ?? DEFAULT_LOCALE
 
 const en = {
+  postCount: (n: number) => (n === 1 ? '1 post' : `${n} posts`),
+  updatedOn: (date: string) => `updated ${date}`,
+  prevPost: '← prev',
+  nextPost: 'next →',
+  prevPage: '← prev',
+  nextPage: 'next →',
+  shortcutStatus: 'status',
+  statusCommand: 'version, build and settings',
   nav: 'Main',
   language: 'Language',
   view: 'View',
@@ -117,6 +125,14 @@ const en = {
 export type Dictionary = typeof en
 
 const ja: Dictionary = {
+  postCount: (n) => `記事 ${n} 件`,
+  updatedOn: (date) => `${date} 更新`,
+  prevPost: '← 前',
+  nextPost: '次 →',
+  prevPage: '← 前へ',
+  nextPage: '次へ →',
+  shortcutStatus: '設定',
+  statusCommand: 'バージョン・ビルド・設定',
   nav: 'メイン',
   language: '言語',
   view: '表示',
@@ -190,6 +206,14 @@ const ja: Dictionary = {
 }
 
 const zh: Dictionary = {
+  postCount: (n) => `${n} 篇文章`,
+  updatedOn: (date) => `更新于 ${date}`,
+  prevPost: '← 上一篇',
+  nextPost: '下一篇 →',
+  prevPage: '← 上一页',
+  nextPage: '下一页 →',
+  shortcutStatus: '设置',
+  statusCommand: '版本、构建和设置',
   nav: '主导航',
   language: '语言',
   view: '视图',
@@ -265,3 +289,176 @@ const zh: Dictionary = {
 const DICTIONARIES: Record<Locale, Dictionary> = { en, ja, zh }
 
 export const dict = (locale: Locale): Dictionary => DICTIONARIES[locale]
+
+/**
+ * Text of the /status settings panel. Values that are switch labels (CLI /
+ * ADE, Light / Dark, EN / JP / ZH, true / false) stay English everywhere.
+ */
+const statusEn = {
+  title: 'Settings',
+  panel: 'Status panel',
+  close: 'Close status panel',
+  tabs: { status: 'Status', config: 'Config', keys: 'Keys' },
+  rows: {
+    site: 'Site',
+    version: 'Version',
+    commit: 'Commit',
+    environment: 'Environment',
+    built: 'Built',
+    rendered: 'Rendered',
+    cache: 'Cache',
+    language: 'Language',
+    view: 'View',
+    theme: 'Theme',
+    content: 'Content',
+    stack: 'Stack',
+  },
+  settings: {
+    view: ['View', 'CLI or ADE layout'],
+    theme: ['Theme', 'light or dark colors'],
+    language: ['Language', 'English, Japanese, Chinese'],
+    motion: ['Reduce motion', 'no page fades or blinking cursor'],
+    keys: ['Keyboard shortcuts', 'single-key shortcuts like / t v s'],
+    reset: ['Reset to defaults', 'clear the settings above'],
+  },
+  searchSettings: 'Search settings',
+  searchPlaceholder: 'Search settings…',
+  noMatch: 'No settings match.',
+  savedLocally: 'Saved in this browser only.',
+  keys: {
+    search: 'search',
+    move: 'move between posts',
+    theme: 'toggle theme',
+    view: 'switch view (CLI / ADE)',
+    panel: 'this panel',
+    close: 'close',
+  },
+  // Sent to the browser script.
+  client: {
+    hintTabs: '←/→ to switch · Esc to close',
+    hintConfig: '↑/↓ to select · Enter to change · ←/→ to switch · Esc to close',
+    changeHint: 'Press Enter to change.',
+    justNow: 'just now',
+    secondsAgo: '{n}s ago · from cache',
+    minutesAgo: '{n} min ago · from cache',
+    hoursAgo: '{n} h ago · from cache',
+    daysAgo: '{n} days ago · from cache',
+    posts: ['{n} post', '{n} posts'],
+    pages: ['{n} page', '{n} pages'],
+    unavailable: 'unavailable',
+  },
+}
+
+export type StatusText = typeof statusEn
+
+const statusJa: StatusText = {
+  title: '設定',
+  panel: 'ステータスパネル',
+  close: 'ステータスパネルを閉じる',
+  tabs: { status: 'ステータス', config: '構成', keys: 'キー' },
+  rows: {
+    site: 'サイト',
+    version: 'バージョン',
+    commit: 'コミット',
+    environment: '環境',
+    built: 'ビルド',
+    rendered: '生成',
+    cache: 'キャッシュ',
+    language: '言語',
+    view: '表示',
+    theme: 'テーマ',
+    content: 'コンテンツ',
+    stack: '構成技術',
+  },
+  settings: {
+    view: ['表示', 'CLI か ADE のレイアウト'],
+    theme: ['テーマ', 'ライトかダークの配色'],
+    language: ['言語', '英語・日本語・中国語'],
+    motion: ['動きを減らす', 'ページのフェードとカーソルの点滅を止める'],
+    keys: ['キーボードショートカット', '/ t v s などの 1 キー操作'],
+    reset: ['初期設定に戻す', '上の設定をすべて消す'],
+  },
+  searchSettings: '設定を検索',
+  searchPlaceholder: '設定を検索…',
+  noMatch: '一致する設定はありません。',
+  savedLocally: 'このブラウザにだけ保存されます。',
+  keys: {
+    search: '検索',
+    move: '記事を移動',
+    theme: 'テーマ切替',
+    view: '表示切替（CLI / ADE）',
+    panel: 'このパネル',
+    close: '閉じる',
+  },
+  client: {
+    hintTabs: '←/→ で切替 · Esc で閉じる',
+    hintConfig: '↑/↓ で選択 · Enter で変更 · ←/→ で切替 · Esc で閉じる',
+    changeHint: 'Enter で変更します。',
+    justNow: 'たった今',
+    secondsAgo: '{n} 秒前 · キャッシュ',
+    minutesAgo: '{n} 分前 · キャッシュ',
+    hoursAgo: '{n} 時間前 · キャッシュ',
+    daysAgo: '{n} 日前 · キャッシュ',
+    posts: ['記事 {n} 件', '記事 {n} 件'],
+    pages: ['ページ {n} 件', 'ページ {n} 件'],
+    unavailable: '取得できません',
+  },
+}
+
+const statusZh: StatusText = {
+  title: '设置',
+  panel: '状态面板',
+  close: '关闭状态面板',
+  tabs: { status: '状态', config: '配置', keys: '快捷键' },
+  rows: {
+    site: '站点',
+    version: '版本',
+    commit: '提交',
+    environment: '环境',
+    built: '构建',
+    rendered: '生成',
+    cache: '缓存',
+    language: '语言',
+    view: '视图',
+    theme: '主题',
+    content: '内容',
+    stack: '技术栈',
+  },
+  settings: {
+    view: ['视图', 'CLI 或 ADE 布局'],
+    theme: ['主题', '浅色或深色配色'],
+    language: ['语言', '英语、日语、中文'],
+    motion: ['减少动态效果', '关闭页面淡入淡出和光标闪烁'],
+    keys: ['键盘快捷键', '/ t v s 等单键快捷键'],
+    reset: ['恢复默认设置', '清除以上所有设置'],
+  },
+  searchSettings: '搜索设置',
+  searchPlaceholder: '搜索设置…',
+  noMatch: '没有匹配的设置。',
+  savedLocally: '仅保存在此浏览器中。',
+  keys: {
+    search: '搜索',
+    move: '在文章间移动',
+    theme: '切换主题',
+    view: '切换视图（CLI / ADE）',
+    panel: '此面板',
+    close: '关闭',
+  },
+  client: {
+    hintTabs: '←/→ 切换 · Esc 关闭',
+    hintConfig: '↑/↓ 选择 · Enter 更改 · ←/→ 切换 · Esc 关闭',
+    changeHint: '按 Enter 更改。',
+    justNow: '刚刚',
+    secondsAgo: '{n} 秒前 · 来自缓存',
+    minutesAgo: '{n} 分钟前 · 来自缓存',
+    hoursAgo: '{n} 小时前 · 来自缓存',
+    daysAgo: '{n} 天前 · 来自缓存',
+    posts: ['{n} 篇文章', '{n} 篇文章'],
+    pages: ['{n} 个页面', '{n} 个页面'],
+    unavailable: '无法获取',
+  },
+}
+
+const STATUS_TEXT: Record<Locale, StatusText> = { en: statusEn, ja: statusJa, zh: statusZh }
+
+export const statusText = (locale: Locale): StatusText => STATUS_TEXT[locale]

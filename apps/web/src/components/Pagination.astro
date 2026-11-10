@@ -26,11 +26,11 @@ const item = 'join-item btn btn-sm font-mono font-normal'
     {
       page > 1 ? (
         <a class:list={[item, 'btn-ghost']} href={pageHref(page - 1)} rel="prev">
-          ← prev
+          {t.prevPage}
         </a>
       ) : (
         <span class:list={[item, 'btn-disabled']} aria-disabled="true">
-          ← prev
+          {t.prevPage}
         </span>
       )
     }
@@ -50,11 +50,11 @@ const item = 'join-item btn btn-sm font-mono font-normal'
     {
       page < totalPages ? (
         <a class:list={[item, 'btn-ghost']} href={pageHref(page + 1)} rel="next">
-          next →
+          {t.nextPage}
         </a>
       ) : (
         <span class:list={[item, 'btn-disabled']} aria-disabled="true">
-          next →
+          {t.nextPage}
         </span>
       )
     }

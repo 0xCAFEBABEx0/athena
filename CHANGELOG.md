@@ -37,6 +37,12 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 - The dev container installs the same Bun as the repo (1.4) next to Node.js 24,
   installs every workspace from `bun.lock`, and exposes the web dev server.
 
+### Fixed
+
+- Japanese and Chinese pages: a missing page now shows the 404 in the page's
+  language (it fell back to English), and the settings panel, previous and
+  next links and the home summary line are translated.
+
 ### Removed
 
 - The Admin link in the footer. The public nav never links to the CMS admin,

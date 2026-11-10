@@ -4,14 +4,14 @@ import Prompt from '@/components/Prompt.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
 import { routeMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
-import { dict, localeOf, localizePath } from '@/lib/i18n'
+import { dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 
 const locale = localeOf(Astro)
 const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
 const site = await getSite(Astro.request, locale)
 const meta = routeMeta('404', Astro.originPathname, site)
-const path = Astro.originPathname.replace(/(.)\/$/, '$1')
+const path = lp(splitLocale(Astro.originPathname).path)
 
 Astro.response.status = 404
 ---

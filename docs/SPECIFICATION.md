@@ -101,7 +101,10 @@ all managed by editors without code changes.
   comes from the `site` global; the visitor's choice is stored in
   `localStorage['athena-view']` and applied before paint. Switch labels
   (CLI / ADE, Dark / Light, EN / JP / ZH) are English in every language;
-  the CLI header writes them in lowercase (`[ade]`, `[dark]`, `en`).
+  the CLI header writes them, and its nav links, in lowercase (`posts`,
+  `[ade]`, `[dark]`, `en`).
+  All other UI text, including the `/status` panel, follows the page
+  language; post and page content falls back to English per field.
 - **F-I18N-1** English at `/…`, Japanese at `/ja/…`, Chinese at `/zh/…`.
   UI strings are translated; content falls back to English per field. Pages
   declare `hreflang` alternates, and each language has its own RSS feed.

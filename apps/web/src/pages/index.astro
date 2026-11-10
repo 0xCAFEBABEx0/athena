@@ -52,14 +52,11 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
         {site.intro && <p class="mt-1.5 whitespace-pre-line leading-loose text-base-content/85">{site.intro}</p>}
         <p class="home-meta mt-4 font-mono text-[13px] leading-loose text-base-content/65">
           <span class="whitespace-nowrap">~/{site.siteName}</span>
-          <span aria-hidden="true"> · </span>
-          <span class="whitespace-nowrap">{totalPosts} posts</span>
+          {/* The separator wraps with the next item, so no line ends in "·". */}
+          <span class="whitespace-nowrap"><span aria-hidden="true">· </span>{t.postCount(totalPosts)}</span>
           {
             updated && (
-              <>
-                <span aria-hidden="true"> · </span>
-                <span class="whitespace-nowrap">updated {updated}</span>
-              </>
+              <span class="whitespace-nowrap"><span aria-hidden="true">· </span>{t.updatedOn(updated)}</span>
             )
           }
         </p>

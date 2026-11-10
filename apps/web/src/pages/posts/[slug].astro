@@ -77,7 +77,7 @@ const otherLanguages = LOCALES.filter((code) => code !== locale).map((code) => (
       {
         adjacent.prev && (
           <p class="flex gap-3">
-            <span class="w-14 shrink-0 text-base-content/65">← prev</span>
+            <span class="w-[4.5rem] shrink-0 whitespace-nowrap text-base-content/65">{t.prevPost}</span>
             <a class="link-term font-sans text-[15px]" href={lp(`/posts/${adjacent.prev.slug}`)}>
               {adjacent.prev.title}
             </a>
@@ -87,7 +87,7 @@ const otherLanguages = LOCALES.filter((code) => code !== locale).map((code) => (
       {
         adjacent.next && (
           <p class="flex gap-3">
-            <span class="w-14 shrink-0 text-base-content/65">next →</span>
+            <span class="w-[4.5rem] shrink-0 whitespace-nowrap text-base-content/65">{t.nextPost}</span>
             <a class="link-term font-sans text-[15px]" href={lp(`/posts/${adjacent.next.slug}`)}>
               {adjacent.next.title}
             </a>
@@ -95,7 +95,7 @@ const otherLanguages = LOCALES.filter((code) => code !== locale).map((code) => (
         )
       }
       <p class="flex gap-3">
-        <span class="w-14 shrink-0 text-base-content/65">↑</span>
+        <span class="w-[4.5rem] shrink-0 text-base-content/65">↑</span>
         <a class="link-term" href={lp('/posts')}>{t.allPosts}</a>
       </p>
     </nav>

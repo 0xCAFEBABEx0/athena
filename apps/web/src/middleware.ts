@@ -25,7 +25,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // the prefix, remember the locale, and rewrite. ISR still caches by the
   // original (prefixed) URL.
   const { locale, path: pathname } = splitLocale(context.url.pathname)
-  context.locals.locale = locale
+  // A page that rewrites to /404 runs this again with the unprefixed URL:
+  // keep the locale of the original request (/zh/nope shows the Chinese 404).
+  if (!context.locals.locale || locale !== DEFAULT_LOCALE) context.locals.locale = locale
   const render = () =>
     locale === DEFAULT_LOCALE ? next() : next(`${pathname}${context.url.search}`)
 

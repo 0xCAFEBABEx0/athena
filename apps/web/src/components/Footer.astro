@@ -3,7 +3,7 @@ import CMSLink from '@/components/CMSLink.astro'
 import { SHORT_VERSION } from '@/lib/build'
 import { getFooterNav } from '@/lib/nav'
 import type { SiteData } from '@/lib/site'
-import { localeOf, localizePath } from '@/lib/i18n'
+import { localeOf, localizePath, splitLocale } from '@/lib/i18n'
 
 type Props = {
   site: SiteData
@@ -14,7 +14,9 @@ const locale = localeOf(Astro)
 
 const navLinks = await getFooterNav(Astro.request, locale)
 
-const path = Astro.originPathname === '/' ? '~' : `~${Astro.originPathname.replace(/\/$/, '')}`
+// A /404 rewrite reports the unprefixed path, so prefix it from the locale.
+const here = localizePath(locale, splitLocale(Astro.originPathname).path)
+const path = here === '/' ? '~' : `~${here}`
 const year = new Date().getFullYear()
 ---
 

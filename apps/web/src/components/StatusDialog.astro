@@ -3,10 +3,11 @@
  * `/status` panel: a terminal-style settings sheet with the site version,
  * build, cache state and the visitor's current settings. Opens from the
  * version next to the site name, the `s` key, or `/status` in the popup
- * search. Labels stay English in every language, like the other switches.
+ * search. Text follows the page language; switch values (CLI / ADE,
+ * Light / Dark, EN / JP / ZH, true / false) stay English, like the switches.
  */
 import { BUILD } from '@/lib/build'
-import { LOCALES, LOCALE_LABEL, LOCALE_NAME, localeOf, localizePath, splitLocale } from '@/lib/i18n'
+import { LOCALES, LOCALE_LABEL, LOCALE_NAME, localeOf, localizePath, splitLocale, statusText } from '@/lib/i18n'
 import type { SiteData } from '@/lib/site'
 
 type Props = {
@@ -15,35 +16,31 @@ type Props = {
 
 const { site } = Astro.props
 const locale = localeOf(Astro)
+const s = statusText(locale)
+const en = statusText('en')
 const current = splitLocale(Astro.originPathname).path
 const renderedAt = new Date().toISOString()
 const builtAt = `${BUILD.builtAt.slice(0, 16).replace('T', ' ')} UTC`
 
-const tabs = [
-  { id: 'status', label: 'Status' },
-  { id: 'config', label: 'Config' },
-  { id: 'keys', label: 'Keys' },
-] as const
+const tabs = (['status', 'config', 'keys'] as const).map((id) => ({ id, label: s.tabs[id] }))
 
 // Config rows: each one is a setting stored in this browser only.
 const langIndex = LOCALES.indexOf(locale)
 const nextLocale = LOCALES[(langIndex + 1) % LOCALES.length] ?? locale
-const settings = [
-  { id: 'view', label: 'View', hint: 'CLI or ADE layout' },
-  { id: 'theme', label: 'Theme', hint: 'light or dark colors' },
-  { id: 'language', label: 'Language', hint: 'English, Japanese, Chinese' },
-  { id: 'motion', label: 'Reduce motion', hint: 'no page fades or blinking cursor' },
-  { id: 'keys', label: 'Keyboard shortcuts', hint: 'single-key shortcuts like / t v s' },
-  { id: 'reset', label: 'Reset to defaults', hint: 'clear the settings above' },
-] as const
+const settings = (['view', 'theme', 'language', 'motion', 'keys', 'reset'] as const).map((id) => {
+  const [label, hint] = s.settings[id]
+  // Search matches the English words too ("theme" finds テーマ).
+  const search = [label, hint, ...en.settings[id]].join(' ').toLowerCase()
+  return { id, label, hint, search }
+})
 
 const keys: [string, string][] = [
-  ['/  ⌘K', 'search'],
-  ['j  k', 'move between posts'],
-  ['t', 'toggle theme'],
-  ['v', 'switch view (CLI / ADE)'],
-  ['s', 'this panel'],
-  ['esc', 'close'],
+  ['/  ⌘K', s.keys.search],
+  ['j  k', s.keys.move],
+  ['t', s.keys.theme],
+  ['v', s.keys.view],
+  ['s', s.keys.panel],
+  ['esc', s.keys.close],
 ]
 ---
 
@@ -52,12 +49,13 @@ const keys: [string, string][] = [
   aria-labelledby="status-title"
   data-status-dialog
   data-index-url={localizePath(locale, '/search-index.json')}
+  data-strings={JSON.stringify(s.client)}
 >
   <div
     class="status-box modal-box w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-base-300 p-0 font-mono text-[13px] shadow-2xl"
   >
-    <div class="flex flex-wrap items-center gap-x-1 gap-y-2 px-5 pb-3 pt-4" role="tablist" aria-label="Status panel">
-      <h2 id="status-title" class="me-2 text-[13px] font-semibold text-primary sm:me-3">Settings</h2>
+    <div class="flex flex-wrap items-center gap-x-1 gap-y-2 px-5 pb-3 pt-4" role="tablist" aria-label={s.panel}>
+      <h2 id="status-title" class="me-2 text-[13px] font-semibold text-primary sm:me-3">{s.title}</h2>
       {
         tabs.map((tab, index) => (
           <button
@@ -79,31 +77,31 @@ const keys: [string, string][] = [
     <div class="max-h-[min(60vh,26rem)] overflow-y-auto px-5 pb-4">
       <section id="status-panel-status" role="tabpanel" aria-labelledby="status-tab-status" data-status-panel="status">
         <dl class="status-grid">
-          <dt>Site</dt>
+          <dt>{s.rows.site}</dt>
           <dd>{site.siteName}</dd>
-          <dt>Version</dt>
+          <dt>{s.rows.version}</dt>
           <dd>v{BUILD.version}</dd>
-          <dt>Commit</dt>
+          <dt>{s.rows.commit}</dt>
           <dd>{BUILD.commit || 'unknown'}</dd>
-          <dt>Environment</dt>
+          <dt>{s.rows.environment}</dt>
           <dd>{BUILD.env}</dd>
-          <dt>Built</dt>
+          <dt>{s.rows.built}</dt>
           <dd>{builtAt}</dd>
-          <dt>Rendered</dt>
+          <dt>{s.rows.rendered}</dt>
           <dd><time datetime={renderedAt} data-status-rendered>{renderedAt}</time></dd>
-          <dt>Cache</dt>
+          <dt>{s.rows.cache}</dt>
           <dd>ISR · tag <code>content</code> · ttl 7d</dd>
         </dl>
         <dl class="status-grid mt-4">
-          <dt>Language</dt>
+          <dt>{s.rows.language}</dt>
           <dd>{LOCALE_LABEL[locale]} <span class="text-base-content/65">({LOCALE_NAME[locale]})</span></dd>
-          <dt>View</dt>
+          <dt>{s.rows.view}</dt>
           <dd data-status-view>CLI</dd>
-          <dt>Theme</dt>
+          <dt>{s.rows.theme}</dt>
           <dd data-status-theme>Light</dd>
-          <dt>Content</dt>
+          <dt>{s.rows.content}</dt>
           <dd data-status-content>…</dd>
-          <dt>Stack</dt>
+          <dt>{s.rows.stack}</dt>
           <dd>Astro {BUILD.astro} · Payload CMS · Vercel</dd>
         </dl>
       </section>
@@ -117,19 +115,19 @@ const keys: [string, string][] = [
       >
         <label class="config-search">
           <span aria-hidden="true">⌕</span>
-          <span class="sr-only">Search settings</span>
+          <span class="sr-only">{s.searchSettings}</span>
           <input
             type="search"
-            placeholder="Search settings…"
+            placeholder={s.searchPlaceholder}
             autocomplete="off"
             spellcheck="false"
             data-config-search
           />
         </label>
-        <ul class="config-list" aria-label="Settings" data-config-list>
+        <ul class="config-list" aria-label={s.title} data-config-list>
           {
             settings.map((setting) => (
-              <li data-config-item data-config-label={`${setting.label} ${setting.hint}`.toLowerCase()}>
+              <li data-config-item data-config-label={setting.search}>
                 <button
                   type="button"
                   class="config-row"
@@ -148,8 +146,8 @@ const keys: [string, string][] = [
             ))
           }
         </ul>
-        <p class="mt-3 text-base-content/65" data-config-empty hidden>No settings match.</p>
-        <p class="mt-3 text-base-content/65">Saved in this browser only.</p>
+        <p class="mt-3 text-base-content/65" data-config-empty hidden>{s.noMatch}</p>
+        <p class="mt-3 text-base-content/65">{s.savedLocally}</p>
       </section>
 
       <section id="status-panel-keys" role="tabpanel" aria-labelledby="status-tab-keys" data-status-panel="keys" hidden>
@@ -169,18 +167,20 @@ const keys: [string, string][] = [
     </div>
 
     <div class="flex items-center gap-4 border-t border-base-300 px-5 py-2.5 text-xs text-base-content/65">
-      <span class="min-w-0 truncate" data-status-hint>←/→ to switch · Esc to close</span>
+      <span class="min-w-0 truncate" data-status-hint>{s.client.hintTabs}</span>
       <form method="dialog" class="ms-auto">
-        <button class="btn btn-ghost btn-xs font-mono" aria-label="Close status panel">✕</button>
+        <button class="btn btn-ghost btn-xs font-mono" aria-label={s.close}>✕</button>
       </form>
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button tabindex="-1">close</button>
+    <button tabindex="-1">{s.keys.close}</button>
   </form>
 </dialog>
 
 <script>
+  import type { StatusText } from '@/lib/i18n'
+
   type Win = Window & {
     __openStatus?: () => void
     __toggleTheme?: () => void
@@ -210,6 +210,9 @@ const keys: [string, string][] = [
 
   if (dialog) {
     const root = document.documentElement
+    // Page-language strings, rendered by the server (see statusText()).
+    const T = JSON.parse(dialog.dataset.strings ?? '{}') as StatusText['client']
+    const fill = (template: string, n: number) => template.replace('{n}', String(n))
     const win = window as Win
     const tabs = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-status-tab]'))
     const panels = Array.from(dialog.querySelectorAll<HTMLElement>('[data-status-panel]'))
@@ -223,9 +226,9 @@ const keys: [string, string][] = [
     let counted = false
 
     const HINTS: Record<string, string> = {
-      status: '←/→ to switch · Esc to close',
-      config: '↑/↓ to select · Enter to change · ←/→ to switch · Esc to close',
-      keys: '←/→ to switch · Esc to close',
+      status: T.hintTabs,
+      config: T.hintConfig,
+      keys: T.hintTabs,
     }
 
     const currentTab = () =>
@@ -258,13 +261,13 @@ const keys: [string, string][] = [
 
     const ago = (iso: string): string => {
       const seconds = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000))
-      if (seconds < 10) return 'just now'
-      if (seconds < 90) return `${seconds}s ago · from cache`
+      if (seconds < 10) return T.justNow
+      if (seconds < 90) return fill(T.secondsAgo, seconds)
       const minutes = Math.round(seconds / 60)
-      if (minutes < 90) return `${minutes} min ago · from cache`
+      if (minutes < 90) return fill(T.minutesAgo, minutes)
       const hours = Math.round(minutes / 60)
-      if (hours < 36) return `${hours} h ago · from cache`
-      return `${Math.round(hours / 24)} days ago · from cache`
+      if (hours < 36) return fill(T.hoursAgo, hours)
+      return fill(T.daysAgo, Math.round(hours / 24))
     }
 
     const motionReduced = () => {
@@ -288,7 +291,7 @@ const keys: [string, string][] = [
         if (value !== undefined && cell) cell.textContent = value
         const label = row.querySelector('.config-label')?.textContent ?? ''
         const shown = cell?.textContent?.replace('›', '').trim() ?? ''
-        row.setAttribute('aria-label', shown ? `${label}: ${shown}. Press Enter to change.` : label)
+        row.setAttribute('aria-label', shown ? `${label}: ${shown}. ${T.changeHint}` : label)
       }
       const viewCell = dialog.querySelector('[data-status-view]')
       const themeCell = dialog.querySelector('[data-status-theme]')
@@ -350,11 +353,11 @@ const keys: [string, string][] = [
         const res = await fetch(dialog.dataset.indexUrl ?? '/search-index.json')
         if (!res.ok) throw new Error(String(res.status))
         const index = (await res.json()) as { posts: unknown[]; pages: unknown[] }
-        const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
-        content.textContent = `${plural(index.posts.length, 'post')} · ${plural(index.pages.length, 'page')}`
+        const count = ([one, many]: string[], n: number) => fill((n === 1 ? one : many) ?? '', n)
+        content.textContent = `${count(T.posts, index.posts.length)} · ${count(T.pages, index.pages.length)}`
       } catch {
         counted = false
-        content.textContent = 'unavailable'
+        content.textContent = T.unavailable
       }
     }
 
