@@ -100,7 +100,8 @@ all managed by editors without code changes.
   search box, "On this page" panel on posts at ≥1280 px). The site default
   comes from the `site` global; the visitor's choice is stored in
   `localStorage['athena-view']` and applied before paint. Switch labels
-  (CLI / ADE, Dark / Light, EN / JP / ZH) are English in every language.
+  (CLI / ADE, Dark / Light, EN / JP / ZH) are English in every language;
+  the CLI header writes them in lowercase (`[ade]`, `[dark]`, `en`).
 - **F-I18N-1** English at `/…`, Japanese at `/ja/…`, Chinese at `/zh/…`.
   UI strings are translated; content falls back to English per field. Pages
   declare `hreflang` alternates, and each language has its own RSS feed.

@@ -10,7 +10,7 @@ import type { SiteData } from '@/lib/site'
 
 /**
  * Both headers render on every page and CSS shows one: the CLI header
- * (`❯_ site  home posts  en [modern] [dark]`) or the modern top bar
+ * (`❯_ site  home posts  en [ade] [dark]`, all lowercase) or the modern top bar
  * (breadcrumb + CLI|Modern and EN|日本語|中文 controls).
  */
 type Props = {
@@ -71,7 +71,7 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
         class="inline-flex min-h-11 cursor-pointer list-none items-center px-2 font-mono text-sm text-base-content/65 hover:text-base-content"
         aria-label={t.language}
       >
-        {LOCALE_LABEL[locale]}
+        {LOCALE_LABEL[locale].toLowerCase()}
       </summary>
       <ul
         class="menu dropdown-content z-20 mt-1 w-20 rounded-box border border-base-300 bg-base-100 p-1 font-mono text-sm"
@@ -87,7 +87,7 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
                 aria-current={lang.code === locale ? 'true' : undefined}
                 title={lang.name}
               >
-                {lang.label}
+                {lang.label.toLowerCase()}
               </a>
             </li>
           ))
