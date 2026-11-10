@@ -1,38 +1,41 @@
 # Dev-container image for the Athena monorepo (docker-compose `app` service,
-# target: development). Production deploys happen on Vercel — there is no
-# container runtime stage.
-# Using Docker Hardened Images (DHI) for enhanced security
+# target: development). Production runs on Vercel (functions on Bun 1.4) —
+# there is no container runtime stage.
+#
+# Both runtimes are installed, matching the repo:
+# - Bun (pinned to `packageManager` in the root package.json): package manager,
+#   web dev server (`bun --bun astro dev`) and production builds.
+# - Node.js 24: the CMS dev server (`next dev` under Bun fails to resolve
+#   Turbopack's hashed externals) and tooling (`astro check`, Payload CLI).
+#
+# Using Docker Hardened Images (DHI) for enhanced security.
 
-# Base image for deps/builder (includes Bun)
-FROM dhi.io/bun:1-debian13-dev AS base-bun
+ARG BUN_VERSION=1.4.4
 
-# Base image for development (includes both Node.js and Bun)
-FROM dhi.io/node:24-debian13-sfw-dev AS base-node
+FROM dhi.io/node:24-debian13-sfw-dev AS base
+ARG BUN_VERSION
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  curl unzip ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+# Installs to /usr/local/bin/bun, so every user (root, vscode) gets the same Bun.
+RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash -s "bun-v${BUN_VERSION}" \
+  && bun --version
 
-# Install dependencies only when needed
-FROM base-bun AS deps
-
+# Install dependencies (Bun only: bun.lock is the single lockfile).
+FROM base AS deps
 WORKDIR /app
-
-# Toggle reproducible installs when desired
-ARG BUN_FROZEN_LOCKFILE=false
-
-# Install dependencies based on the preferred package manager
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* bun.lock* ./
-
-RUN \
-  if [ -f bun.lock ]; then if [ "$BUN_FROZEN_LOCKFILE" = "true" ]; then bun install --frozen-lockfile; else bun install --no-save; fi; \
-  elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+COPY package.json bun.lock ./
+COPY apps/cms/package.json apps/cms/
+COPY apps/web/package.json apps/web/
+COPY packages/shared/package.json packages/shared/
+ARG BUN_FROZEN_LOCKFILE=true
+RUN if [ "$BUN_FROZEN_LOCKFILE" = "true" ]; then bun install --frozen-lockfile; else bun install; fi
 
 # Development stage for Dev Container
-FROM base-node AS development
-# Install packages needed for vscode user, Bun installation, and Cursor/VS Code Server
+FROM base AS development
+# Packages for the vscode user and Cursor/VS Code Server
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  sudo curl unzip git procps libatomic1 ca-certificates tar gzip which wget passwd \
+  sudo git procps libatomic1 tar gzip which wget passwd \
   && rm -rf /var/lib/apt/lists/*
 
 # Create vscode user for devcontainer (handle existing UID/GID)
@@ -43,22 +46,17 @@ RUN (getent group 1000 || groupadd --gid 1000 vscode) && \
 # Install claude-code globally
 RUN npm install -g @anthropic-ai/claude-code
 
-# Install Bun for development
-USER vscode
-WORKDIR /home/vscode
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/home/vscode/.bun/bin:${PATH}"
-
 # Set up workspace
-USER root
 RUN mkdir -p /workspace && chown 1000:1000 /workspace
 USER vscode
 WORKDIR /workspace
 
-# Copy dependencies from deps stage
-COPY --from=deps --chown=1000:1000 /app/node_modules ./node_modules
+# Workspace manifests + every node_modules (root and nested, e.g. apps/cms's
+# TypeScript 7), then the source on top.
+COPY --from=deps --chown=1000:1000 /app ./
 COPY --chown=1000:1000 . .
 
 ENV NODE_ENV=development
-EXPOSE 3000
+# CMS (next dev) and web (astro dev)
+EXPOSE 3000 4321
 CMD ["sleep", "infinity"]

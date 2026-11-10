@@ -25,11 +25,29 @@ const memo = <T>(load: (locale: Locale) => Promise<T>) => {
   }
 }
 
+/**
+ * Links to the CMS admin (`/admin`, on any host) are dropped from the public
+ * nav even when an editor adds one: the site should not point visitors, or
+ * scanners, at the login page.
+ */
+const isAdminLink = (link: CMSLinkData): boolean => {
+  if (link.type === 'reference' || !link.url) return false
+  try {
+    const { pathname } = new URL(link.url, 'https://site.invalid')
+    return pathname === '/admin' || pathname.startsWith('/admin/')
+  } catch {
+    return false
+  }
+}
+
+const publicLinks = (items: { link: CMSLinkData }[] | null | undefined): CMSLinkData[] =>
+  (items ?? []).map(({ link }) => link).filter((link) => !isAdminLink(link))
+
 /** Header nav links. Never throws: a CMS outage renders the fallback nav. */
 export const getHeaderNav = memo(async (locale): Promise<CMSLinkData[]> => {
   try {
     const header = await getGlobal<Header>('header', { locale })
-    return (header?.navItems ?? []).map(({ link }) => link)
+    return publicLinks(header?.navItems)
   } catch (error) {
     console.error('[nav] failed to load header nav', error)
     return []
@@ -39,7 +57,7 @@ export const getHeaderNav = memo(async (locale): Promise<CMSLinkData[]> => {
 export const getFooterNav = memo(async (locale): Promise<CMSLinkData[]> => {
   try {
     const footer = await getGlobal<Footer>('footer', { locale })
-    return (footer?.navItems ?? []).map(({ link }) => link)
+    return publicLinks(footer?.navItems)
   } catch (error) {
     console.error('[nav] failed to load footer nav', error)
     return []

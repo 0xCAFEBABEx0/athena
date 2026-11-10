@@ -34,3 +34,10 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 - Server functions of both apps run on Bun instead of Node.js.
 - Links are prefetched on hover, and pages crossfade on navigation, so
   switching language or opening a post feels faster.
+- The dev container installs the same Bun as the repo (1.4) next to Node.js 24,
+  installs every workspace from `bun.lock`, and exposes the web dev server.
+
+### Removed
+
+- The Admin link in the footer. The public nav never links to the CMS admin,
+  even if an editor adds one.

@@ -208,11 +208,12 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
 ## Common Pitfalls
 
 1. `POSTGRES_URL` is required at startup - the cms throws without it
-2. Bun is the only supported package manager. A stray `package-lock.json` will be
-   picked up by the Dockerfile's package-manager detection **before** `bun.lock`
-   (`npm ci` wins), so keep it deleted.
+2. Bun is the only supported package manager; `bun.lock` is the only lockfile
+   (the dev-container Dockerfile runs `bun install --frozen-lockfile`, so keep
+   it in sync and delete any stray `package-lock.json`).
 3. Sentry wraps Next.js config only when `SENTRY_DSN` + `SENTRY_ORG`/`SENTRY_PROJECT` are set
-4. Dockerfile uses Docker Hardened Images (`dhi.io/`), not standard Docker Hub
+4. The Dockerfile is the dev container only (Docker Hardened Images, `dhi.io/`):
+   Node 24 plus Bun pinned by `BUN_VERSION` — bump it with `packageManager`
 5. Use type-only imports for Payload generated types
 6. Keep `withPayload` and the browser `payload/internal` alias (in both
    `turbopack.resolveAlias` and `webpack()`) in apps/cms (see [Build Configuration](#build-configuration-appscmsconfignextconfigmjs))
