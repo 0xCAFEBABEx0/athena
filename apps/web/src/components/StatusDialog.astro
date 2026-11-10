@@ -189,6 +189,28 @@ const keys: [string, string][] = [
 
   const dialog = document.querySelector<HTMLDialogElement>('[data-status-dialog]')
 
+  // Changing the language loads another page (and Reset reloads this one), so
+  // the panel would vanish. Remember the row in sessionStorage and reopen on it.
+  const REOPEN_KEY = 'athena-status-reopen'
+  const session = {
+    take(): string | null {
+      try {
+        const value = window.sessionStorage.getItem(REOPEN_KEY)
+        window.sessionStorage.removeItem(REOPEN_KEY)
+        return value
+      } catch {
+        return null
+      }
+    },
+    put(value: string) {
+      try {
+        window.sessionStorage.setItem(REOPEN_KEY, value)
+      } catch {
+        /* storage blocked: the panel just stays closed after the reload */
+      }
+    },
+  }
+
   // Browser-only settings; the attributes are applied before paint in Layout.
   const store = {
     get(key: string): string | null {
@@ -309,7 +331,9 @@ const keys: [string, string][] = [
           win.__toggleTheme?.()
           break
         case 'language':
-          if (row.dataset.nextHref) window.location.href = row.dataset.nextHref
+          if (!row.dataset.nextHref) return
+          session.put('language')
+          window.location.href = row.dataset.nextHref
           return
         case 'motion': {
           const next = motionReduced() ? 'full' : 'reduce'
@@ -326,6 +350,7 @@ const keys: [string, string][] = [
         }
         case 'reset': {
           for (const key of ['athena-view', 'athena-motion', 'athena-keys', 'payload-theme']) store.set(key, null)
+          session.put('reset')
           window.location.reload()
           return
         }
@@ -361,14 +386,19 @@ const keys: [string, string][] = [
       }
     }
 
-    const open = () => {
+    // With a Config row id, opens on the Config tab with that row selected.
+    const open = (configRow?: string) => {
       if (dialog.open) return
       if (search) search.value = ''
       filter()
-      showTab('status')
       refresh()
+      const row = configRow
+        ? dialog.querySelector<HTMLElement>(`[data-config="${CSS.escape(configRow)}"]`)
+        : null
+      showTab(row ? 'config' : 'status')
       dialog.showModal()
-      tabs[0]?.focus()
+      if (row) setActive(row)
+      else tabs[0]?.focus()
       void count()
     }
 
@@ -442,6 +472,14 @@ const keys: [string, string][] = [
     })
 
     // The `s` shortcut (Layout) and `/status` in the popup search call this.
-    win.__openStatus = open
+    win.__openStatus = () => open()
+
+    const reopen = () => {
+      const row = session.take()
+      if (row) open(row)
+    }
+    const doc = document as Document & { prerendering?: boolean }
+    if (doc.prerendering) document.addEventListener('prerenderingchange', reopen, { once: true })
+    else reopen()
   }
 </script>
