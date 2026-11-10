@@ -111,6 +111,12 @@ reviews:
         Node is pinned to 24.22.1 (`.nvmrc`) and Bun to the version in the
         root `package.json` `packageManager` field; flag drift. Bun is the
         only package manager: flag any `npm`, `pnpm` or `yarn` usage.
+    - path: '{CHANGELOG.md,.github/workflows/release.yml}'
+      instructions: |
+        Versioning rules live in docs/VERSIONING.md. A PR that bumps the root
+        `package.json` `version` must add a matching `## [X.Y.Z]` section at
+        the top of CHANGELOG.md. The release workflow must stay idempotent
+        (skip when the tag `vX.Y.Z` exists) and never move or delete tags.
     - path: '**/package.json'
       instructions: |
         Bun is the only package manager; a `package-lock.json` or

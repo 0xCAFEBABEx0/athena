@@ -1,0 +1,278 @@
+---
+/**
+ * `/status` panel: a terminal-style settings sheet with the site version,
+ * build, cache state and the visitor's current settings. Opens from the
+ * version next to the site name, the `s` key, or `/status` in the popup
+ * search. Labels stay English in every language, like the other switches.
+ */
+import { BUILD } from '@/lib/build'
+import { LOCALES, LOCALE_LABEL, LOCALE_NAME, localeOf, localizePath, splitLocale } from '@/lib/i18n'
+import type { SiteData } from '@/lib/site'
+
+type Props = {
+  site: SiteData
+}
+
+const { site } = Astro.props
+const locale = localeOf(Astro)
+const current = splitLocale(Astro.originPathname).path
+const renderedAt = new Date().toISOString()
+const builtAt = `${BUILD.builtAt.slice(0, 16).replace('T', ' ')} UTC`
+
+const tabs = [
+  { id: 'status', label: 'Status' },
+  { id: 'config', label: 'Config' },
+  { id: 'keys', label: 'Keys' },
+] as const
+
+const keys: [string, string][] = [
+  ['/  ⌘K', 'search'],
+  ['j  k', 'move between posts'],
+  ['t', 'toggle theme'],
+  ['v', 'switch view (CLI / ADE)'],
+  ['s', 'this panel'],
+  ['esc', 'close'],
+]
+---
+
+<dialog
+  class="modal items-start pt-[10vh] sm:pt-[14vh]"
+  aria-labelledby="status-title"
+  data-status-dialog
+  data-index-url={localizePath(locale, '/search-index.json')}
+>
+  <div
+    class="status-box modal-box w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-base-300 p-0 font-mono text-[13px] shadow-2xl"
+  >
+    <div class="flex flex-wrap items-center gap-x-1 gap-y-2 px-5 pb-3 pt-4" role="tablist" aria-label="Status panel">
+      <h2 id="status-title" class="me-3 text-[13px] font-semibold text-primary">❯ /status</h2>
+      {
+        tabs.map((tab, index) => (
+          <button
+            type="button"
+            role="tab"
+            id={`status-tab-${tab.id}`}
+            aria-controls={`status-panel-${tab.id}`}
+            aria-selected={index === 0 ? 'true' : 'false'}
+            tabindex={index === 0 ? 0 : -1}
+            class="status-tab"
+            data-status-tab={tab.id}
+          >
+            {tab.label}
+          </button>
+        ))
+      }
+    </div>
+
+    <div class="max-h-[min(60vh,26rem)] overflow-y-auto px-5 pb-4">
+      <section id="status-panel-status" role="tabpanel" aria-labelledby="status-tab-status" data-status-panel="status">
+        <dl class="status-grid">
+          <dt>Site</dt>
+          <dd>{site.siteName}</dd>
+          <dt>Version</dt>
+          <dd>v{BUILD.version}</dd>
+          <dt>Commit</dt>
+          <dd>{BUILD.commit || 'unknown'}</dd>
+          <dt>Environment</dt>
+          <dd>{BUILD.env}</dd>
+          <dt>Built</dt>
+          <dd>{builtAt}</dd>
+          <dt>Rendered</dt>
+          <dd><time datetime={renderedAt} data-status-rendered>{renderedAt}</time></dd>
+          <dt>Cache</dt>
+          <dd>ISR · tag <code>content</code> · ttl 7d</dd>
+        </dl>
+        <dl class="status-grid mt-4">
+          <dt>Language</dt>
+          <dd>{LOCALE_LABEL[locale]} <span class="text-base-content/65">({LOCALE_NAME[locale]})</span></dd>
+          <dt>View</dt>
+          <dd data-status-view>CLI</dd>
+          <dt>Theme</dt>
+          <dd data-status-theme>Light</dd>
+          <dt>Content</dt>
+          <dd data-status-content>…</dd>
+          <dt>Stack</dt>
+          <dd>Astro {BUILD.astro} · Payload CMS · Vercel</dd>
+        </dl>
+      </section>
+
+      <section
+        id="status-panel-config"
+        role="tabpanel"
+        aria-labelledby="status-tab-config"
+        data-status-panel="config"
+        hidden
+      >
+        <dl class="status-grid items-center">
+          <dt>View</dt>
+          <dd class="flex gap-1">
+            <button type="button" class="status-choice" data-view-set="cli" data-status-choice="view:cli">CLI</button>
+            <button type="button" class="status-choice" data-view-set="modern" data-status-choice="view:modern">ADE</button>
+          </dd>
+          <dt>Theme</dt>
+          <dd class="flex gap-1">
+            <button type="button" class="status-choice" data-status-choice="theme:light">Light</button>
+            <button type="button" class="status-choice" data-status-choice="theme:dark">Dark</button>
+          </dd>
+          <dt>Language</dt>
+          <dd class="flex gap-1">
+            {
+              LOCALES.map((code) => (
+                <a
+                  class="status-choice no-underline"
+                  href={localizePath(code, current)}
+                  hreflang={code}
+                  lang={code}
+                  title={LOCALE_NAME[code]}
+                  aria-current={code === locale ? 'true' : undefined}
+                >
+                  {LOCALE_LABEL[code]}
+                </a>
+              ))
+            }
+          </dd>
+        </dl>
+        <p class="mt-4 text-base-content/65">Saved in this browser only.</p>
+      </section>
+
+      <section id="status-panel-keys" role="tabpanel" aria-labelledby="status-tab-keys" data-status-panel="keys" hidden>
+        <dl class="status-grid">
+          {
+            keys.map(([key, action]) => (
+              <>
+                <dt>
+                  <kbd class="kbd kbd-sm font-mono">{key}</kbd>
+                </dt>
+                <dd>{action}</dd>
+              </>
+            ))
+          }
+        </dl>
+      </section>
+    </div>
+
+    <div class="flex items-center gap-4 border-t border-base-300 px-5 py-2.5 text-xs text-base-content/65">
+      <span>esc to close</span>
+      <span class="hidden sm:inline">← → switch tabs</span>
+      <form method="dialog" class="ms-auto">
+        <button class="btn btn-ghost btn-xs font-mono" aria-label="Close status panel">✕</button>
+      </form>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button tabindex="-1">close</button>
+  </form>
+</dialog>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>('[data-status-dialog]')
+
+  if (dialog) {
+    const root = document.documentElement
+    const tabs = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-status-tab]'))
+    const panels = Array.from(dialog.querySelectorAll<HTMLElement>('[data-status-panel]'))
+    const rendered = dialog.querySelector<HTMLTimeElement>('[data-status-rendered]')
+    const content = dialog.querySelector<HTMLElement>('[data-status-content]')
+    let counted = false
+
+    const showTab = (id: string, focus = false) => {
+      for (const tab of tabs) {
+        const selected = tab.dataset.statusTab === id
+        tab.setAttribute('aria-selected', String(selected))
+        tab.tabIndex = selected ? 0 : -1
+        if (selected && focus) tab.focus()
+      }
+      for (const panel of panels) panel.hidden = panel.dataset.statusPanel !== id
+    }
+
+    const ago = (iso: string): string => {
+      const seconds = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000))
+      if (seconds < 10) return 'just now'
+      if (seconds < 90) return `${seconds}s ago · from cache`
+      const minutes = Math.round(seconds / 60)
+      if (minutes < 90) return `${minutes} min ago · from cache`
+      const hours = Math.round(minutes / 60)
+      if (hours < 36) return `${hours} h ago · from cache`
+      return `${Math.round(hours / 24)} days ago · from cache`
+    }
+
+    // Live values: they change with the toggles while the panel is open.
+    const refresh = () => {
+      const view = root.getAttribute('data-view') === 'modern' ? 'modern' : 'cli'
+      const theme = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+      const viewLabel = view === 'modern' ? 'ADE' : 'CLI'
+      const themeLabel = theme === 'dark' ? 'Dark' : 'Light'
+      const viewCell = dialog.querySelector('[data-status-view]')
+      const themeCell = dialog.querySelector('[data-status-theme]')
+      if (viewCell) viewCell.textContent = viewLabel
+      if (themeCell) themeCell.textContent = themeLabel
+      for (const choice of dialog.querySelectorAll<HTMLElement>('[data-status-choice]')) {
+        const [key, value] = (choice.dataset.statusChoice ?? '').split(':')
+        const on = (key === 'view' && value === view) || (key === 'theme' && value === theme)
+        choice.setAttribute('aria-pressed', String(on))
+      }
+      if (rendered) rendered.textContent = ago(rendered.dateTime)
+    }
+
+    // Post and page counts come from the popup search index (cached at Vercel).
+    const count = async () => {
+      if (counted || !content) return
+      counted = true
+      try {
+        const res = await fetch(dialog.dataset.indexUrl ?? '/search-index.json')
+        if (!res.ok) throw new Error(String(res.status))
+        const index = (await res.json()) as { posts: unknown[]; pages: unknown[] }
+        const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+        content.textContent = `${plural(index.posts.length, 'post')} · ${plural(index.pages.length, 'page')}`
+      } catch {
+        counted = false
+        content.textContent = 'unavailable'
+      }
+    }
+
+    const open = () => {
+      if (dialog.open) return
+      showTab('status')
+      refresh()
+      dialog.showModal()
+      tabs[0]?.focus()
+      void count()
+    }
+
+    for (const tab of tabs) {
+      tab.addEventListener('click', () => showTab(tab.dataset.statusTab ?? 'status'))
+    }
+
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
+      const index = tabs.findIndex((tab) => tab.getAttribute('aria-selected') === 'true')
+      const step = event.key === 'ArrowRight' ? 1 : -1
+      const next = tabs[(index + step + tabs.length) % tabs.length]
+      if (!next) return
+      event.preventDefault()
+      showTab(next.dataset.statusTab ?? 'status', true)
+    })
+
+    dialog.addEventListener('click', (event) => {
+      const choice = (event.target as Element | null)?.closest<HTMLElement>('[data-status-choice]')
+      if (!choice) return
+      const [key, value] = (choice.dataset.statusChoice ?? '').split(':')
+      if (key === 'theme') {
+        const now = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+        const toggle = (window as Window & { __toggleTheme?: () => void }).__toggleTheme
+        if (value !== now) toggle?.()
+      }
+      // View buttons also carry data-view-set, which ViewToggle handles.
+      requestAnimationFrame(refresh)
+    })
+
+    document.addEventListener('click', (event) => {
+      if (!(event.target as Element | null)?.closest('[data-status-open]')) return
+      event.preventDefault()
+      open()
+    })
+
+    // The `s` shortcut (Layout) and `/status` in the popup search call this.
+    ;(window as Window & { __openStatus?: () => void }).__openStatus = open
+  }
+</script>

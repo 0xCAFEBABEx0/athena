@@ -105,6 +105,14 @@ English, configured by `.coderabbit.yaml` at the repo root.
 The app itself is installed once per repository at
 <https://github.com/apps/coderabbitai>; without it, the config file does nothing.
 
+## Release Workflow
+
+`.github/workflows/release.yml` runs on every push to `main`. It reads the root
+`package.json` `version`, and when the tag `vX.Y.Z` does not exist yet it
+creates the tag on the merge commit and a GitHub Release whose notes are that
+version's `CHANGELOG.md` section (the job fails if the section is missing).
+When the version was not bumped it does nothing. Rules: `docs/VERSIONING.md`.
+
 ## Build Configuration (Vercel)
 
 Each app has a `vercel.json` (Vercel reads it from the project's Root Directory).
@@ -116,7 +124,7 @@ repo, split by **Root Directory**:
 
 | Project | Root Directory | Build Command | Install Command |
 |---|---|---|---|
-| `athena-cms` | `apps/cms` | `bun run build` → `next build` (Turbopack) | `bun install --frozen-lockfile` |
+| `athena-cms` | `apps/cms` | `bun run build` (set in `vercel.json`) → `next build` (Turbopack) | `bun install --frozen-lockfile` |
 | `athena-web` | `apps/web` | `bun run build` → `astro build` | `bun install --frozen-lockfile` |
 
 - **Node.js**: 24 LTS (pinned to `24.22.1` via `.nvmrc`; on Vercel, `engines.node: "24.x"` in each app's `package.json` selects the 24.x runtime)

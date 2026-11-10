@@ -26,6 +26,7 @@
       "preview": true
     }
   },
+  "buildCommand": "bun run build",
   "ignoreCommand": "bash ../../scripts/vercel-ignore-build.sh",
   "env": {
     "NODE_ENV": "production"

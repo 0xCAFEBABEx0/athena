@@ -4,6 +4,7 @@ import ThemeToggle from '@/components/ThemeToggle.astro'
 import ViewToggle from '@/components/ViewToggle.astro'
 import { LOCALES, LOCALE_LABEL, LOCALE_NAME, dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
+import { SHORT_VERSION } from '@/lib/build'
 import { getHeaderNav } from '@/lib/nav'
 import type { SiteData } from '@/lib/site'
 
@@ -47,12 +48,22 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
 ---
 
 <header class="cli-header container flex flex-wrap items-center justify-between gap-x-4 pt-5">
-  <a
-    class="inline-flex min-h-11 items-center gap-2 font-mono text-sm font-semibold text-base-content no-underline"
-    href={localizePath(locale, '/')}
-  >
-    <span class="text-primary" aria-hidden="true">❯_</span>{site.siteName}
-  </a>
+  <span class="inline-flex items-center gap-2">
+    <a
+      class="inline-flex min-h-11 items-center gap-2 font-mono text-sm font-semibold text-base-content no-underline"
+      href={localizePath(locale, '/')}
+    >
+      <span class="text-primary" aria-hidden="true">❯_</span>{site.siteName}
+    </a>
+    <button
+      type="button"
+      class="site-version inline-flex min-h-11 items-center"
+      aria-label={`Site status, version ${SHORT_VERSION}`}
+      data-status-open
+    >
+      v{SHORT_VERSION}
+    </button>
+  </span>
   <nav class="flex flex-wrap items-center" aria-label={t.nav}>
     {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
     <details class="dropdown dropdown-end" data-language-menu>

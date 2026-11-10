@@ -6,6 +6,7 @@
 import ThemeToggle from '@/components/ThemeToggle.astro'
 import { dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
+import { SHORT_VERSION } from '@/lib/build'
 import { getHeaderNav, getRecentPosts } from '@/lib/nav'
 import type { SiteData } from '@/lib/site'
 
@@ -42,10 +43,20 @@ const authorInitial = (site.authorName.match(/[\p{L}\p{N}]/u)?.[0] ?? initial).t
 ---
 
 <aside class="modern-sidebar" aria-label={t.sidebar}>
-  <a class="flex items-center gap-2.5 rounded-field px-2 py-1.5 font-semibold no-underline" href={lp('/')}>
-    <span class="modern-avatar" aria-hidden="true">{initial}</span>
-    {site.siteName}
-  </a>
+  <div class="flex items-center gap-1.5">
+    <a class="flex min-w-0 items-center gap-2.5 rounded-field px-2 py-1.5 font-semibold no-underline" href={lp('/')}>
+      <span class="modern-avatar" aria-hidden="true">{initial}</span>
+      <span class="truncate">{site.siteName}</span>
+    </a>
+    <button
+      type="button"
+      class="site-version"
+      aria-label={`Site status, version ${SHORT_VERSION}`}
+      data-status-open
+    >
+      v{SHORT_VERSION}
+    </button>
+  </div>
 
   <button type="button" class="modern-search-button" data-search-open>
     <span class="text-primary" aria-hidden="true">⌕</span>

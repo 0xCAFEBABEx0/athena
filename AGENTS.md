@@ -121,7 +121,8 @@ Three things there are load-bearing and easy to break:
 
 Sentry (`withSentryConfig`) wraps the result only when `SENTRY_DSN` +
 `SENTRY_ORG`/`SENTRY_PROJECT` are set. With Turbopack, source maps are uploaded
-by Sentry's after-production-compile hook (needs `SENTRY_AUTH_TOKEN`); the
+by Sentry's after-production-compile hook (needs `SENTRY_AUTH_TOKEN`), and only
+when `VERCEL_ENV=production` (it adds ~10 s to every build); the
 options under `webpack` (`treeshake`, `automaticVercelMonitors`) are no-ops.
 
 ## Git Workflow
@@ -139,6 +140,16 @@ PR from `preview` to `main`; `bun run deploy:production` opens it with `gh` and
 enables auto-merge. `preview` still accepts direct pushes (`bun run deploy:preview`).
 
 CI (GitHub Actions) runs lint + type check on push to `main`/`preview` and PRs to `main`.
+
+**Versioning** ([`docs/VERSIONING.md`](./docs/VERSIONING.md)): one SemVer for
+the whole site in the root `package.json` `version`. Bump it and add a
+`CHANGELOG.md` section on `development` before promoting a code change
+(content edits never bump it). On push to `main`,
+`.github/workflows/release.yml` tags `vX.Y.Z` and publishes a GitHub Release
+from that section when the tag does not exist yet. The web app shows the
+version beside the site name and in its `/status` panel, with a
+`-preview.<sha>` / `-dev.<sha>` suffix outside Production
+(`apps/web/src/lib/build-info.mjs`).
 CodeRabbit (`.coderabbit.yaml`) reviews PRs to `main`, `development`, and
 `preview` in English; when a rule in this file changes, update the matching
 `path_instructions` entry there too.

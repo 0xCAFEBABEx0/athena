@@ -3,6 +3,7 @@ import { defineConfig, passthroughImageService } from 'astro/config'
 import vercel from '@astrojs/vercel'
 import tailwindcss from '@tailwindcss/vite'
 
+import { buildInfo } from './src/lib/build-info.mjs'
 import { isrBypassToken } from './src/lib/isr-bypass.mjs'
 
 // On-demand rendering everywhere: draft preview needs per-request cookie
@@ -38,5 +39,7 @@ export default defineConfig({
   }),
   vite: {
     plugins: [tailwindcss()],
+    // Site version, commit and environment for the header and /status panel.
+    define: { __BUILD_INFO__: JSON.stringify(buildInfo()) },
   },
 })

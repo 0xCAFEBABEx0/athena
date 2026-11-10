@@ -9,6 +9,7 @@ import '@/styles/global.css'
 import Footer from '@/components/Footer.astro'
 import Header from '@/components/Header.astro'
 import SearchDialog from '@/components/SearchDialog.astro'
+import StatusDialog from '@/components/StatusDialog.astro'
 import Sidebar from '@/components/Sidebar.astro'
 import { isDraft } from '@/lib/draft'
 import { DEFAULT_OG_IMAGE, type PageMeta } from '@/lib/seo'
@@ -138,6 +139,7 @@ if (draft) {
       </div>
     </div>
     <SearchDialog />
+    <StatusDialog site={site} />
     <script is:inline>
       // Shortcuts: "/" search, j/k move through post lists, t theme, v view.
       ;(function () {
@@ -167,6 +169,9 @@ if (draft) {
             window.__toggleTheme()
           } else if (event.key === 'v' && window.__toggleView) {
             window.__toggleView()
+          } else if (event.key === 's' && window.__openStatus) {
+            event.preventDefault()
+            window.__openStatus()
           }
         })
       })()

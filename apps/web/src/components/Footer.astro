@@ -1,5 +1,6 @@
 ---
 import CMSLink from '@/components/CMSLink.astro'
+import { SHORT_VERSION } from '@/lib/build'
 import { getFooterNav } from '@/lib/nav'
 import type { SiteData } from '@/lib/site'
 import { localeOf, localizePath } from '@/lib/i18n'
@@ -21,12 +22,17 @@ const year = new Date().getFullYear()
   <div
     class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-base-300 pt-3.5 font-mono text-xs text-base-content/65"
   >
-    <span class="inline-flex items-center gap-2">
+    <button
+      type="button"
+      class="inline-flex min-h-8 min-w-0 max-w-full cursor-pointer items-center gap-2 text-start font-mono text-xs hover:text-base-content"
+      aria-label={`Site status, version ${SHORT_VERSION}`}
+      data-status-open
+    >
       <span class="status status-success" aria-hidden="true"></span>
-      <span>{site.siteName}</span>
+      <span class="whitespace-nowrap">{site.siteName} v{SHORT_VERSION}</span>
       <span aria-hidden="true">·</span>
-      <span>{path}</span>
-    </span>
+      <span class="min-w-0 truncate">{path}</span>
+    </button>
     <span class="inline-flex flex-wrap items-center gap-x-4 gap-y-1">
       {
         navLinks.map((link) => (

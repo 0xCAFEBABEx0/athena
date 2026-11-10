@@ -4,3 +4,13 @@ declare namespace App {
     locale: import('@athena/shared/constants').Locale
   }
 }
+
+/** Baked in at build time by astro.config.mjs (see src/lib/build-info.mjs). */
+declare const __BUILD_INFO__: {
+  version: string
+  release: string
+  commit: string
+  env: string
+  builtAt: string
+  astro: string
+}

@@ -86,7 +86,12 @@ all managed by editors without code changes.
   `posts`. The footer always links to `/rss.xml`.
 - **F-NAV-3** Keyboard shortcuts outside text fields: `/` opens the popup
   search, `j`/`k` move through post rows, `t` toggles the theme, `v` switches
-  between the CLI and ADE views.
+  between the CLI and ADE views, `s` opens the `/status` panel.
+- **F-NAV-4** The site version (`docs/VERSIONING.md`) is shown next to the
+  site name and in the footer. Clicking it, pressing `s`, or running
+  `/status` in the popup search opens a `/status` panel: version, commit,
+  environment, build and render time, cache, content counts (Status tab),
+  view / theme / language switches (Config tab) and shortcuts (Keys tab).
 - **F-VIEW-1** Two looks for the same content: CLI (terminal-style) and
   ADE (agent-app style, called `modern` in code and in the CMS: sidebar, question bubbles, ✓ step pills, composer
   search box, "On this page" panel on posts at ≥1280 px). The site default

@@ -125,9 +125,58 @@ const strings = {
 
     const icon = { posts: '▤', pages: '◎' } as const
 
-    const render = (data: SearchIndex) => {
+    // Slash commands (type "/status"): a little terminal easter egg.
+    const COMMANDS = [{ name: '/status', hint: 'version, build and settings' }] as const
+    const runCommand = (name: string) => {
+      if (name !== '/status') return
+      dialog.close()
+      ;(window as Window & { __openStatus?: () => void }).__openStatus?.()
+    }
+
+    const renderCommands = (q: string) => {
+      const query = q.trim().toLowerCase()
+      if (!query.startsWith('/')) return
+      for (const command of COMMANDS) {
+        if (!command.name.startsWith(query)) continue
+        const option = document.createElement('a')
+        option.href = '#'
+        option.id = `search-hit-${options.length}`
+        option.dataset.command = command.name
+        option.setAttribute('role', 'option')
+        option.setAttribute('aria-selected', 'false')
+        option.className = 'search-hit font-mono'
+        const glyph = document.createElement('span')
+        glyph.className = 'search-hit-icon'
+        glyph.setAttribute('aria-hidden', 'true')
+        glyph.textContent = '❯'
+        const title = document.createElement('span')
+        title.className = 'min-w-0 flex-1 truncate'
+        title.textContent = command.name
+        const hint = document.createElement('span')
+        hint.className = 'hidden shrink-0 text-xs text-base-content/65 sm:inline'
+        hint.textContent = command.hint
+        const enter = document.createElement('span')
+        enter.className = 'search-hit-enter'
+        enter.setAttribute('aria-hidden', 'true')
+        enter.textContent = '↵'
+        option.append(glyph, title, hint, enter)
+        const index = options.length
+        option.addEventListener('mousemove', () => {
+          if (active !== index) select(index)
+        })
+        option.addEventListener('click', (event) => {
+          event.preventDefault()
+          runCommand(command.name)
+        })
+        options.push(option)
+        list.append(option)
+      }
+    }
+
+    const render = (data: SearchIndex, q = '') => {
       list.replaceChildren()
       options = []
+      renderCommands(q)
       for (const group of ['posts', 'pages'] as const) {
         const hits: SearchHit[] = data[group]
         if (hits.length === 0) continue
@@ -224,7 +273,7 @@ const strings = {
       if (!index) status.textContent = strings.loading
       try {
         const data = await loadIndex()
-        if (run === latest) render(filter(data, q))
+        if (run === latest) render(filter(data, q), q)
       } catch {
         if (run !== latest) return
         list.replaceChildren()
@@ -257,7 +306,10 @@ const strings = {
         dialog.close()
       } else if (event.key === 'Enter' && !event.isComposing) {
         const current = options[active]
-        if (current) {
+        if (current?.dataset.command) {
+          event.preventDefault()
+          runCommand(current.dataset.command)
+        } else if (current) {
           event.preventDefault()
           window.location.href = current.href
         }
