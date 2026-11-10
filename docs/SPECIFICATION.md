@@ -202,10 +202,11 @@ From the 2026-10 review; none of these are implemented yet.
 - **Spam protection**: no captcha, honeypot or rate limit on form posts.
 - **Corporate content types**: no Services, Team, Case Studies, Careers,
   Testimonials or Locations.
-- **Template branding**: `SITE_NAME` and SEO titles still read "Payload
-  Website Template"; admin welcome/login components are the template's.
+- **Template branding**: the admin welcome/login components and the seed's
+  sample home page are still the template's.
 - **Schema migrations**: production schema changes are applied by hand (see
   [DATABASE.md](./DATABASE.md)).
-- **Testing**: one unit-test file in `apps/web`; no end-to-end tests; the
-  Checkly checks are still the CLI scaffold examples.
+- **Testing**: unit tests (`bun test`) and a Playwright E2E suite in
+  `apps/web`, run by hand before pushing ([TESTING.md](./TESTING.md)); not in
+  CI yet. No uptime monitoring (the Checkly scaffold was removed).
 - **Compliance**: no privacy policy or cookie consent.

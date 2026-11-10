@@ -42,7 +42,7 @@ graph LR
 | **Shared package** (`packages/shared`) | TypeScript only | Generated Payload types and cross-app constants (`CACHE_TAGS`, `DRAFT_COOKIE`, `COLLECTION_SLUGS`, `IMAGE_SIZES`). |
 | **Database** | Neon PostgreSQL 16 via `@payloadcms/db-postgres` | All documents, versions, users, form submissions, search index. |
 | **Media storage** | Vercel Blob via `@payloadcms/storage-vercel-blob` | Original uploads and all generated renditions. Served directly from Blob (`disablePayloadAccessControl: true`). |
-| **Monitoring** | Sentry (CMS), Vercel Analytics + Speed Insights (web), Checkly (scaffold only) | Errors, performance, uptime. |
+| **Monitoring** | Sentry (CMS), Vercel Analytics + Speed Insights (web) | Errors, performance, uptime. |
 
 Production lives at **https://www.findb.uk** (athena-web). The staging
 deployment is built from the `preview` branch.

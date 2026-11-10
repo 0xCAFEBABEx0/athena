@@ -29,7 +29,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
 - **Database**: PostgreSQL 16 (`@payloadcms/db-postgres`, Neon)
 - **Rich Text**: Lexical (`@payloadcms/richtext-lexical`; the web app renders it via `convertLexicalToHTML` in `apps/web/src/lib/richtext.ts`)
-- **Monitoring**: Sentry, Checkly
+- **Monitoring**: Sentry (CMS), Vercel Web Analytics + Speed Insights (web)
 
 ## Key Commands (run from the repo root)
 

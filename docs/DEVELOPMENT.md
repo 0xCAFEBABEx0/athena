@@ -99,7 +99,7 @@ the full list. The CMS↔web contract (`WEB_URL`/`CMS_URL`, `PREVIEW_SECRET`,
 - **Media**: Vercel Blob (`BLOB_READ_WRITE_TOKEN`)
 - **Rich text**: Lexical; the web app renders it via `convertLexicalToHTML` in
   `apps/web/src/lib/richtext.ts`
-- **Monitoring**: Sentry, Checkly
+- **Monitoring**: Sentry (CMS), Vercel Web Analytics + Speed Insights (web)
 
 ## 🗄️ Database & Content
 
