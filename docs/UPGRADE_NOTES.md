@@ -23,6 +23,9 @@ A running log of notable dependency upgrades. Newest first.
   ADE view. `/work/<slug>` shows one repository as a thread: brief, write-up,
   latest release, recent commits, details. Pinned entries replace the home
   page's project list (the Site global's projects remain the fallback).
+  A repository that is private on GitHub can still be listed when it has a
+  live URL ("Private on GitHub"): only the CMS text and the live link are
+  shown.
 - Relative times ("32m", "2 years ago") are written in the browser, so cached
   pages never go stale.
 
@@ -33,7 +36,7 @@ after `2026-11-10-whoa-i18n.sql`, on the preview Neon branch and then
 production, **before** the CMS deploy. It adds the `projects` tables, the
 `syncGitHub` job enum value and Payload's job scheduling table/column; every
 statement is idempotent, so re-run the whole file where an earlier version
-of it (without the `waiting` status) was applied. Verified locally: applying it twice to a database
+of it (without the `waiting` status or `private_repo`) was applied. Verified locally: applying it twice to a database
 built by the previous code gives the same schema as a fresh push of the new
 config (0 differences).
 

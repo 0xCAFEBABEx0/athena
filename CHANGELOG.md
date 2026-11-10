@@ -27,7 +27,8 @@ First versioned release: the portfolio and blog redesign for whoa.me.
   as Waiting on you / Working / Idle / Resolved (from GitHub activity
   unless set in the CMS), with open pull request counts and the
   repository's social preview image, and a searchable, keyboard-driven
-  picker in the CLI view. Each repository has its own page
+  picker in the CLI view. Live projects whose repository is private can be
+  listed too, without source or commit details. Each repository has its own page
   with a brief, a write-up, the latest release and recent commits. Entries
   are added, pinned, hidden and translated in the CMS; GitHub data refreshes
   every 6 hours.

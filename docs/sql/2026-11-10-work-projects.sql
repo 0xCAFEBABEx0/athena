@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS "projects_locales" (
 
 ALTER TABLE "payload_locked_documents_rels" ADD COLUMN IF NOT EXISTS "projects_id" integer;
 
+-- Added later: "Private on GitHub" (shown from CMS text only).
+ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "private_repo" boolean DEFAULT false;
+
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'projects_locales_parent_id_fk') THEN

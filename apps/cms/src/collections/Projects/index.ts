@@ -3,8 +3,11 @@ import type {
   CollectionAfterDeleteHook,
   CollectionBeforeChangeHook,
   CollectionConfig,
+  FieldAccess,
   Where,
 } from 'payload'
+
+import type { Project } from '@athena/shared/payload-types'
 
 import { CACHE_TAGS } from '@athena/shared/constants'
 
@@ -28,15 +31,27 @@ const slugOf = (repo: string): string =>
     .replace(/[^a-z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '')
 
+const hideWhenPrivate: FieldAccess<Project> = ({ req: { user }, doc }) =>
+  Boolean(user) || !doc?.privateRepo
+
 const fillFromGitHub: CollectionBeforeChangeHook = async ({ data, originalDoc, req, context }) => {
   if (typeof data.repo === 'string')
     data.repo = data.repo.trim().replace(/^https:\/\/github\.com\//, '')
   if (typeof data.repo === 'string' && isRepoName(data.repo)) data.slug = slugOf(data.repo)
   if (context.skipGitHubFetch) return data
 
+  // Private on GitHub: never ask GitHub (the token only reads public
+  // repositories); the entry is shown from what the editor wrote.
+  if (data.privateRepo ?? originalDoc?.privateRepo) {
+    data.github = null
+    data.syncError = null
+    return data
+  }
+
   // Fetch right away when the entry is new or points at another repository,
   // so the page is complete on first publish instead of after the next sync.
-  const repoChanged = !originalDoc || originalDoc.repo !== data.repo
+  const repoChanged =
+    !originalDoc || originalDoc.repo !== data.repo || Boolean(originalDoc.privateRepo)
   if (!repoChanged && originalDoc?.github) return data
   if (!isRepoName(data.repo)) return data
 
@@ -101,6 +116,8 @@ export const Projects: CollectionConfig<'projects'> = {
       type: 'text',
       required: true,
       unique: true,
+      // A private repository's name stays out of the public API.
+      access: { read: hideWhenPrivate },
       admin: {
         description:
           'GitHub repository as owner/name, e.g. 0xCAFEBABEx0/athena. Public repositories only.',
@@ -121,7 +138,18 @@ export const Projects: CollectionConfig<'projects'> = {
         {
           name: 'liveUrl',
           type: 'text',
-          admin: { width: '50%', description: 'Live site. Defaults to the repository homepage.' },
+          admin: {
+            width: '50%',
+            description:
+              'Live site. Defaults to the repository homepage. Required for a private repository.',
+          },
+          validate: (value: unknown, { siblingData }: { siblingData: Partial<Project> }) => {
+            const url = typeof value === 'string' ? value.trim() : ''
+            if (url && !/^https?:\/\/\S+$/.test(url)) return 'Use a full URL, e.g. https://whoa.me'
+            if (siblingData?.privateRepo && !url)
+              return 'A private repository is only shown with a Live URL.'
+            return true
+          },
         },
       ],
     },
@@ -185,6 +213,17 @@ export const Projects: CollectionConfig<'projects'> = {
       admin: { position: 'sidebar', description: 'Show on the home page.' },
     },
     {
+      name: 'privateRepo',
+      type: 'checkbox',
+      label: 'Private on GitHub',
+      defaultValue: false,
+      admin: {
+        position: 'sidebar',
+        description:
+          'Shown only with a Live URL, from what you write here: no source link, commits or languages, and GitHub is never asked. Set Status by hand (Auto = Resolved).',
+      },
+    },
+    {
       name: 'hidden',
       type: 'checkbox',
       defaultValue: false,
@@ -219,6 +258,7 @@ export const Projects: CollectionConfig<'projects'> = {
     {
       name: 'github',
       type: 'json',
+      access: { read: hideWhenPrivate },
       admin: { readOnly: true, description: 'Snapshot from GitHub (read-only).' },
     },
   ],

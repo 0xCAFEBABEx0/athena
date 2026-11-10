@@ -202,6 +202,8 @@ export async function syncProjects(
     pagination: false,
     depth: 0,
     overrideAccess: true,
+    // Private repositories are never fetched (see the Projects collection).
+    where: { privateRepo: { not_equals: true } },
   })
   if (!docs.length) return { checked: 0, updated: 0 }
 

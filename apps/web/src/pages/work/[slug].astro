@@ -34,7 +34,7 @@ const reply = item.notes || item.description
 const moreCommits = Math.max(0, item.commitCount - item.commits.length)
 const languages = item.languages.filter((lang) => lang.share > 0)
 const details = [
-  { label: t.workSource, value: item.repo, href: item.repoUrl },
+  { label: t.workSource, value: item.repoUrl ? item.repo : t.workPrivate, href: item.repoUrl },
   ...(item.liveUrl ? [{ label: t.workLive, value: displayHost(item.liveUrl), href: item.liveUrl }] : []),
   ...(languages.length
     ? [{ label: t.workLanguages, value: languages.map((l) => `${l.name} ${l.share}%`).join(' · '), href: null }]
@@ -73,7 +73,7 @@ const details = [
             )
           }
           <span class="work-actions modern-only">
-            <a class="btn btn-sm" href={item.repoUrl} rel="noopener">{t.workSource} ↗</a>
+            {item.repoUrl && <a class="btn btn-sm" href={item.repoUrl} rel="noopener">{t.workSource} ↗</a>}
             {item.liveUrl && <a class="btn btn-sm btn-primary" href={item.liveUrl} rel="noopener">{t.workLive} ↗</a>}
           </span>
         </header>

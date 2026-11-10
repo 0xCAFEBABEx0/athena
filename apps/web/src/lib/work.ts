@@ -14,8 +14,12 @@ export type WorkCommit = { sha: string; message: string; date: string }
 
 export type WorkItem = {
   slug: string
+  /** owner/name; empty for a private repository (hidden by the CMS). */
   repo: string
-  repoUrl: string
+  /** GitHub page; null for a private repository. */
+  repoUrl: string | null
+  /** Private on GitHub: shown from CMS text only, with its live URL. */
+  isPrivate: boolean
   title: string
   /** One line: CMS override, else the (translated) GitHub description. */
   description: string
@@ -68,6 +72,8 @@ const isSnapshot = (value: unknown): value is GitHubSnapshot =>
 
 const deriveStatus = (doc: Project, gh: GitHubSnapshot, now: number): WorkStatus => {
   if (doc.status && doc.status !== 'auto') return doc.status
+  // No GitHub activity to go by; a private entry is listed because it is live.
+  if (doc.privateRepo) return 'done'
   if (gh.archived) return 'done'
   if (gh.activity) return gh.activity
   const pushed = Date.parse(gh.pushedAt ?? '')
@@ -75,30 +81,36 @@ const deriveStatus = (doc: Project, gh: GitHubSnapshot, now: number): WorkStatus
   return now - pushed < IDLE_AFTER_DAYS * 86_400_000 ? 'working' : 'idle'
 }
 
-const normalize = (doc: Project, gh: GitHubSnapshot, now: number): WorkItem => ({
-  slug: doc.slug || doc.repo.split('/').pop() || String(doc.id),
-  repo: doc.repo,
-  repoUrl: `https://github.com/${doc.repo}`,
-  title: doc.title?.trim() || doc.repo.split('/').pop() || doc.repo,
-  description: doc.description?.trim() || gh.description?.trim() || '',
-  brief: doc.brief?.trim() || '',
-  notes: doc.notes?.trim() || '',
-  status: deriveStatus(doc, gh, now),
-  pinned: Boolean(doc.pinned),
-  order: doc.order ?? 0,
-  liveUrl: doc.liveUrl?.trim() || gh.homepage || null,
-  language: gh.language ?? null,
-  languages: gh.languages ?? [],
-  topics: gh.topics ?? [],
-  stars: gh.stars ?? 0,
-  commitCount: gh.commitCount ?? 0,
-  createdAt: gh.createdAt ?? '',
-  pushedAt: gh.pushedAt ?? '',
-  release: gh.release ?? null,
-  commits: gh.commits ?? [],
-  openPRs: gh.openPRs ?? 0,
-  image: gh.image?.startsWith('https://') ? gh.image : null,
-})
+const normalize = (doc: Project, gh: GitHubSnapshot, now: number): WorkItem => {
+  const isPrivate = Boolean(doc.privateRepo)
+  const repo = isPrivate ? '' : (doc.repo ?? '')
+  const name = repo.split('/').pop() || doc.slug || String(doc.id)
+  return {
+    slug: doc.slug || name,
+    repo,
+    repoUrl: isPrivate ? null : `https://github.com/${repo}`,
+    isPrivate,
+    title: doc.title?.trim() || name,
+    description: doc.description?.trim() || gh.description?.trim() || '',
+    brief: doc.brief?.trim() || '',
+    notes: doc.notes?.trim() || '',
+    status: deriveStatus(doc, gh, now),
+    pinned: Boolean(doc.pinned),
+    order: doc.order ?? 0,
+    liveUrl: doc.liveUrl?.trim() || gh.homepage || null,
+    language: gh.language ?? null,
+    languages: gh.languages ?? [],
+    topics: gh.topics ?? [],
+    stars: gh.stars ?? 0,
+    commitCount: gh.commitCount ?? 0,
+    createdAt: gh.createdAt ?? '',
+    pushedAt: gh.pushedAt ?? '',
+    release: gh.release ?? null,
+    commits: gh.commits ?? [],
+    openPRs: gh.openPRs ?? 0,
+    image: gh.image?.startsWith('https://') ? gh.image : null,
+  }
+}
 
 const STATUS_ORDER: Record<WorkStatus, number> = { waiting: 0, working: 1, idle: 2, done: 3 }
 
@@ -106,10 +118,17 @@ const loadWork = async (locale: Locale): Promise<WorkItem[]> => {
   try {
     const now = Date.now()
     const docs = await getProjectDocs<Project>({ locale })
-    // Entries GitHub never returned (private, renamed, typo) stay off the site.
+    // Entries GitHub never returned (renamed, typo, private without the
+    // "Private on GitHub" box) stay off the site; private ones need a live URL.
     return docs
-      .filter((doc) => doc.repo && !doc.hidden && isSnapshot(doc.github))
-      .map((doc) => normalize(doc, doc.github as GitHubSnapshot, now))
+      .filter((doc) =>
+        doc.hidden
+          ? false
+          : doc.privateRepo
+            ? Boolean(doc.liveUrl?.trim() && doc.slug)
+            : Boolean(doc.repo) && isSnapshot(doc.github),
+      )
+      .map((doc) => normalize(doc, isSnapshot(doc.github) ? doc.github : {}, now))
       .sort(
         (a, b) =>
           STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||

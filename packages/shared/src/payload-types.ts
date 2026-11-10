@@ -759,7 +759,7 @@ export interface Project {
    */
   title?: string | null;
   /**
-   * Live site. Defaults to the repository homepage.
+   * Live site. Defaults to the repository homepage. Required for a private repository.
    */
   liveUrl?: string | null;
   /**
@@ -786,6 +786,10 @@ export interface Project {
    * Show on the home page.
    */
   pinned?: boolean | null;
+  /**
+   * Shown only with a Live URL, from what you write here: no source link, commits or languages, and GitHub is never asked. Set Status by hand (Auto = Resolved).
+   */
+  privateRepo?: boolean | null;
   /**
    * Keep the entry but take it off the site.
    */
@@ -1275,6 +1279,7 @@ export interface ProjectsSelect<T extends boolean = true> {
   status?: T;
   order?: T;
   pinned?: T;
+  privateRepo?: T;
   hidden?: T;
   slug?: T;
   syncedAt?: T;

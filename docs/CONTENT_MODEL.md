@@ -155,6 +155,7 @@ off the site without deleting it (visitors' reads filter it out).
 | `title`, `liveUrl` | Optional; default to the repository name and homepage. |
 | `description`, `brief`, `notes` | Localized. One-line summary (filled from GitHub on first save), what the author set out to build (shown as the user's message of the thread), and the write-up (shown as the reply). The Translate button fills `ja`/`zh`. |
 | `status` | `auto` (default), `waiting`, `working`, `idle`, `done`. Shown as Waiting on you / Working / Idle / Resolved, in that order. Auto: pushed in the last 30 days = working, archived = done, else idle; `waiting` ("try it / feedback wanted") is only set by hand. |
+| `privateRepo` | "Private on GitHub": GitHub is never asked; the entry is shown only with a `liveUrl`, from the CMS text (no source link, commits or languages), and visitors' reads omit `repo` and `github`. Auto status = Resolved. |
 | `order`, `pinned`, `hidden` | Home page selection and order; `hidden` keeps the entry off the site. |
 | `slug` | Read-only, from the repository name: `/work/<slug>`. |
 | `github`, `syncedAt`, `syncError` | Read-only snapshot from GitHub (languages, topics, stars, latest release, last 5 commits, commit count, open pull requests, custom social preview image, activity) and sync state. |

@@ -32,6 +32,18 @@ const groups = picker
       (group) => group.items.length > 0,
     )
   : [{ status: null, items }]
+// CLI second line after the time: "TypeScript · 153 commits · v1.0.0 · whoa.me".
+const metaOf = (item: WorkItem) =>
+  [
+    item.isPrivate ? t.workPrivate.toLowerCase() : null,
+    item.language,
+    item.commitCount ? t.workCommits(item.commitCount) : null,
+    item.release?.tag,
+    item.openPRs ? t.workOpenPRs(item.openPRs) : null,
+    item.liveUrl ? displayHost(item.liveUrl) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 const searchText = (item: WorkItem) =>
   [item.title, item.description, item.language, ...item.topics].filter(Boolean).join(' ').toLowerCase()
 ---
@@ -73,6 +85,7 @@ const searchText = (item: WorkItem) =>
                       </span>
                     )}
                     {item.release && <span class="work-pill modern-only">{item.release.tag}</span>}
+                    {item.isPrivate && <span class="work-pill modern-only">{t.workPrivate}</span>}
                     {item.openPRs > 0 && (
                       <span class="work-pill work-pill-pr modern-only" title={t.workOpenPRs(item.openPRs)}>
                         <svg class="work-pr-icon" viewBox="0 0 16 16" aria-hidden="true">
@@ -105,16 +118,8 @@ const searchText = (item: WorkItem) =>
                         {formatDate(item.pushedAt)}
                       </time>
                     )}
-                    {[
-                      item.language,
-                      item.commitCount ? t.workCommits(item.commitCount) : null,
-                      item.release?.tag,
-                      item.openPRs ? t.workOpenPRs(item.openPRs) : null,
-                      item.liveUrl ? displayHost(item.liveUrl) : null,
-                    ]
-                      .filter(Boolean)
-                      .map((part) => ` · ${part}`)
-                      .join('')}
+                    {item.pushedAt && metaOf(item) && ' · '}
+                    {metaOf(item)}
                   </span>
                 </span>
                 {item.pushedAt && (
@@ -128,7 +133,7 @@ const searchText = (item: WorkItem) =>
         </ul>
       )
       return group.status ? (
-        <details class="work-group" open={group.status !== 'done'} data-work-group>
+        <details class="work-group" open data-work-group>
           <summary class="work-group-heading">
             <span class="work-group-label">{t.workStatus[group.status]}</span>
             <span class="work-group-count">{group.items.length}</span>
