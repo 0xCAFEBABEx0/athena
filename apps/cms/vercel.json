@@ -1,10 +1,11 @@
 {
-  "crons": [
-    {
+  "schedules": {
+    "payload-jobs": {
+      "schedule": "0 * * * *",
       "path": "/api/payload-jobs/run",
-      "schedule": "0 0 * * *"
+      "requestMethod": "GET"
     }
-  ],
+  },
   "functions": {
     "src/app/(payload)/api/[...slug]/route.ts": {
       "maxDuration": 30

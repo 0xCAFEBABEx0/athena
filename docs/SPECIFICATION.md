@@ -19,7 +19,7 @@ all managed by editors without code changes.
 | Editor / Admin | Payload admin (athena-cms `/admin`) | email + password |
 | Web app (system) | CMS REST API | `web-frontend` API key (drafts only) |
 | CMS (system) | Web `/api/invalidate` | `REVALIDATE_SECRET` |
-| Vercel Cron (system) | CMS jobs runner | `CRON_SECRET` |
+| Vercel Schedules (system) | CMS jobs runner | `CRON_SECRET` |
 
 ## 2. Public Website
 

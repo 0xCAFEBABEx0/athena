@@ -130,7 +130,7 @@ There is no captcha, honeypot or rate limit.
 | `/admin` | Payload admin panel. |
 | `/api/{collection}`, `/api/globals/{slug}` | Payload REST API (all collections). |
 | `/api/graphql`, `/api/graphql-playground` | Payload GraphQL. |
-| `/api/payload-jobs/run` | Jobs runner. Vercel Cron daily at 00:00 UTC; needs a logged-in user or `Authorization: Bearer ${CRON_SECRET}`. |
+| `/api/payload-jobs/run` | Jobs runner. Vercel Schedules hourly (`0 * * * *` UTC, Hobby adds up to 15 min jitter); needs a logged-in user or `Authorization: Bearer ${CRON_SECRET}`. |
 | `/api/sentry-test` | Sentry smoke test route. |
 | `/` | Redirects to `/admin`. Any other non-admin, non-API path redirects (308) to the same path on `WEB_URL`. |
 
@@ -159,6 +159,6 @@ both apps together.
 | `PAYLOAD_API_KEY` | | yes | `web-frontend` API key for draft reads. |
 | `CMS_PROTECTION_BYPASS` | | optional | Vercel protection bypass for server-side fetches. |
 | `BLOB_READ_WRITE_TOKEN` | yes | | Vercel Blob. |
-| `CRON_SECRET` | yes | | Jobs runner auth for Vercel Cron. |
+| `CRON_SECRET` | yes | | Jobs runner auth for Vercel Schedules (sent as a bearer token, like Vercel Cron). |
 | `DEPLOY_ENV` | optional | | Overrides `VERCEL_ENV` for stage detection (Sentry environment). |
 | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | optional | | See [SENTRY_SETUP.md](./SENTRY_SETUP.md). |

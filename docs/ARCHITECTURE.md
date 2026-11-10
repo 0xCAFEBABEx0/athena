@@ -233,11 +233,21 @@ URLs; `mediaUrl()` prefixes those with `CMS_URL`.
 
 ### 3.9 Scheduled jobs
 
-`apps/cms/vercel.json` registers a daily Vercel Cron at `00:00 UTC` that calls
-`/api/payload-jobs/run`. Unauthenticated calls must carry
-`Authorization: Bearer ${CRON_SECRET}`. The queue powers **scheduled publish**
-on Pages and Posts, so a scheduled publish takes effect on the next cron run,
-not at the exact minute chosen.
+`apps/cms/vercel.json` registers an hourly Vercel Schedule (`0 * * * *` UTC,
+`GET`) that calls `/api/payload-jobs/run`. Schedules replaced Vercel Cron
+because Hobby Cron is limited to once a day; Hobby Schedules may run as often
+as every 15 minutes and start within a 15-minute jitter window. Unauthenticated
+calls must carry `Authorization: Bearer ${CRON_SECRET}` (Schedules sends it the
+same way Cron did). The queue powers **scheduled publish** on Pages and Posts,
+so a scheduled publish takes effect on the next run (up to about 75 minutes
+later), not at the exact minute chosen.
+
+Keep the interval at hourly or longer: every run wakes the Neon compute, which
+then stays active for 5 minutes (scale to zero is fixed on the Neon Free plan),
+and all branches share the project's 100 CU-hours a month. Hourly costs at most
+about 15 CU-hours a month at 0.25 CU; every 15 minutes would cost about 62.
+Static schedules are inactive on Preview branches by default, so the preview
+Neon branch is not woken unless the schedule is enabled there.
 
 ## 4. Security Model
 
@@ -248,7 +258,7 @@ not at the exact minute chosen.
 | Draft reads from web | `web-frontend` service account API key, server-side only (`PAYLOAD_API_KEY`). |
 | Preview entry | `PREVIEW_SECRET` query param, HttpOnly `SameSite=Lax` cookie, `Secure` in production. |
 | Cache invalidation | `REVALIDATE_SECRET` bearer token; same value is the ISR bypass token. |
-| Cron | `CRON_SECRET` bearer token. |
+| Scheduled jobs | `CRON_SECRET` bearer token. |
 | Cross-origin form posts | Payload `cors`/`csrf` allow-lists limited to `CMS_URL` and `WEB_URL`. |
 | Author privacy | `populateAuthors` copies only `id` and `name` into `populatedAuthors`; the `users` collection itself is never exposed. |
 
