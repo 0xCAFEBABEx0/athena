@@ -1,28 +1,51 @@
 ---
 /**
- * CLI-view welcome box on the home page: Hoo the owl on the left (a button:
- * clicking wakes it and it says a tip), the welcome line, name, intro and a
- * `posts / updated / langs / links` list on the right. At phone width the
- * owl shrinks to 3 px per pixel and sits beside the name.
+ * CLI-view welcome box on the home page: Hoo the owl (a button: clicking
+ * wakes it and it says a tip), the welcome line, name, intro and a
+ * `posts / updated / langs / links` list. At phone width the owl shrinks to
+ * 3 px per pixel and sits beside the name.
+ *
+ * From 48rem the box splits in two, like an agent CLI's startup screen: the
+ * owl and the profile centered on the left, and on the right "Tips for
+ * getting started" (clickable commands) and "Recent activity" (newest posts,
+ * pushes and releases, relative times).
  *
  * Settings come from the Site global (`banner`); the ADE view keeps its own
  * intro card.
  */
 import { LOCALES, LOCALE_LABEL, dict, localeOf } from '@/lib/i18n'
+import { formatDate } from '@/lib/format'
 import { owlPaths, OWL_HEIGHT, OWL_WIDTH, type OwlFrame } from '@/lib/owl'
 import type { SiteData } from '@/lib/site'
+import RelativeTimes from '@/components/work/RelativeTimes.astro'
+
+export type BannerActivity = {
+  /** ISO timestamp. */
+  date: string
+  kind: 'post' | 'release' | 'push'
+  label: string
+  href: string
+}
 
 type Props = {
   site: SiteData
   totalPosts: number
   updated: string | null
+  activity: BannerActivity[]
 }
 
-const { site, totalPosts, updated } = Astro.props
+const { site, totalPosts, updated, activity } = Astro.props
 const t = dict(localeOf(Astro))
 const tips = site.banner.tips.length > 0 ? site.banner.tips : t.bannerTips
 const frames: OwlFrame[] = ['sleep', 'awake', 'wave', 'wink']
 const name = site.authorName || site.siteName
+const kindLabel = { post: t.activityPost, release: t.activityRelease, push: t.activityPush }
+const commands = [
+  { cmd: 'search', key: '/', label: t.bannerCmdSearch },
+  { cmd: 'status', key: '/status', label: t.bannerCmdStatus },
+  { cmd: 'view', key: 'v', label: t.bannerCmdView },
+  { cmd: 'theme', key: 't', label: t.bannerCmdTheme },
+] as const
 ---
 
 <section
@@ -96,7 +119,47 @@ const name = site.authorName || site.siteName
       }
     </dl>
   </div>
+  <div class="cli-banner-side">
+    <section aria-labelledby="banner-start">
+      <h2 id="banner-start" class="cli-banner-side-title">{t.bannerStart}</h2>
+      <ul class="cli-banner-cmds">
+        {
+          commands.map((command) => (
+            <li>
+              <button type="button" class="cli-banner-cmd" data-banner-cmd={command.cmd}>
+                <kbd class="kbd kbd-sm">{command.key}</kbd>
+                <span>{command.label}</span>
+              </button>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+    <section aria-labelledby="banner-activity">
+      <h2 id="banner-activity" class="cli-banner-side-title">{t.bannerActivity}</h2>
+      {
+        activity.length > 0 ? (
+          <ul class="cli-banner-activity">
+            {activity.map((item) => (
+              <li>
+                <time datetime={item.date} data-relative="compact">
+                  {formatDate(item.date)}
+                </time>
+                <span class="cli-banner-kind">{kindLabel[item.kind]}</span>
+                <a class="cli-banner-activity-link" href={item.href}>
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p class="cli-banner-empty">{t.bannerNoActivity}</p>
+        )
+      }
+    </section>
+  </div>
 </section>
+<RelativeTimes />
 
 <script>
   // Wake sequence: wave and look up three times, wink, stay awake (300 ms a
@@ -108,6 +171,26 @@ const name = site.authorName || site.siteName
     const setting = document.documentElement.getAttribute('data-motion')
     if (setting) return setting === 'reduce'
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  }
+
+  // "Tips for getting started": each line runs what it shows.
+  type Commands = {
+    __openSearch?: () => void
+    __openStatus?: () => void
+    __toggleView?: () => void
+    __toggleTheme?: () => void
+  }
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-banner-cmd]')) {
+    button.addEventListener('click', () => {
+      const win = window as unknown as Commands
+      const run = {
+        search: win.__openSearch,
+        status: win.__openStatus,
+        view: win.__toggleView,
+        theme: win.__toggleTheme,
+      }[button.dataset.bannerCmd ?? '']
+      run?.()
+    })
   }
 
   for (const banner of document.querySelectorAll<HTMLElement>('[data-owl-banner]')) {

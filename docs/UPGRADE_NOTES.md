@@ -21,6 +21,9 @@ A running log of notable dependency upgrades. Newest first.
 - In the CLI view the home intro box becomes the banner: Hoo, a 30 × 27
   pixel owl drawn as inline SVG (`apps/web/src/lib/owl.ts`), beside the
   welcome line, name, intro and a `posts / updated / langs / links` list.
+  From 48rem it has two panes: owl and profile centered on the left; "Tips
+  for getting started" (buttons for `/`, `/status`, `v`, `t`) and "Recent
+  activity" (three newest posts, pushes or releases) on the right.
   Hoo is a button: it waves, looks up and winks (300 ms a frame; straight to
   awake with Reduce motion) and says the next tip. The ADE view keeps its
   intro card.
