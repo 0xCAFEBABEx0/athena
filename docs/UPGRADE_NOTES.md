@@ -2,6 +2,33 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## X picks on the home page — 2026-11-10
+
+**CMS**
+
+- The `site` global gains **`picks`** (max 6): a link to a post on X, an
+  optional localized `note`, and `text`, `authorName`, `authorHandle`,
+  `postedAt`, `lang`, filled on save from
+  `publish.twitter.com/oembed?omit_script=1&dnt=true` (no API key, 10 s
+  timeout). Links are stored as `https://x.com/<handle>/status/<id>`.
+- `bun run --filter @athena/cms test` runs CMS unit tests (`bun test src`);
+  `*.test.ts` is excluded from `tsc`.
+
+**Web**
+
+- `components/XPicks.astro` on the home page, after the projects. Plain HTML
+  from the stored fields: no widget script, images or requests to X.
+
+**Database (manual, push is off)**
+
+Run [`docs/sql/2026-11-10-site-picks.sql`](./sql/2026-11-10-site-picks.sql)
+(creates `site_picks` and `site_picks_locales`) after
+`2026-11-10-site-tagline.sql`, on the preview Neon branch and then
+production, **before** the CMS deploy. Without it the CMS cannot read the
+`site` global and the web app falls back to defaults. Idempotent; verified
+locally: applied twice to a copy without the tables, it gives the same
+schema as a fresh push of the new config.
+
 ## Performance and load: search, scanners, CSS, tests — 2026-11-10
 
 **Web**

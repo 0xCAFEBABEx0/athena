@@ -42,6 +42,7 @@ bun run build:web             # Astro production build
 bun run lint                  # Biome (cms) + astro check (web)
 bun run typecheck             # tsc --noEmit (cms)
 bun run --filter @athena/web test      # Web unit tests (bun test)
+bun run --filter @athena/cms test      # CMS unit tests (bun test)
 bun run --filter @athena/web test:e2e  # Web E2E (Playwright, E2E_BASE_URL; cases in docs/TESTING.md)
 bun run generate:types        # Regenerate Payload types -> packages/shared
 bun run generate:importmap    # Regenerate admin import map
@@ -57,6 +58,7 @@ apps/cms/src/
 ├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only; rendering lives in apps/web
 ├── Site/ Header/ Footer/     # globals (Site = name, intro, links, projects shown by the web app)
 ├── github/                   # sync.ts: GitHub snapshot for the projects (/work) collection
+├── x/                        # oembed.ts: reads posts on X for the Site global picks
 ├── utilities/                # invalidateWeb.ts, generatePreviewPath.ts, env.ts, getURL.ts
 └── payload.config.ts         # Main Payload CMS configuration
 

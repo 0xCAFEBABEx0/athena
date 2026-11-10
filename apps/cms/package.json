@@ -15,6 +15,7 @@
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "typecheck": "tsc --noEmit",
+    "test": "bun test src",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "start": "cross-env NODE_ENV=production NODE_OPTIONS=--no-deprecation bun --bun next start",
     "seed:standalone": "tsx src/scripts/seed-standalone.ts",

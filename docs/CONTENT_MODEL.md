@@ -205,11 +205,12 @@ review each language and publish. See `src/translation/`.
 | `ogImage` | upload → `media` | Default share image for pages without their own; empty = built-in `/og.png` |
 | `socialLinks` | array (max 8) of `label`, `url` | Links in the home intro box |
 | `projects` | array (max 12) of `name`, `url`, `description` (localized) | "Things I built" list on the home page |
+| `picks` | array (max 6) of `url` (required, stored as `https://x.com/<handle>/status/<id>`), `note` (localized), `text`, `authorName`, `authorHandle`, `postedAt` (day), `lang` | "Picks from X" cards on the home page. On save, a new pick, a changed link or an empty text is filled from X's oEmbed endpoint; edited text is kept |
 | `banner.style` | select `fetch` / `off`, default `fetch` | CLI view: Hoo the owl + details, or the plain intro box |
 | `banner.mascot` | checkbox, default on | Show Hoo in the CLI banner |
 | `banner.tips` | array (max 12) of `text` (localized) | Lines Hoo says when woken, in order; empty = built-in |
 
-Hook: `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
+Hooks: `beforeChange` fills the X picks (`Site/hooks/fillXPicks.ts`, `x/oembed.ts`; a pick X cannot read and that has no text rejects the save with a message); `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
 
 `header` and `footer` share the same shape:
 

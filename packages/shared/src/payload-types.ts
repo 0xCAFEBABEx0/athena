@@ -1694,7 +1694,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Name, intro, links and projects shown on the public site (whoa.me).
+ * Name, intro, links, projects and X picks shown on the public site (whoa.me).
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site".
@@ -1748,6 +1748,33 @@ export interface Site {
         name: string;
         url?: string | null;
         description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Posts on X shown as cards on the home page, in this order. Paste the link and save: text, author and date are read from X. Clear Text and save to read it again. Nothing is loaded from X when visitors open the page.
+   */
+  picks?:
+    | {
+        url: string;
+        /**
+         * Optional: why you picked it, shown under the post.
+         */
+        note?: string | null;
+        /**
+         * Filled from X on save. Edit to shorten or fix it.
+         */
+        text?: string | null;
+        authorName?: string | null;
+        /**
+         * Without @
+         */
+        authorHandle?: string | null;
+        postedAt?: string | null;
+        /**
+         * e.g. en, ja
+         */
+        lang?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -1872,6 +1899,18 @@ export interface SiteSelect<T extends boolean = true> {
         name?: T;
         url?: T;
         description?: T;
+        id?: T;
+      };
+  picks?:
+    | T
+    | {
+        url?: T;
+        note?: T;
+        text?: T;
+        authorName?: T;
+        authorHandle?: T;
+        postedAt?: T;
+        lang?: T;
         id?: T;
       };
   banner?:

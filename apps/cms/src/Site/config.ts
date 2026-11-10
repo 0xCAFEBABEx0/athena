@@ -1,5 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
+import { normalizeXUrl } from '../x/oembed'
+import { fillXPicks } from './hooks/fillXPicks'
 import { revalidateSite } from './hooks/revalidateSite'
 
 /**
@@ -13,7 +15,7 @@ export const Site: GlobalConfig = {
     read: () => true,
   },
   admin: {
-    description: 'Name, intro, links and projects shown on the public site (whoa.me).',
+    description: 'Name, intro, links, projects and X picks shown on the public site (whoa.me).',
   },
   fields: [
     {
@@ -119,6 +121,66 @@ export const Site: GlobalConfig = {
       ],
     },
     {
+      name: 'picks',
+      type: 'array',
+      label: 'Picks from X',
+      maxRows: 6,
+      labels: { singular: 'Pick', plural: 'Picks' },
+      admin: {
+        initCollapsed: true,
+        description:
+          'Posts on X shown as cards on the home page, in this order. Paste the link and save: text, author and date are read from X. Clear Text and save to read it again. Nothing is loaded from X when visitors open the page.',
+      },
+      fields: [
+        {
+          name: 'url',
+          type: 'text',
+          required: true,
+          label: 'Link to the post',
+          admin: { placeholder: 'https://x.com/<user>/status/<id>' },
+          validate: (value: string | null | undefined) =>
+            normalizeXUrl(value)
+              ? true
+              : 'Paste a link to a post on x.com or twitter.com (…/status/<id>).',
+        },
+        {
+          name: 'note',
+          type: 'text',
+          localized: true,
+          admin: { description: 'Optional: why you picked it, shown under the post.' },
+        },
+        {
+          name: 'text',
+          type: 'textarea',
+          admin: { description: 'Filled from X on save. Edit to shorten or fix it.' },
+        },
+        {
+          type: 'row',
+          fields: [
+            { name: 'authorName', type: 'text', admin: { width: '35%' } },
+            {
+              name: 'authorHandle',
+              type: 'text',
+              label: 'Handle',
+              admin: { width: '25%', description: 'Without @' },
+            },
+            {
+              name: 'postedAt',
+              type: 'date',
+              label: 'Posted',
+              admin: { width: '25%', date: { pickerAppearance: 'dayOnly' } },
+            },
+            {
+              name: 'lang',
+              type: 'text',
+              label: 'Language',
+              admin: { width: '15%', description: 'e.g. en, ja' },
+            },
+          ],
+        },
+      ],
+    },
+    {
       name: 'banner',
       type: 'group',
       label: 'CLI banner',
@@ -165,6 +227,7 @@ export const Site: GlobalConfig = {
     },
   ],
   hooks: {
+    beforeChange: [fillXPicks()],
     afterChange: [revalidateSite],
   },
 }

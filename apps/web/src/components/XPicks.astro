@@ -1,0 +1,60 @@
+---
+/**
+ * Home page "Picks from X": posts chosen in the CMS (Site global → picks),
+ * drawn as the site's own cards from the text the CMS read from X on save.
+ * Nothing is loaded from X: no widget script, no images, no cookies; each
+ * card links to the post on x.com.
+ */
+import Prompt from '@/components/Prompt.astro'
+import { dict, localeOf } from '@/lib/i18n'
+import type { SitePick } from '@/lib/site'
+
+type Props = { picks: SitePick[]; class?: string }
+
+const { picks, class: className } = Astro.props
+const t = dict(localeOf(Astro))
+---
+
+{
+  picks.length > 0 && (
+    <section class:list={['x-picks', className]} aria-labelledby="picks">
+      <Prompt command="ls picks --from=x" question={t.askPicks} heading={t.picks} count={picks.length} id="picks" />
+      <ul class="x-picks-grid mt-2.5 grid list-none gap-3 pl-5 md:grid-cols-2">
+        {picks.map((pick) => (
+          <li class="x-pick card card-border min-w-0 border-base-300 bg-base-200/50">
+            <article class="card-body gap-2 px-4 py-3.5">
+              <header class="flex min-w-0 flex-wrap items-baseline gap-x-2 font-mono text-[13px]">
+                <span class="min-w-0 truncate font-semibold text-base-content">{pick.authorName}</span>
+                <span class="min-w-0 truncate text-base-content/65">@{pick.authorHandle}</span>
+                {pick.postedAt && (
+                  <time class="ml-auto shrink-0 text-base-content/65" datetime={pick.postedAt}>
+                    {pick.postedAt}
+                  </time>
+                )}
+              </header>
+              <p class="x-pick-text line-clamp-8 whitespace-pre-line wrap-anywhere text-[15px] leading-relaxed" lang={pick.lang ?? undefined}>
+                {pick.text}
+              </p>
+              {pick.note && (
+                <p class="x-pick-note flex gap-2 wrap-anywhere text-sm leading-relaxed text-base-content/80">
+                  <span class="cli-only shrink-0 font-mono text-primary" aria-hidden="true">#</span>
+                  <span class="modern-only shrink-0 text-primary" aria-hidden="true">›</span>
+                  <span>{pick.note}</span>
+                </p>
+              )}
+              <a
+                class="link-term mt-0.5 self-start font-mono text-[13px]"
+                href={pick.url}
+                rel="noopener"
+                aria-label={t.picksOpenLabel(pick.authorName)}
+                data-x-pick
+              >
+                {t.picksOpen} <span aria-hidden="true">↗</span>
+              </a>
+            </article>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}

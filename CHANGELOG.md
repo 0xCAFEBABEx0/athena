@@ -33,6 +33,10 @@ First versioned release: the portfolio and blog redesign for whoa.me.
   screen: Hoo and the profile on the left, and clickable "Tips for getting
   started" and "Recent activity" (newest posts, pushes and releases) on the
   right.
+- Home page "Picks from X": posts on X chosen in the CMS (Site global) are
+  shown as cards with the text, author, date and an optional note, linking
+  to the post. Paste the link and save; the CMS reads the rest from X.
+  Visitors' browsers load nothing from X.
 - `/work`: GitHub repositories shown like threads in an agent app, grouped
   as Waiting on you / Working / Idle / Resolved (from GitHub activity
   unless set in the CMS), with open pull request counts and the

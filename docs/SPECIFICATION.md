@@ -28,6 +28,13 @@ all managed by editors without code changes.
 - **F-HOME-1** `/` shows the intro box from the `site` global (welcome line,
   author name, intro, post count, last update, social links), the 8 newest
   posts, the `site.projects` list and a search box. `/home` redirects there.
+- **F-HOME-2** "Picks from X": up to 6 posts on X listed in the `site`
+  global (`picks`) are shown on `/` as the site's own cards (author,
+  @handle, day, text, optional localized note, link to the post on x.com),
+  one column on phones and two from 768 px. The CMS reads text, author,
+  handle, day and language from X's public oEmbed endpoint when the Site
+  global is saved (no API key); visitors' browsers load nothing from X.
+  Photos and videos are not shown (text only; the card links to the post).
 - **F-PAGE-1** A published page with slug `s` is served at `/s` (e.g. `/about`).
   The CMS page with slug `home` is no longer routed.
 - **F-PAGE-2** A page shows its hero (none / low / medium / high impact) then

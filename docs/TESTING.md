@@ -1,10 +1,12 @@
 # Testing
 
-Two automated suites live in `apps/web`, plus a short list of checks that only
+Two automated suites live in `apps/web`, unit tests for CMS helpers in
+`apps/cms`, plus a short list of checks that only
 a Vercel deployment can answer (response headers, cache status).
 
 ```bash
 bun run --filter @athena/web test        # unit tests (bun test, src/**/*.test.ts)
+bun run --filter @athena/cms test        # CMS unit tests (bun test, src/**/*.test.ts)
 bun run build:web                        # optional: enables TC-E-23
 bun run dev:web                          # or point E2E_BASE_URL at a deployment
 E2E_BASE_URL=http://localhost:4321 bun run --filter @athena/web test:e2e
@@ -43,7 +45,17 @@ production build in `apps/web/.vercel/output`.
 | TC-U-23 | SEO | JSON-LD: WebSite (author `sameAs` only http links), BlogPosting (`zh-Hans`), SoftwareSourceCode |
 | TC-U-24 | SEO | JSON-LD text cannot close its `<script>` |
 | TC-U-25 | SEO | Home title is `site — tagline`, or the site name when the tagline is empty; the Site global trims it |
+| TC-U-30 | Site global | X picks: only `https://x.com/<handle>/status/<id>` links with text reach the page; fields trimmed, `@` dropped from the handle, day in Japan time, odd `lang` values dropped |
 | (14 more) | i18n, cms | Existing `i18n.test.ts` and `cms.test.ts` |
+
+CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
+
+| ID | Area | Case |
+|---|---|---|
+| TC-U-26 | X link | x.com, twitter.com, mobile and `statuses` links become `https://x.com/<handle>/status/<id>`; other hosts, look-alike hosts, profiles and non-numeric ids are refused |
+| TC-U-27 | oEmbed | Text (line breaks kept, entities decoded, `pic.twitter.com` links dropped), author, handle, day and language read from the oEmbed HTML; `zxx` / unparsable dates give null; no text gives null |
+| TC-U-28 | oEmbed | Asks `publish.twitter.com/oembed` for the canonical link with `omit_script=1&dnt=true`; a bad link, an error status or a network failure gives null |
+| TC-U-29 | Site hook | A new pick is filled and its link normalized; edited text is kept without asking X; a changed link replaces the old post; no answer and no text rejects the save with a message; no answer with typed text keeps it |
 
 ## End-to-end tests (`apps/web/e2e`)
 
@@ -89,6 +101,9 @@ production build in `apps/web/.vercel/output`.
 | TC-E-38 | seo | Every URL in the pages and posts sitemaps answers 200, is indexable and canonical to itself; `/` listed, `/search` not; fixed routes have no `<lastmod>` |
 | TC-E-39 | files | No link to `/admin` in the header, sidebar or footer (`/`, `/ja/posts`); content check: keep such links out of Globals → Header / Footer |
 | TC-E-40 | seo | Home title (en/ja/zh) is the site name or `site name — tagline`, never a dangling ` — `; `og:title` matches |
+| TC-E-41 | picks | Home "Picks from X": ≤ 6 cards, count in the heading, each with text, `@handle`, a `YYYY-MM-DD` date when known and a link to `https://x.com/<handle>/status/<id>`; no request to x.com / twitter.com / twimg.com / t.co, no widget script or iframe (section absent without picks) |
+| TC-E-42 | picks | 320px (CLI light, ADE dark): no horizontal scroll, cards inside the viewport, one column; two columns at 1024px |
+| TC-E-43 | picks | `/ja`: heading and link text in Japanese; each text keeps the post's own `lang` |
 
 ## Deployment checks (Preview, then Production)
 
@@ -104,12 +119,14 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 | TC-P-06 | `GET /llms.txt`, `/og.png` | 200; llms.txt names the site and the current domain |
 | TC-P-07 | Warm-cache workflow run | Succeeds for the deployment's commit, with 200 responses (no "Cache not warmed" warning; Preview needs the `VERCEL_AUTOMATION_BYPASS_SECRET` repository secret) |
 | TC-P-08 | E2E suite with `E2E_BASE_URL` set to the deployment | All pass (TC-E-20 needs the footer rows deleted) |
+| TC-P-10 | CMS on the deployment: add a public X post under Site → Picks from X with only the link, save | Text, author, handle, date and language are filled; the card shows on `/` after the save (cache invalidated) |
 | TC-P-09 | Schema Markup Validator (validator.schema.org) on `/`, a post, a /work entry; Google Rich Results Test on the post | WebSite / BlogPosting / SoftwareSourceCode parsed without errors; the post is eligible as an Article |
 
 ## Results
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-10 | local dev (3 sample picks: long Japanese name and URL, one without a date or language; ja note), local build | web 40/40, cms 12/12 | 54/54 | X picks. Saving a pick without text while X is unreachable is refused with the message (checked over REST); a 26-character handle is refused by the link check. oEmbed itself is not reachable from the test container, so the live fetch is checked on Preview (TC-P-10). |
 | 2026-11-10 | Preview 083e6da (via Vercel share link) | — | not run (proxy blocks direct access) | TC-P-01 HIT + br ✓; P-02 immutable + br ✓; P-03 `?q=b` HIT on the page cached for `?q=a` ✓; P-04 second hit HIT ✓; P-05 first hit MISS (second not checked); P-06 ✓; P-07 ✗: every request got 302 (preview behind Vercel Authentication), fixed in b965bdf, needs the bypass secret; SEO head (canonical, hreflang, noindex on /search and 404, BlogPosting, WebSite) ✓. |
 | 2026-11-10 | local dev (tagline set in en/ja, empty in zh), local build | 39/39 | 50/50 | `/admin` nav filter removed (Master: controlled in the CMS); TC-E-39 stays as a content check. |
 | 2026-11-10 | local dev (SEO changes), local build | 38/38 | 48/48 | First TC-E-31 run flagged `/ja` sharing the home title with `/` (the site name); language versions may share a title, so uniqueness is now checked per language. Found and fixed: `programmingLanguage` listed GitHub's "Other". |

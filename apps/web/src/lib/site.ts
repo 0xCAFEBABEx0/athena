@@ -3,6 +3,7 @@ import type { Site } from '@athena/shared/payload-types'
 import type { Locale } from '@athena/shared/constants'
 
 import { getGlobal } from './cms'
+import { formatDate } from './format'
 import { mediaUrl } from './media'
 
 /** Used when the CMS `site` global is empty or unreachable. */
@@ -24,6 +25,8 @@ export type SiteData = {
   ogImage: string | null
   socialLinks: { label: string; url: string }[]
   projects: { name: string; url: string | null; description: string }[]
+  /** Posts on X picked for the home page, read from X when the CMS saved them. */
+  picks: SitePick[]
   /** CLI-view welcome box: Hoo the owl beside the intro, or the plain box. */
   banner: {
     style: 'fetch' | 'off'
@@ -32,6 +35,42 @@ export type SiteData = {
     tips: string[]
   }
 }
+
+export type SitePick = {
+  url: string
+  text: string
+  authorName: string
+  authorHandle: string
+  /** `YYYY-MM-DD` (Japan time), or null when unknown. */
+  postedAt: string | null
+  lang: string | null
+  note: string
+}
+
+// Only links to a post on x.com reach the page (the CMS stores them in this form).
+const X_POST = /^https:\/\/x\.com\/([A-Za-z0-9_]{1,15})\/status\/\d{1,25}$/
+
+const picksOf = (picks: Site['picks'] | undefined): SitePick[] =>
+  (picks ?? []).flatMap((pick) => {
+    const url = pick.url?.trim() ?? ''
+    const handle = url.match(X_POST)?.[1]
+    const text = pick.text?.trim() ?? ''
+    if (!handle || !text) return []
+    return [
+      {
+        url,
+        text,
+        authorName: pick.authorName?.trim() || pick.authorHandle?.trim() || handle,
+        authorHandle: pick.authorHandle?.trim().replace(/^@/, '') || handle,
+        // The day in Japan time, like post dates (the admin date picker saves local midnight).
+        postedAt: formatDate(pick.postedAt) || null,
+        lang: /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(pick.lang?.trim() ?? '')
+          ? (pick.lang?.trim() ?? null)
+          : null,
+        note: pick.note?.trim() ?? '',
+      },
+    ]
+  })
 
 const ogImageOf = (image: Site['ogImage'] | undefined): string | null => {
   if (!image || typeof image !== 'object') return null
@@ -59,6 +98,7 @@ export const normalizeSite = (site: Partial<Site> | null | undefined): SiteData 
       url: url || null,
       description: description ?? '',
     })),
+  picks: picksOf(site?.picks),
   banner: {
     style: site?.banner?.style === 'off' ? 'off' : 'fetch',
     mascot: site?.banner?.mascot !== false,
