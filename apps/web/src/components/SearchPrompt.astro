@@ -4,7 +4,9 @@ import { dict, localeOf, localizePath } from '@/lib/i18n'
 /**
  * Keyword search box. CLI view: an agent CLI's input line (`❯ …`). Modern
  * view: the chat composer pinned to the bottom of the column. Either way it
- * submits to /search; the popup search is the "/" and ⌘K shortcut.
+ * submits to /search; the popup search is the "/" and ⌘K shortcut. Slash
+ * commands work here too: typing "/s…" suggests /status, and Enter opens the
+ * status panel instead of searching.
  */
 type Props = {
   value?: string
@@ -17,8 +19,16 @@ const t = dict(locale)
 const { value = '', autofocus = false, class: className } = Astro.props
 ---
 
-<div class:list={['search-prompt', className]}>
-  <form action={localizePath(locale, '/search')} method="get" role="search" class="font-mono">
+<div class:list={['search-prompt', className]} data-search-prompt>
+  <form action={localizePath(locale, '/search')} method="get" role="search" class="relative font-mono">
+    <div class="prompt-commands" role="listbox" aria-label={t.statusCommand} hidden data-prompt-commands>
+      <button type="button" class="search-hit font-mono" role="option" aria-selected="true" data-prompt-command="/status">
+        <span class="search-hit-icon" aria-hidden="true">❯</span>
+        <span class="min-w-0 flex-1 truncate text-left">/status</span>
+        <span class="hidden shrink-0 text-xs text-base-content/65 sm:inline">{t.statusCommand}</span>
+        <span class="search-hit-enter" aria-hidden="true">↵</span>
+      </button>
+    </div>
     <label
       class="search-prompt-box input input-lg h-12 w-full gap-3 bg-base-200 font-mono text-sm focus-within:border-primary focus-within:outline-none"
     >
@@ -46,3 +56,55 @@ const { value = '', autofocus = false, class: className } = Astro.props
     / {t.shortcutSearch} · j/k {t.shortcutMove} · t {t.shortcutTheme} · v {t.shortcutView} · s {t.shortcutStatus}
   </p>
 </div>
+
+<script>
+  // Slash commands in the inline prompt, mirroring the popup search.
+  type StatusWindow = Window & { __openStatus?: () => void }
+  const COMMANDS = ['/status'] as const
+
+  const matchCommand = (value: string) => {
+    const query = value.trim().toLowerCase()
+    if (!query.startsWith('/')) return null
+    return COMMANDS.find((name) => name.startsWith(query)) ?? null
+  }
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-search-prompt]')) {
+    const form = root.querySelector('form')
+    const input = root.querySelector<HTMLInputElement>('[data-search-input]')
+    const menu = root.querySelector<HTMLElement>('[data-prompt-commands]')
+    if (!form || !input || !menu) continue
+
+    const update = () => {
+      menu.hidden = matchCommand(input.value) === null
+      // Open downward when the prompt sits near the top (e.g. the /search page).
+      if (!menu.hidden) menu.toggleAttribute('data-below', form.getBoundingClientRect().top < menu.offsetHeight + 72)
+    }
+    const run = () => {
+      input.value = ''
+      menu.hidden = true
+      input.blur()
+      ;(window as StatusWindow).__openStatus?.()
+    }
+
+    input.addEventListener('input', update)
+    input.addEventListener('focus', update)
+    input.addEventListener('blur', () => {
+      // Let a click on the suggestion land before hiding it.
+      setTimeout(() => {
+        if (!root.contains(document.activeElement)) menu.hidden = true
+      }, 120)
+    })
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') menu.hidden = true
+    })
+    for (const button of menu.querySelectorAll<HTMLButtonElement>('[data-prompt-command]')) {
+      button.addEventListener('mousedown', (event) => event.preventDefault())
+      button.addEventListener('click', run)
+    }
+    form.addEventListener('submit', (event) => {
+      if (matchCommand(input.value) === null || !(window as StatusWindow).__openStatus) return
+      event.preventDefault()
+      run()
+    })
+  }
+</script>

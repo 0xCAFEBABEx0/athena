@@ -15,7 +15,8 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 - English, Japanese and Chinese content under `/`, `/ja` and `/zh`, with an
   EN / JP / ZH switch.
 - Popup search (`/` or `⌘K`) that searches posts and pages in the browser from
-  a cached index, plus `/status` as a command.
+  a cached index, plus `/status` as a command (also in the inline prompt at
+  the bottom of the page, which suggests it as you type `/`).
 - Site version next to the site name, and a settings panel (click the
   version, press `s`, or run `/status`) with build and cache details and a
   searchable Config list, including Reduce motion and an option to turn off
