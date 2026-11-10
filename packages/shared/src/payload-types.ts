@@ -1725,6 +1725,10 @@ export interface Site {
    * Default meta description for pages without their own (home, post list, RSS).
    */
   description?: string | null;
+  /**
+   * Default share image (1200 × 630) for pages without their own. Empty = the built-in image with Hoo.
+   */
+  ogImage?: (number | null) | Media;
   socialLinks?:
     | {
         label: string;
@@ -1849,6 +1853,7 @@ export interface SiteSelect<T extends boolean = true> {
   welcome?: T;
   intro?: T;
   description?: T;
+  ogImage?: T;
   socialLinks?:
     | T
     | {

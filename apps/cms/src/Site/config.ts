@@ -69,6 +69,15 @@ export const Site: GlobalConfig = {
       },
     },
     {
+      name: 'ogImage',
+      type: 'upload',
+      relationTo: 'media',
+      admin: {
+        description:
+          'Default share image (1200 × 630) for pages without their own. Empty = the built-in image with Hoo.',
+      },
+    },
+    {
       name: 'socialLinks',
       type: 'array',
       maxRows: 8,

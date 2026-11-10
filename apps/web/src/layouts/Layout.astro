@@ -35,7 +35,7 @@ const alternates = LOCALES.map((code) => ({
 
 const title = meta?.title ?? site.siteName
 const description = meta?.description ?? site.description
-const ogImage = meta?.ogImage ?? `${webURL()}${DEFAULT_OG_IMAGE}`
+const ogImage = meta?.ogImage ?? site.ogImage ?? `${webURL()}${DEFAULT_OG_IMAGE}`
 const url = meta?.url ?? `${webURL()}${Astro.originPathname}`
 
 // Chrome and Edge prerender a page once a link is hovered (or pressed on

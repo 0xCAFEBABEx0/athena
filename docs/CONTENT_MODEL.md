@@ -201,6 +201,7 @@ review each language and publish. See `src/translation/`.
 | `welcome` | text, localized, default `Welcome to whoa.me` | First line of the home intro box |
 | `intro` | textarea, localized | Sentence(s) under the name on the home page |
 | `description` | textarea, localized | Default meta description, RSS description |
+| `ogImage` | upload → `media` | Default share image for pages without their own; empty = built-in `/og.png` |
 | `socialLinks` | array (max 8) of `label`, `url` | Links in the home intro box |
 | `projects` | array (max 12) of `name`, `url`, `description` (localized) | "Things I built" list on the home page |
 | `banner.style` | select `fetch` / `off`, default `fetch` | CLI view: Hoo the owl + details, or the plain intro box |

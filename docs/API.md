@@ -101,7 +101,7 @@ Response `200`:
 | `/sitemap.xml` | `sitemap.xml.ts` | Index pointing at the two sitemaps below. |
 | `/pages-sitemap.xml`, `/posts-sitemap.xml` | | Published slugs with `lastmod = updatedAt`. `503` with `no-store` if the CMS fails. |
 | `/robots.txt` | `robots.txt.ts` | Allow all, disallow `/api/`, link the sitemap index. |
-| `/llms.txt` | `public/llms.txt` | Static site summary for LLM crawlers. |
+| `/llms.txt` | `llms.txt.ts` | Site summary for LLM crawlers, built from the Site global, the 10 newest posts and `/work` (English). |
 | `/rss.xml` | `rss.xml.ts` | 30 newest posts. |
 | `/404`, `/500` | | `500` is standalone and does not call the CMS. |
 

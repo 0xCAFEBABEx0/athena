@@ -10,14 +10,19 @@ export type PageMeta = {
   url: string
 }
 
-export const DEFAULT_OG_IMAGE = '/website-template-OG.webp'
+/** Built-in share image (Hoo); the Site global's `ogImage` replaces it. */
+export const DEFAULT_OG_IMAGE = '/og.png'
 
-const ogImageURL = (image: unknown): string => {
+type SiteMeta = { siteName: string; description?: string; ogImage?: string | null }
+
+const defaultOgImage = (site: SiteMeta): string => site.ogImage || `${webURL()}${DEFAULT_OG_IMAGE}`
+
+const ogImageURL = (image: unknown, site: SiteMeta): string => {
   if (image && typeof image === 'object' && 'url' in image) {
     const media = image as Media
     return mediaUrl(media.sizes?.og?.url || media.url)
   }
-  return `${webURL()}${DEFAULT_OG_IMAGE}`
+  return defaultOgImage(site)
 }
 
 /** `Title | Site name`, or just the site name when there is no title. */
@@ -28,11 +33,11 @@ export const pageTitle = (title: string | null | undefined, siteName: string): s
 export const routeMeta = (
   title: string | null,
   path: string,
-  { siteName, description }: { siteName: string; description?: string },
+  site: SiteMeta,
 ): PageMeta => ({
-  title: pageTitle(title, siteName),
-  description,
-  ogImage: `${webURL()}${DEFAULT_OG_IMAGE}`,
+  title: pageTitle(title, site.siteName),
+  description: site.description,
+  ogImage: defaultOgImage(site),
   url: `${webURL()}${path}`,
 })
 
@@ -40,10 +45,10 @@ export const routeMeta = (
 export const buildMeta = (
   doc: Partial<Page> | Partial<Post> | null,
   path: string,
-  { siteName, description }: { siteName: string; description?: string },
+  site: SiteMeta,
 ): PageMeta => ({
-  title: pageTitle(doc?.meta?.title || doc?.title, siteName),
-  description: doc?.meta?.description ?? description,
-  ogImage: ogImageURL(doc?.meta?.image),
+  title: pageTitle(doc?.meta?.title || doc?.title, site.siteName),
+  description: doc?.meta?.description ?? site.description,
+  ogImage: ogImageURL(doc?.meta?.image, site),
   url: `${webURL()}${path}`,
 })

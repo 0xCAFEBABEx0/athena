@@ -24,7 +24,8 @@ First versioned release: the portfolio and blog redesign for whoa.me.
   or reset the settings.
 - Site name, intro, links, projects and the default view are editable in the
   CMS (Site global).
-- A prompt-style favicon.
+- A prompt-style favicon, and a share image with Hoo for pages without
+  their own (replaceable in the CMS, Site global).
 - CLI view: the home intro box is a banner with Hoo, a pixel owl in round
   glasses. Click it to wake it: it waves, winks and says a tip (still with
   Reduce motion on). Style, owl and tips are set in the CMS (Site global).
@@ -73,5 +74,8 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 
 ### Removed
 
+- Leftovers of the Payload website template: its footer links (Source Code,
+  Payload) in new databases, its share image, and its static `/llms.txt`,
+  which is now built from the CMS.
 - The Admin link in the footer. The public nav never links to the CMS admin,
   even if an editor adds one.

@@ -7,10 +7,10 @@ import { LANG_TAG, localeOf, localizePath } from '@/lib/i18n'
 import { getSite } from '@/lib/site'
 
 /** RSS 2.0 feed of the 30 newest published posts. */
-export const GET: APIRoute = async ({ request, locals }) => {
+export const GET: APIRoute = async ({ locals }) => {
   const locale = localeOf({ locals })
   const [site, posts] = await Promise.all([
-    getSite(request, locale),
+    getSite(locals, locale),
     getPosts({ page: 1, limit: 30 }, { locale }),
   ])
   const origin = webURL()

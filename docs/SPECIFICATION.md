@@ -128,12 +128,14 @@ all managed by editors without code changes.
 - **F-SEO-1** Each page and post emits `<title>`, meta description, Open Graph
   (`og:title`, `og:description`, `og:image`, `og:url`, `og:site_name`) and
   `twitter:card=summary_large_image` from its SEO fields. Missing images fall
-  back to `/website-template-OG.webp`; the `og` rendition is preferred.
+  back to the Site global's `ogImage`, then to the built-in `/og.png` (Hoo);
+  the `og` rendition is preferred.
 - **F-SEO-2** `/sitemap.xml` indexes `/pages-sitemap.xml` and
   `/posts-sitemap.xml`, which list every published page and post with
   `lastmod`.
 - **F-SEO-3** `/robots.txt` allows everything except `/api/` and links the
-  sitemap. `/llms.txt` describes the site for LLM crawlers.
+  sitemap. `/llms.txt` describes the site for LLM crawlers (generated from the
+  CMS: Site global, newest posts, `/work`).
 
 ## 3. Editing (CMS Admin)
 

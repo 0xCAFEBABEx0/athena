@@ -10,6 +10,11 @@ A running log of notable dependency upgrades. Newest first.
   owl + details, `off` = the plain intro box), `banner.mascot` (show Hoo)
   and `banner.tips` (localized lines Hoo says when woken, in order; empty =
   built-in greeting and keyboard tips).
+- The `site` global gains **`ogImage`** (upload): the default share image
+  for pages without their own. Empty = the built-in `/og.png` with Hoo,
+  which replaces the template's `website-template-OG.webp`.
+- The seed no longer adds the template's footer links (Source Code, Payload).
+  Existing databases keep them until they are deleted in Globals → Footer.
 
 **Web**
 
@@ -19,13 +24,17 @@ A running log of notable dependency upgrades. Newest first.
   Hoo is a button: it waves, looks up and winks (300 ms a frame; straight to
   awake with Reduce motion) and says the next tip. The ADE view keeps its
   intro card.
+- `/llms.txt` is generated from the CMS (Site global, newest posts, `/work`)
+  instead of the template's static file, which named the site "Payload
+  Website Template" and linked the old domain.
 
 **Database (manual, push is off)**
 
 Run [`docs/sql/2026-11-10-cli-banner.sql`](./sql/2026-11-10-cli-banner.sql)
 after `2026-11-10-whoa-i18n.sql`, on the preview Neon branch and then
 production, **before** the CMS deploy (without it the CMS cannot read the
-`site` global and the web app falls back to defaults). Idempotent; verified
+`site` global and the web app falls back to defaults). It also adds
+`site.og_image_id`. Idempotent; verified
 locally: applied twice to a database built by the previous code, it gives the
 same schema as a fresh push of the new config.
 
