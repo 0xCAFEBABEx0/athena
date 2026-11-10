@@ -84,7 +84,7 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 - **Draft preview**: the admin Preview button targets `${WEB_URL}/api/preview?slug&collection&path&previewSecret` (`generatePreviewPath.ts`). The endpoint validates `PREVIEW_SECRET`, sets the HttpOnly `athena-draft` cookie, and redirects; draft-aware pages then fetch with `draft=true` using the `web-frontend` service account's API key (`PAYLOAD_API_KEY`). Create/rotate that account with `apps/cms/src/scripts/create-web-service-account.ts`.
 - **Forms**: the web `FormBlock` posts JSON to `${CMS_URL}/api/form-submissions`; CMS CORS already allows the web origin.
 
-`PREVIEW_SECRET` and `REVALIDATE_SECRET` must be identical in both deployments — drift shows up as silent 401s (`invalidateWeb` logs errors but never throws).
+`PREVIEW_SECRET` and `REVALIDATE_SECRET` must be identical in both deployments — drift shows up as silent 401s (`invalidateWeb` logs errors but never throws; a missing secret logs `Web invalidation skipped`, a redirect to the Vercel login `Web invalidation failed: 302`).
 
 ## Code Conventions
 
@@ -195,7 +195,8 @@ PAYLOAD_SECRET=            # 32+ char JWT secret
 CMS_URL=                   # CMS origin (NEXT_PUBLIC_SERVER_URL is a legacy alias)
 WEB_URL=                   # Astro frontend origin; unset = no invalidation webhook, preview targets localhost:4321
 PREVIEW_SECRET=            # Shared with web: gates the draft cookie
-REVALIDATE_SECRET=         # Shared with web: bearer token for /api/invalidate
+REVALIDATE_SECRET=         # Shared with web: bearer token for /api/invalidate (Preview and Production)
+WEB_PROTECTION_BYPASS=     # optional; athena-web Protection Bypass for Automation (invalidation past Vercel Authentication)
 BLOB_READ_WRITE_TOKEN=     # Vercel Blob storage token
 ANTHROPIC_API_KEY=         # Translate button (Claude); TRANSLATION_MODEL optional
 GITHUB_TOKEN=              # /work GitHub sync (fine-grained, public repos read-only)

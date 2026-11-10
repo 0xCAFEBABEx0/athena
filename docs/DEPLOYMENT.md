@@ -68,6 +68,14 @@ both Vercel projects:
 - **`REVALIDATE_SECRET`** — bearer token for cache invalidation. On
   publish/unpublish the CMS POSTs `{ paths, tags }` to
   `${WEB_URL}/api/invalidate` with `Authorization: Bearer ${REVALIDATE_SECRET}`.
+  Set it in **both** Preview and Production of both projects: without it the
+  CMS skips invalidation (it logs `Web invalidation skipped`) and saved
+  changes do not reach cached pages.
+- **`WEB_PROTECTION_BYPASS`** (CMS, optional) — the athena-web Protection
+  Bypass for Automation secret, sent as `x-vercel-protection-bypass` so the
+  invalidation request gets past Vercel Authentication on a protected web
+  deployment (Preview). A redirect to the Vercel login is logged as
+  `Web invalidation failed: 302 redirect to …`.
 - **`PAYLOAD_API_KEY`** (web only) — the CMS `web-frontend` service-account API
   key the web app uses to fetch **draft** content over REST.
 
@@ -88,7 +96,8 @@ PAYLOAD_SECRET=            # 32+ char JWT secret
 CMS_URL=                   # this CMS origin (NEXT_PUBLIC_SERVER_URL is a legacy alias)
 WEB_URL=                   # the Astro frontend origin
 PREVIEW_SECRET=            # shared with web
-REVALIDATE_SECRET=         # shared with web
+REVALIDATE_SECRET=         # shared with web (Preview and Production)
+WEB_PROTECTION_BYPASS=     # optional: athena-web bypass secret, for a protected Preview
 BLOB_READ_WRITE_TOKEN=     # Vercel Blob
 DEPLOY_ENV=                # development | preview | production (VERCEL_ENV is a fallback)
 # Sentry (optional): SENTRY_DSN / SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN

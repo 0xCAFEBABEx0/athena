@@ -87,6 +87,9 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 
 ### Fixed
 
+- Saving in the CMS now reports when it could not refresh the cached site
+  (missing secret, or a redirect to the Vercel login) instead of failing
+  silently, and can pass Vercel Authentication on a protected Preview.
 - Redeploying a Vercel deployment (for example after changing environment
   variables) builds again instead of being skipped as "no changes".
 - Japanese and Chinese pages: a missing page now shows the 404 in the page's

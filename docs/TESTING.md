@@ -56,6 +56,7 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
 | TC-U-27 | oEmbed | Text (line breaks kept, entities decoded, `pic.twitter.com` links dropped), author, handle, day and language read from the oEmbed HTML; `zxx` / unparsable dates give null; no text gives null |
 | TC-U-28 | oEmbed | Asks `publish.twitter.com/oembed` for the canonical link with `omit_script=1&dnt=true`; a bad link, an error status or a network failure gives null |
 | TC-U-29 | Site hook | A new pick is filled and its link normalized; edited text is kept without asking X; a changed link replaces the old post; no answer and no text rejects the save with a message; no answer with typed text keeps it |
+| TC-U-31 | Invalidation | A missing `REVALIDATE_SECRET` / `WEB_URL` logs a warning; the request carries the bearer secret and `x-vercel-protection-bypass`, does not follow redirects, and a 302 is logged as a failure with its target |
 
 ## End-to-end tests (`apps/web/e2e`)
 
@@ -126,6 +127,7 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-10 | Preview ecb2321 (via Vercel share link) | — | not run (proxy) | TC-P-10 ✓ oEmbed from Vercel: a pick saved with only its link got text, author, handle, day and language. ✗ The home page stayed cached: athena-cms Preview has no `REVALIDATE_SECRET` (Production only), so `invalidateWeb` returned without a word. Fixed the silence in code (TC-U-31); the env var needs adding. |
 | 2026-11-10 | local dev (3 sample picks: long Japanese name and URL, one without a date or language; ja note), local build | web 40/40, cms 12/12 | 54/54 | X picks. Saving a pick without text while X is unreachable is refused with the message (checked over REST); a 26-character handle is refused by the link check. oEmbed itself is not reachable from the test container, so the live fetch is checked on Preview (TC-P-10). |
 | 2026-11-10 | Preview 083e6da (via Vercel share link) | — | not run (proxy blocks direct access) | TC-P-01 HIT + br ✓; P-02 immutable + br ✓; P-03 `?q=b` HIT on the page cached for `?q=a` ✓; P-04 second hit HIT ✓; P-05 first hit MISS (second not checked); P-06 ✓; P-07 ✗: every request got 302 (preview behind Vercel Authentication), fixed in b965bdf, needs the bypass secret; SEO head (canonical, hreflang, noindex on /search and 404, BlogPosting, WebSite) ✓. |
 | 2026-11-10 | local dev (tagline set in en/ja, empty in zh), local build | 39/39 | 50/50 | `/admin` nav filter removed (Master: controlled in the CMS); TC-E-39 stays as a content check. |

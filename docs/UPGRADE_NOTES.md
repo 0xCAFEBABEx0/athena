@@ -11,6 +11,12 @@ A running log of notable dependency upgrades. Newest first.
   `postedAt`, `lang`, filled on save from
   `publish.twitter.com/oembed?omit_script=1&dnt=true` (no API key, 10 s
   timeout). Links are stored as `https://x.com/<handle>/status/<id>`.
+- `invalidateWeb` warns when `WEB_URL` or `REVALIDATE_SECRET` is unset (it
+  returned silently), sends `x-vercel-protection-bypass` from the optional
+  `WEB_PROTECTION_BYPASS`, and no longer follows redirects (a 302 to the
+  Vercel login was counted as success). Found on Preview: athena-cms had
+  `REVALIDATE_SECRET` for Production only, so saving the Site global left
+  `preview.whoa.me` cached.
 - `bun run --filter @athena/cms test` runs CMS unit tests (`bun test src`);
   `*.test.ts` is excluded from `tsc`.
 
