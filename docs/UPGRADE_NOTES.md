@@ -2,6 +2,33 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## CLI banner with Hoo the owl — 2026-11-10
+
+**CMS**
+
+- The `site` global gains a **CLI banner** group: `banner.style` (`fetch` =
+  owl + details, `off` = the plain intro box), `banner.mascot` (show Hoo)
+  and `banner.tips` (localized lines Hoo says when woken, in order; empty =
+  built-in greeting and keyboard tips).
+
+**Web**
+
+- In the CLI view the home intro box becomes the banner: Hoo, a 30 × 27
+  pixel owl drawn as inline SVG (`apps/web/src/lib/owl.ts`), beside the
+  welcome line, name, intro and a `posts / updated / langs / links` list.
+  Hoo is a button: it waves, looks up and winks (300 ms a frame; straight to
+  awake with Reduce motion) and says the next tip. The ADE view keeps its
+  intro card.
+
+**Database (manual, push is off)**
+
+Run [`docs/sql/2026-11-10-cli-banner.sql`](./sql/2026-11-10-cli-banner.sql)
+after `2026-11-10-whoa-i18n.sql`, on the preview Neon branch and then
+production, **before** the CMS deploy (without it the CMS cannot read the
+`site` global and the web app falls back to defaults). Idempotent; verified
+locally: applied twice to a database built by the previous code, it gives the
+same schema as a fresh push of the new config.
+
 ## `/work`: GitHub repositories as threads — 2026-11-10
 
 **CMS**

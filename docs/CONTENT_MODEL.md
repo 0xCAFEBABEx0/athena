@@ -203,6 +203,9 @@ review each language and publish. See `src/translation/`.
 | `description` | textarea, localized | Default meta description, RSS description |
 | `socialLinks` | array (max 8) of `label`, `url` | Links in the home intro box |
 | `projects` | array (max 12) of `name`, `url`, `description` (localized) | "Things I built" list on the home page |
+| `banner.style` | select `fetch` / `off`, default `fetch` | CLI view: Hoo the owl + details, or the plain intro box |
+| `banner.mascot` | checkbox, default on | Show Hoo in the CLI banner |
+| `banner.tips` | array (max 12) of `text` (localized) | Lines Hoo says when woken, in order; empty = built-in |
 
 Hook: `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
 

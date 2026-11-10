@@ -1743,6 +1743,22 @@ export interface Site {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Home-page welcome box in the CLI view. Hoo, the owl, sits on the left; clicking it wakes it up and it says one of the tips.
+   */
+  banner?: {
+    style?: ('fetch' | 'off') | null;
+    mascot?: boolean | null;
+    /**
+     * What Hoo says when woken, one per click in this order. Empty: the built-in greeting and keyboard tips.
+     */
+    tips?:
+      | {
+          text: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1847,6 +1863,18 @@ export interface SiteSelect<T extends boolean = true> {
         url?: T;
         description?: T;
         id?: T;
+      };
+  banner?:
+    | T
+    | {
+        style?: T;
+        mascot?: T;
+        tips?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
       };
   updatedAt?: T;
   createdAt?: T;

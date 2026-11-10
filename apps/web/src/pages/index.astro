@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/format'
 import { routeMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
 import WorkList from '@/components/work/WorkList.astro'
+import CliBanner from '@/components/CliBanner.astro'
 import { getWork } from '@/lib/work'
 import type { Post } from '@athena/shared/payload-types'
 
@@ -42,7 +43,11 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
 
 <Layout meta={meta}>
   <div class="container">
-    <section class="home-intro card card-border mt-7 border-primary" aria-labelledby="intro-name">
+    {site.banner.style === 'fetch' && <CliBanner site={site} totalPosts={totalPosts} updated={updated || null} />}
+    <section
+      class:list={['home-intro card card-border mt-7 border-primary', { 'modern-only': site.banner.style === 'fetch' }]}
+      aria-labelledby="intro-name"
+    >
       <span class="modern-only modern-avatar mt-0.5" aria-hidden="true">{initial}</span>
       <div class="card-body gap-0 px-6 py-5 md:px-7">
         {

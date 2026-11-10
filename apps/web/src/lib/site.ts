@@ -19,6 +19,13 @@ export type SiteData = {
   description: string | undefined
   socialLinks: { label: string; url: string }[]
   projects: { name: string; url: string | null; description: string }[]
+  /** CLI-view welcome box: Hoo the owl beside the intro, or the plain box. */
+  banner: {
+    style: 'fetch' | 'off'
+    mascot: boolean
+    /** What Hoo says, in order; empty = the built-in lines (lib/i18n.ts). */
+    tips: string[]
+  }
 }
 
 const normalize = (site: Partial<Site> | null | undefined): SiteData => ({
@@ -38,6 +45,11 @@ const normalize = (site: Partial<Site> | null | undefined): SiteData => ({
       url: url || null,
       description: description ?? '',
     })),
+  banner: {
+    style: site?.banner?.style === 'off' ? 'off' : 'fetch',
+    mascot: site?.banner?.mascot !== false,
+    tips: (site?.banner?.tips ?? []).map((tip) => tip.text?.trim() ?? '').filter(Boolean),
+  },
 })
 
 // One fetch per request: Layout, Header, Footer and the page all ask for it.

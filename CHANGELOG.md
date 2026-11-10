@@ -25,6 +25,9 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 - Site name, intro, links, projects and the default view are editable in the
   CMS (Site global).
 - A prompt-style favicon.
+- CLI view: the home intro box is a banner with Hoo, a pixel owl in round
+  glasses. Click it to wake it: it waves, winks and says a tip (still with
+  Reduce motion on). Style, owl and tips are set in the CMS (Site global).
 - `/work`: GitHub repositories shown like threads in an agent app, grouped
   as Waiting on you / Working / Idle / Resolved (from GitHub activity
   unless set in the CMS), with open pull request counts and the

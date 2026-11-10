@@ -1,0 +1,167 @@
+---
+/**
+ * CLI-view welcome box on the home page: Hoo the owl on the left (a button:
+ * clicking wakes it and it says a tip), the welcome line, name, intro and a
+ * `posts / updated / langs / links` list on the right. At phone width the
+ * owl shrinks to 3 px per pixel and sits beside the name.
+ *
+ * Settings come from the Site global (`banner`); the ADE view keeps its own
+ * intro card.
+ */
+import { LOCALES, LOCALE_LABEL, dict, localeOf } from '@/lib/i18n'
+import { owlPaths, OWL_HEIGHT, OWL_WIDTH, type OwlFrame } from '@/lib/owl'
+import type { SiteData } from '@/lib/site'
+
+type Props = {
+  site: SiteData
+  totalPosts: number
+  updated: string | null
+}
+
+const { site, totalPosts, updated } = Astro.props
+const t = dict(localeOf(Astro))
+const tips = site.banner.tips.length > 0 ? site.banner.tips : t.bannerTips
+const frames: OwlFrame[] = ['sleep', 'awake', 'wave', 'wink']
+const name = site.authorName || site.siteName
+---
+
+<section
+  class:list={['cli-banner cli-only', { 'has-owl': site.banner.mascot }]}
+  aria-labelledby="banner-name"
+  data-owl-banner
+  data-tips={JSON.stringify(tips)}
+>
+  {
+    site.banner.mascot && (
+      <div class="cli-banner-owl">
+        <button type="button" class="owl-button" aria-label={t.bannerWake} aria-pressed="false" data-owl-button>
+          <svg
+            class="owl"
+            viewBox={`0 0 ${OWL_WIDTH} ${OWL_HEIGHT}`}
+            shape-rendering="crispEdges"
+            aria-hidden="true"
+            data-owl-frame="sleep"
+          >
+            {frames.map((frame) => (
+              <g data-frame={frame}>
+                {owlPaths(frame).map((path) => (
+                  <path class={`owl-${path.color}`} d={path.d} />
+                ))}
+              </g>
+            ))}
+          </svg>
+          <span class="owl-zz" aria-hidden="true">
+            z<span>Z</span>
+          </span>
+        </button>
+        <span class="owl-hint" aria-hidden="true">{t.bannerHint}</span>
+      </div>
+    )
+  }
+  <div class="owl-tip-live" aria-live="polite">
+    <p class="owl-tip" hidden data-owl-tip></p>
+  </div>
+  <div class="cli-banner-head">
+    {site.welcome && <p class="cli-banner-welcome"># {site.welcome}</p>}
+    <h1 id="banner-name" class="heading-display">{name}</h1>
+  </div>
+  <div class="cli-banner-body">
+    {site.intro && <p class="cli-banner-intro">{site.intro}</p>}
+    <dl class="cli-banner-facts">
+      <dt>{t.bannerPosts}</dt>
+      <dd>{totalPosts}</dd>
+      {
+        updated && (
+          <>
+            <dt>{t.bannerUpdated}</dt>
+            <dd>{updated}</dd>
+          </>
+        )
+      }
+      <dt>{t.bannerLangs}</dt>
+      <dd>{LOCALES.map((code) => LOCALE_LABEL[code].toLowerCase()).join(' · ')}</dd>
+      {
+        site.socialLinks.length > 0 && (
+          <>
+            <dt>{t.bannerLinks}</dt>
+            <dd class="cli-banner-links">
+              {site.socialLinks.map((link) => (
+                <a class="link-term" href={link.url} rel="me noopener">
+                  {link.label}
+                </a>
+              ))}
+            </dd>
+          </>
+        )
+      }
+    </dl>
+  </div>
+</section>
+
+<script>
+  // Wake sequence: wave and look up three times, wink, stay awake (300 ms a
+  // frame). Clicking again puts Hoo back to sleep; each wake says the next tip.
+  const SEQUENCE = ['wave', 'awake', 'wave', 'awake', 'wave', 'awake', 'wink', 'awake'] as const
+  const FRAME_MS = 300
+
+  const reduceMotion = () => {
+    const setting = document.documentElement.getAttribute('data-motion')
+    if (setting) return setting === 'reduce'
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  }
+
+  for (const banner of document.querySelectorAll<HTMLElement>('[data-owl-banner]')) {
+    const button = banner.querySelector<HTMLButtonElement>('[data-owl-button]')
+    const svg = banner.querySelector<SVGElement>('[data-owl-frame]')
+    const tip = banner.querySelector<HTMLElement>('[data-owl-tip]')
+    if (!button || !svg || !tip) continue
+
+    let tips: string[] = []
+    try {
+      tips = JSON.parse(banner.dataset.tips ?? '[]') as string[]
+    } catch {
+      tips = []
+    }
+    let next = 0
+    let timer: number | undefined
+
+    const show = (frame: string) => svg.setAttribute('data-owl-frame', frame)
+    const stop = () => {
+      if (timer !== undefined) window.clearInterval(timer)
+      timer = undefined
+    }
+
+    button.addEventListener('click', () => {
+      stop()
+      if (banner.hasAttribute('data-awake')) {
+        banner.removeAttribute('data-awake')
+        button.setAttribute('aria-pressed', 'false')
+        show('sleep')
+        tip.hidden = true
+        tip.textContent = ''
+        return
+      }
+      banner.setAttribute('data-awake', '')
+      button.setAttribute('aria-pressed', 'true')
+      const line = tips.length > 0 ? tips[next % tips.length] : ''
+      next += 1
+      tip.textContent = line ?? ''
+      tip.hidden = !line
+      if (reduceMotion()) {
+        show('awake')
+        return
+      }
+      let step = 0
+      show(SEQUENCE[0])
+      timer = window.setInterval(() => {
+        step += 1
+        const frame = SEQUENCE[step]
+        if (!frame) {
+          stop()
+          return
+        }
+        show(frame)
+      }, FRAME_MS)
+    })
+  }
+</script>

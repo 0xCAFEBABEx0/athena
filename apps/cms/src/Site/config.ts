@@ -99,6 +99,51 @@ export const Site: GlobalConfig = {
         { name: 'description', type: 'text', localized: true },
       ],
     },
+    {
+      name: 'banner',
+      type: 'group',
+      label: 'CLI banner',
+      admin: {
+        description:
+          'Home-page welcome box in the CLI view. Hoo, the owl, sits on the left; clicking it wakes it up and it says one of the tips.',
+      },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'style',
+              type: 'select',
+              defaultValue: 'fetch',
+              options: [
+                { label: 'Owl + details', value: 'fetch' },
+                { label: 'Off (plain intro box)', value: 'off' },
+              ],
+              admin: { width: '50%' },
+            },
+            {
+              name: 'mascot',
+              type: 'checkbox',
+              label: 'Show Hoo (the owl)',
+              defaultValue: true,
+              admin: { width: '50%', style: { alignSelf: 'flex-end' } },
+            },
+          ],
+        },
+        {
+          name: 'tips',
+          type: 'array',
+          maxRows: 12,
+          labels: { singular: 'Tip', plural: 'Tips' },
+          admin: {
+            initCollapsed: true,
+            description:
+              'What Hoo says when woken, one per click in this order. Empty: the built-in greeting and keyboard tips.',
+          },
+          fields: [{ name: 'text', type: 'text', required: true, localized: true }],
+        },
+      ],
+    },
   ],
   hooks: {
     afterChange: [revalidateSite],
