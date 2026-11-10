@@ -2,6 +2,65 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## `site` global and terminal-style redesign (web) — 2026-11-10
+
+New `site` global (`apps/cms/src/Site/config.ts`): site name, author name,
+welcome line, intro, default description, social links and projects. The web
+app reads it for the home page, header, footer, page titles and `/rss.xml`, and
+falls back to defaults (`findb.uk`, no intro) while the table is missing.
+
+Schema change (three new tables, nothing altered). Found by pushing the old and
+new configs into empty databases and diffing `pg_dump --schema-only`; the SQL
+below produces an identical schema and is safe to run twice. Run it on the
+preview Neon branch and on production **before** the CMS deploy:
+
+```sql
+-- findb.uk: add the "site" global (site name, intro, links, projects).
+-- Safe to run more than once. Run on the preview Neon branch first, then production.
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS public.site (
+  id serial PRIMARY KEY,
+  site_name varchar NOT NULL DEFAULT 'findb.uk',
+  author_name varchar,
+  welcome varchar DEFAULT 'findb.uk へようこそ',
+  intro varchar,
+  description varchar,
+  updated_at timestamp(3) with time zone,
+  created_at timestamp(3) with time zone
+);
+
+CREATE TABLE IF NOT EXISTS public.site_social_links (
+  _order integer NOT NULL,
+  _parent_id integer NOT NULL,
+  id varchar PRIMARY KEY,
+  label varchar NOT NULL,
+  url varchar NOT NULL,
+  CONSTRAINT site_social_links_parent_id_fk FOREIGN KEY (_parent_id) REFERENCES public.site(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS public.site_projects (
+  _order integer NOT NULL,
+  _parent_id integer NOT NULL,
+  id varchar PRIMARY KEY,
+  name varchar NOT NULL,
+  url varchar,
+  description varchar,
+  CONSTRAINT site_projects_parent_id_fk FOREIGN KEY (_parent_id) REFERENCES public.site(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS site_social_links_order_idx ON public.site_social_links (_order);
+CREATE INDEX IF NOT EXISTS site_social_links_parent_id_idx ON public.site_social_links (_parent_id);
+CREATE INDEX IF NOT EXISTS site_projects_order_idx ON public.site_projects (_order);
+CREATE INDEX IF NOT EXISTS site_projects_parent_id_idx ON public.site_projects (_parent_id);
+
+COMMIT;
+```
+
+The web redesign itself needs no schema change: Tailwind v4 + daisyUI v5 themes
+were replaced in `apps/web/src/styles/global.css`, cards became one-line post
+rows, and `/` is now `pages/index.astro` instead of the CMS page `home`.
+
 ## Dependabot round 1, Biome, TypeScript 7 (cms) — 2026-11-03
 
 First Dependabot run (config in `.github/dependabot.yml`). Applied as one

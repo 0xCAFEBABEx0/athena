@@ -23,6 +23,7 @@ import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
+import { Site } from './Site/config'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL, getWebURL } from './utilities/getURL'
@@ -82,7 +83,7 @@ export default buildConfig({
   // The web frontend lives on its own origin and POSTs form submissions here.
   cors: [getServerSideURL(), getWebURL()].filter(Boolean),
   csrf: [getServerSideURL(), getWebURL()].filter(Boolean),
-  globals: [Header, Footer],
+  globals: [Site, Header, Footer],
   plugins: [
     ...plugins,
     vercelBlobStorage({

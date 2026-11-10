@@ -104,10 +104,12 @@ export interface Config {
   };
   fallbackLocale: null;
   globals: {
+    site: Site;
     header: Header;
     footer: Footer;
   };
   globalsSelect: {
+    site: SiteSelect<false> | SiteSelect<true>;
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
   };
@@ -280,6 +282,7 @@ export interface Media {
     };
     [k: string]: unknown;
   } | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -1176,6 +1179,7 @@ export interface PostsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1574,6 +1578,55 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
+ * Name, intro, links and projects shown on the public site (www.findb.uk).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site".
+ */
+export interface Site {
+  id: number;
+  /**
+   * Header, page titles and RSS feed title.
+   */
+  siteName: string;
+  /**
+   * Home-page heading and copyright line.
+   */
+  authorName?: string | null;
+  /**
+   * Small line at the top of the home-page intro box.
+   */
+  welcome?: string | null;
+  /**
+   * One or two sentences under your name on the home page.
+   */
+  intro?: string | null;
+  /**
+   * Default meta description for pages without their own (home, post list, RSS).
+   */
+  description?: string | null;
+  socialLinks?:
+    | {
+        label: string;
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Things you built, one line each.
+   */
+  projects?:
+    | {
+        name: string;
+        url?: string | null;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "header".
  */
@@ -1630,6 +1683,35 @@ export interface Footer {
     | null;
   updatedAt?: string | null;
   createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site_select".
+ */
+export interface SiteSelect<T extends boolean = true> {
+  siteName?: T;
+  authorName?: T;
+  welcome?: T;
+  intro?: T;
+  description?: T;
+  socialLinks?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        id?: T;
+      };
+  projects?:
+    | T
+    | {
+        name?: T;
+        url?: T;
+        description?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -14,10 +14,21 @@ const { data, enableGutter = true, enableProse = true, class: className } = Astr
 
 const html = data ? richTextToHTML(data) : ''
 
+// Prose tuned for Japanese body text: looser leading, accent links, mono code.
+const prose = [
+  'prose max-w-none dark:prose-invert',
+  'prose-p:leading-[1.95] prose-li:leading-[1.9] text-[16.5px]',
+  'prose-headings:heading-display prose-h2:mt-11 prose-h2:text-[21px] prose-h3:text-lg',
+  'prose-a:text-primary prose-a:underline-offset-[3px] prose-a:decoration-1',
+  'prose-code:font-mono prose-code:before:content-none prose-code:after:content-none',
+  'prose-code:rounded-selector prose-code:bg-base-200 prose-code:px-1 prose-code:py-0.5 prose-code:font-normal',
+  'prose-blockquote:border-l-primary prose-blockquote:font-normal prose-blockquote:not-italic',
+].join(' ')
+
 const classes = [
   'payload-richtext',
-  enableGutter ? 'container' : 'max-w-none',
-  enableProse ? 'mx-auto prose md:prose-md dark:prose-invert' : '',
+  enableGutter ? 'container' : '',
+  enableProse ? prose : '',
   className,
 ]
   .filter(Boolean)

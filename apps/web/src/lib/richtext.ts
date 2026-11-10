@@ -10,11 +10,7 @@ import {
   type HTMLConvertersFunction,
 } from '@payloadcms/richtext-lexical/html'
 
-import type {
-  BannerBlock,
-  CallToActionBlock,
-  MediaBlock,
-} from '@athena/shared/payload-types'
+import type { BannerBlock, CallToActionBlock, MediaBlock } from '@athena/shared/payload-types'
 
 import { imgAttrs } from './media'
 import { linkHref, type CMSLinkData } from './links'
@@ -73,7 +69,7 @@ const ctaLinkHTML = (links: CallToActionBlock['links']): string =>
       const newTab = (link as CMSLinkData).newTab
         ? ' target="_blank" rel="noopener noreferrer"'
         : ''
-      return `<a class="btn btn-primary font-medium no-underline" href="${escapeHTML(href)}"${newTab}>${label}</a>`
+      return `<a class="btn btn-primary btn-sm font-mono font-normal no-underline" href="${escapeHTML(href)}"${newTab}>${label}</a>`
     })
     .join('')
 
@@ -89,7 +85,8 @@ const htmlConverters: HTMLConvertersFunction<NodeTypes> = ({ defaultConverters }
     },
     code: ({ node }) => {
       const { code, language } = node.fields as CodeBlockFields
-      return `<div class="col-start-2 not-prose"><pre class="border border-base-300/60 bg-base-200 rounded-field p-4 overflow-x-auto text-sm"><code class="language-${escapeHTML(language ?? '')}">${escapeHTML(code ?? '')}</code></pre></div>`
+      const lang = escapeHTML(language || 'text')
+      return `<figure class="not-prose my-6 overflow-hidden rounded-box border border-base-300"><figcaption class="flex items-center justify-between border-b border-base-300 bg-base-200 px-3.5 py-2 font-mono text-xs text-base-content/60"><span><span class="text-primary" aria-hidden="true">●</span> ${lang}</span></figcaption><pre class="m-0 overflow-x-auto bg-base-100 px-4 py-3.5 font-mono text-[13px] leading-relaxed"><code class="language-${lang}">${escapeHTML(code ?? '')}</code></pre></figure>`
     },
     cta: ({ node }) => {
       const { links, richText } = node.fields as CallToActionBlock

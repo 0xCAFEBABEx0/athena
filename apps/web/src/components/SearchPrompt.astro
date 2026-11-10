@@ -1,0 +1,30 @@
+---
+/** Search box shaped like an agent CLI's input line. "/" focuses it (see Layout). */
+type Props = {
+  value?: string
+  autofocus?: boolean
+  class?: string
+}
+
+const { value = '', autofocus = false, class: className } = Astro.props
+---
+
+<form action="/search" method="get" role="search" class:list={['font-mono', className]}>
+  <label class="input input-lg h-12 w-full gap-3 bg-base-200 font-mono text-sm focus-within:border-primary focus-within:outline-none">
+    <span class="text-primary" aria-hidden="true">❯</span>
+    <span class="sr-only">記事を検索</span>
+    <input
+      type="search"
+      name="q"
+      value={value}
+      placeholder="記事を検索"
+      autocomplete="off"
+      autofocus={autofocus}
+      data-search-input
+      class="grow"
+    />
+    <span class="hidden items-center gap-1 text-xs text-base-content/60 sm:flex">
+      <kbd class="kbd kbd-sm">/</kbd> で検索 · <kbd class="kbd kbd-sm">Enter</kbd> で実行
+    </span>
+  </label>
+</form>

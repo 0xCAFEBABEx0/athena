@@ -1,0 +1,115 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import PostList from '@/components/PostList.astro'
+import Prompt from '@/components/Prompt.astro'
+import SearchPrompt from '@/components/SearchPrompt.astro'
+import { getPosts } from '@/lib/cms'
+import { formatDate } from '@/lib/format'
+import { routeMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
+import type { Post } from '@athena/shared/payload-types'
+
+const RECENT = 8
+
+const site = await getSite(Astro.request)
+
+let posts: Post[] = []
+let totalPosts = 0
+try {
+  const result = await getPosts({ page: 1, limit: RECENT })
+  posts = result.docs
+  totalPosts = result.totalDocs
+} catch (error) {
+  console.error('[home] failed to load posts', error)
+}
+
+const updated = formatDate(posts[0]?.publishedAt)
+const more = Math.max(0, totalPosts - posts.length)
+const meta = routeMeta(null, '/', site)
+---
+
+<Layout meta={meta}>
+  <div class="container">
+    <section class="card card-border mt-7 border-primary" aria-labelledby="intro-name">
+      <div class="card-body gap-0 px-6 py-5 md:px-7">
+        {site.welcome && <p class="font-mono text-[13px] text-primary">✳ {site.welcome}</p>}
+        <h1 id="intro-name" class="heading-display mt-3.5 text-2xl leading-snug md:text-[26px]">
+          {site.authorName || site.siteName}
+        </h1>
+        {site.intro && <p class="mt-1.5 whitespace-pre-line leading-loose text-base-content/85">{site.intro}</p>}
+        <p class="mt-4 font-mono text-[13px] leading-loose text-base-content/60">
+          <span class="whitespace-nowrap">~/{site.siteName}</span>
+          <span aria-hidden="true"> · </span>
+          <span class="whitespace-nowrap">{totalPosts} posts</span>
+          {
+            updated && (
+              <>
+                <span aria-hidden="true"> · </span>
+                <span class="whitespace-nowrap">updated {updated}</span>
+              </>
+            )
+          }
+        </p>
+        {
+          site.socialLinks.length > 0 && (
+            <ul class="flex flex-wrap gap-x-4 font-mono text-[13px]">
+              {site.socialLinks.map((link) => (
+                <li>
+                  <a class="link-term" href={link.url} rel="me noopener">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+    </section>
+
+    <section class="mt-10" aria-labelledby="recent">
+      <Prompt command="ls posts --sort=date" heading="最近の記事" count={posts.length} id="recent" />
+      {
+        posts.length > 0 ? (
+          <PostList class="mt-1.5" posts={posts} />
+        ) : (
+          <p class="mt-2 pl-5 font-mono text-sm text-base-content/60">⎿ まだ記事がありません</p>
+        )
+      }
+      <p class="mt-2.5 pl-5 font-mono text-[13px] text-base-content/60">
+        {more > 0 && <span>… 他 {more} 件 · </span>}
+        <a class="link-term" href="/posts">すべての記事</a>
+      </p>
+    </section>
+
+    {
+      site.projects.length > 0 && (
+        <section class="mt-9" aria-labelledby="projects">
+          <Prompt command="ls projects" heading="作ったもの" count={site.projects.length} id="projects" />
+          <ul class="mt-1.5 list-none pl-5 leading-relaxed">
+            {site.projects.map((project, index) => (
+              <li class="flex gap-2 py-1">
+                <span class="w-4 shrink-0 font-mono text-base-content/60" aria-hidden="true">
+                  {index === 0 ? '⎿' : ''}
+                </span>
+                <span>
+                  {project.url ? (
+                    <a class="link-term font-mono text-[14.5px]" href={project.url}>{project.name}</a>
+                  ) : (
+                    <span class="font-mono text-[14.5px] text-primary">{project.name}</span>
+                  )}{' '}
+                  {project.description && <span class="text-base-content/85">{project.description}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <SearchPrompt class="mt-11" />
+    <p class="mt-2 hidden flex-wrap gap-x-4 font-mono text-xs text-base-content/60 sm:flex">
+      <span><kbd class="kbd kbd-xs">j</kbd> <kbd class="kbd kbd-xs">k</kbd> 記事を移動</span>
+      <span><kbd class="kbd kbd-xs">t</kbd> テーマ切替</span>
+    </p>
+  </div>
+</Layout>

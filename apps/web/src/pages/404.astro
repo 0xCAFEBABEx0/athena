@@ -1,25 +1,31 @@
 ---
 import Layout from '@/layouts/Layout.astro'
-import { SITE_NAME } from '@/lib/seo'
-import { webURL } from '@/lib/env'
+import Prompt from '@/components/Prompt.astro'
+import SearchPrompt from '@/components/SearchPrompt.astro'
+import { routeMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
 
-const meta = {
-  title: `404 | ${SITE_NAME}`,
-  description: undefined,
-  ogImage: `${webURL()}/website-template-OG.webp`,
-  url: `${webURL()}/404`,
-}
+const site = await getSite(Astro.request)
+const meta = routeMeta('404', '/404', site)
+const path = Astro.originPathname.replace(/(.)\/$/, '$1')
 
 Astro.response.status = 404
 ---
 
 <Layout meta={meta}>
-  <div class="container flex flex-col items-center py-32 text-center">
-    <p class="text-sm font-medium uppercase tracking-wider text-base-content/50">Error 404</p>
-    <h1 class="heading-display mt-4 text-5xl md:text-6xl">Page not found</h1>
-    <p class="mt-4 max-w-[24rem] text-base-content/60">
-      The page you're looking for doesn't exist or has been moved.
+  <div class="container pt-12">
+    <Prompt command={`cd ${path}`} />
+    <h1 class="mt-3 font-mono text-sm">
+      <span class="text-error" aria-hidden="true">●</span> ページが見つかりません
+      <span class="text-base-content/60">(404)</span>
+    </h1>
+    <p class="mt-1 flex gap-2 pl-5 text-base-content/85">
+      <span class="font-mono text-base-content/60" aria-hidden="true">⎿</span>
+      URL が変わったか、削除された可能性があります。
     </p>
-    <a class="btn btn-primary mt-8 font-medium" href="/"> Go home </a>
+    <p class="mt-4 pl-5 font-mono text-sm">
+      <a class="link-term" href="/">ホームへ戻る</a> · <a class="link-term" href="/posts">すべての記事</a>
+    </p>
+    <SearchPrompt class="mt-10" />
   </div>
 </Layout>

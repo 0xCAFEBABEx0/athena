@@ -2,8 +2,16 @@
 import type { Header } from '@athena/shared/payload-types'
 
 import CMSLink from '@/components/CMSLink.astro'
-import Logo from '@/components/Logo.astro'
+import ThemeToggle from '@/components/ThemeToggle.astro'
 import { getGlobal } from '@/lib/cms'
+import { linkHref, type CMSLinkData } from '@/lib/links'
+import type { SiteData } from '@/lib/site'
+
+type Props = {
+  site: SiteData
+}
+
+const { site } = Astro.props
 
 let navItems: NonNullable<Header['navItems']> = []
 try {
@@ -13,34 +21,31 @@ try {
   // CMS outage must not 500 every page; Layout still renders without nav.
   console.error('[header] failed to load nav', error)
 }
+
+// Until nav is set up in the CMS, keep the two routes every visitor needs.
+const fallbackNav: CMSLinkData[] = [
+  { type: 'custom', url: '/', label: 'home' },
+  { type: 'custom', url: '/posts', label: 'posts' },
+]
+const links: CMSLinkData[] = navItems.length > 0 ? navItems.map(({ link }) => link) : fallbackNav
+
+const { pathname } = Astro.url
+const isCurrent = (href: string | null): boolean => {
+  if (!href || !href.startsWith('/')) return false
+  if (href === '/') return pathname === '/'
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
 ---
 
-<header
-  class="sticky top-0 z-20 border-b border-base-300/60 bg-base-100/80 backdrop-blur-xl"
->
-  <div class="container flex h-16 items-center justify-between">
-    <a class="flex items-center" href="/">
-      <Logo loading="eager" class="invert dark:invert-0" />
-    </a>
-    <nav class="flex items-center gap-1">
-      {navItems.map(({ link }) => <CMSLink {...link} appearance="nav" />)}
-      <a class="btn btn-ghost btn-sm btn-square text-base-content/70" href="/search">
-        <span class="sr-only">Search</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="w-4"
-          aria-hidden="true"
-        >
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.3-4.3"></path>
-        </svg>
-      </a>
-    </nav>
-  </div>
+<header class="container flex flex-wrap items-center justify-between gap-x-4 pt-5">
+  <a
+    class="inline-flex min-h-11 items-center gap-2 font-mono text-sm font-semibold text-base-content no-underline"
+    href="/"
+  >
+    <span class="text-primary" aria-hidden="true">❯_</span>{site.siteName}
+  </a>
+  <nav class="flex flex-wrap items-center" aria-label="メイン">
+    {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link))} />)}
+    <ThemeToggle />
+  </nav>
 </header>

@@ -19,8 +19,10 @@ import { env, webURL } from '@/lib/env'
  */
 const TAG_PATH_MAP: Partial<Record<CacheTag, string[]>> = {
   [CACHE_TAGS.sitemap]: ['/pages-sitemap.xml', '/posts-sitemap.xml'],
-  [CACHE_TAGS.posts]: ['/posts'],
-  // header/footer/redirects affect every page; covered by ISR expiration.
+  [CACHE_TAGS.posts]: ['/', '/posts', '/rss.xml'],
+  [CACHE_TAGS.site]: ['/', '/posts', '/rss.xml'],
+  // Site settings, header/footer and redirects also affect every other page;
+  // those are covered by ISR expiration.
 }
 
 export const POST: APIRoute = async ({ request }) => {

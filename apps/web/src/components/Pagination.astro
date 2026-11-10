@@ -7,61 +7,52 @@ type Props = {
 
 const { page, totalPages, class: className } = Astro.props
 
-const hasNextPage = page < totalPages
-const hasPrevPage = page > 1
-const hasExtraPrevPages = page - 1 > 1
-const hasExtraNextPages = page + 1 < totalPages
+const pageHref = (n: number) => (n === 1 ? '/posts' : `/posts/page/${n}`)
 
-const pageHref = (n: number) => `/posts/page/${n}`
+// Current page with up to two neighbours on each side.
+const first = Math.max(1, page - 2)
+const last = Math.min(totalPages, page + 2)
+const pages = Array.from({ length: last - first + 1 }, (_, i) => first + i)
 
-const itemClasses = 'join-item btn btn-sm bg-base-100 border-base-300/60 font-medium'
-const activeClasses = 'join-item btn btn-sm btn-primary font-medium'
-const disabledClasses = 'join-item btn btn-sm btn-disabled border-base-300/60'
-const ellipsisClasses = 'join-item btn btn-sm btn-disabled border-base-300/60'
+const item = 'join-item btn btn-sm font-mono font-normal'
 ---
 
-<nav class:list={['my-12', className]} aria-label="Pagination">
-  <ul class="join">
-    <li>
-      <a class={hasPrevPage ? itemClasses : disabledClasses} href={hasPrevPage ? pageHref(page - 1) : undefined}>
-        Previous
-      </a>
-    </li>
-
-    {hasExtraPrevPages && <li class={ellipsisClasses}>…</li>}
-
+<nav class:list={['mt-8', className]} aria-label="ページ送り">
+  <div class="join">
     {
-      hasPrevPage && (
-        <li>
-          <a class={itemClasses} href={pageHref(page - 1)}>
-            {page - 1}
-          </a>
-        </li>
+      page > 1 ? (
+        <a class:list={[item, 'btn-ghost']} href={pageHref(page - 1)} rel="prev">
+          ← prev
+        </a>
+      ) : (
+        <span class:list={[item, 'btn-disabled']} aria-disabled="true">
+          ← prev
+        </span>
       )
     }
-
-    <li>
-      <a class={activeClasses} href={pageHref(page)} aria-current="page">
-        {page}
-      </a>
-    </li>
-
     {
-      hasNextPage && (
-        <li>
-          <a class={itemClasses} href={pageHref(page + 1)}>
-            {page + 1}
+      pages.map((n) =>
+        n === page ? (
+          <a class:list={[item, 'btn-primary']} href={pageHref(n)} aria-current="page">
+            {n}
           </a>
-        </li>
+        ) : (
+          <a class:list={[item, 'btn-ghost']} href={pageHref(n)}>
+            {n}
+          </a>
+        ),
       )
     }
-
-    {hasExtraNextPages && <li class={ellipsisClasses}>…</li>}
-
-    <li>
-      <a class={hasNextPage ? itemClasses : disabledClasses} href={hasNextPage ? pageHref(page + 1) : undefined}>
-        Next
-      </a>
-    </li>
-  </ul>
+    {
+      page < totalPages ? (
+        <a class:list={[item, 'btn-ghost']} href={pageHref(page + 1)} rel="next">
+          next →
+        </a>
+      ) : (
+        <span class:list={[item, 'btn-disabled']} aria-disabled="true">
+          next →
+        </span>
+      )
+    }
+  </div>
 </nav>

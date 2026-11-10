@@ -1,49 +1,34 @@
 ---
 import Layout from '@/layouts/Layout.astro'
-import CollectionArchive from '@/components/CollectionArchive.astro'
-import type { CardPostData } from '@/components/Card.astro'
+import PostList from '@/components/PostList.astro'
+import Prompt from '@/components/Prompt.astro'
+import SearchPrompt from '@/components/SearchPrompt.astro'
 import { searchPosts } from '@/lib/cms'
-import { SITE_NAME } from '@/lib/seo'
-import { webURL } from '@/lib/env'
+import { routeMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
 
-const query = Astro.url.searchParams.get('q') ?? ''
+const site = await getSite(Astro.request)
+const query = (Astro.url.searchParams.get('q') ?? '').trim()
 const results = await searchPosts(query)
+const meta = routeMeta('検索', '/search', site)
 
-const meta = {
-  title: `Search | ${SITE_NAME}`,
-  description: undefined,
-  ogImage: `${webURL()}/website-template-OG.webp`,
-  url: `${webURL()}/search`,
-}
+// A blank query lists everything; the command line shows what ran.
+const command = query ? `grep -ri "${query}" posts/` : 'ls posts'
 ---
 
 <Layout meta={meta}>
-  <div class="pt-16 pb-24">
-    <div class="container mb-16 text-center">
-      <h1 class="heading-display mb-8 text-4xl md:text-5xl">Search</h1>
-
-      <div class="mx-auto max-w-[36rem]">
-        <form action="/search" method="get" class="join w-full">
-          <label for="search" class="sr-only">Search</label>
-          <input
-            id="search"
-            name="q"
-            type="search"
-            value={query}
-            placeholder="Search posts…"
-            class="input join-item w-full"
-          />
-          <button type="submit" class="btn btn-primary join-item font-medium"> Search </button>
-        </form>
-      </div>
+  <div class="container pt-10">
+    <h1 class="sr-only">記事を検索</h1>
+    <SearchPrompt value={query} autofocus={!query} />
+    <div class="mt-10">
+      <Prompt command={command} heading={query ? '検索結果' : '記事'} count={results.totalDocs} />
+      {
+        results.docs.length > 0 ? (
+          <PostList class="mt-1.5" posts={results.docs} />
+        ) : (
+          <p class="mt-2 pl-5 font-mono text-sm text-base-content/60">⎿ 見つかりませんでした</p>
+        )
+      }
     </div>
-
-    {
-      results.docs.length > 0 ? (
-        <CollectionArchive posts={results.docs as CardPostData[]} />
-      ) : (
-        <div class="container text-center text-base-content/60">No results found.</div>
-      )
-    }
   </div>
 </Layout>

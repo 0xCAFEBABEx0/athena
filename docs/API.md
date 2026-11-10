@@ -92,9 +92,10 @@ encoded with `qs-esm`.
 |---|---|---|
 | `getPage(slug)` | `GET /pages` | `where[slug][equals]`, `depth=2`, `limit=1`, `pagination=false` |
 | `getPost(slug)` | `GET /posts` | same as above |
-| `getPosts({page})` | `GET /posts` | `depth=1`, `limit=12`, `page`, `sort=-publishedAt`, `select` title/slug/categories/meta |
+| `getPosts({page})` | `GET /posts` | `depth=1`, `limit=12`, `page`, `sort=-publishedAt`, `select` title/slug/categories/meta/publishedAt |
+| `getAdjacentPosts(publishedAt)` | `GET /posts` ×2 | `limit=1`, `where[publishedAt][less_than / greater_than]`, `sort` ±publishedAt |
 | `getArchivePosts` | `GET /posts` | `depth=1`, `limit`, optional `where[categories][in]` |
-| `getGlobal(slug)` | `GET /globals/header` or `/globals/footer` | `depth=1` |
+| `getGlobal(slug)` | `GET /globals/site`, `/globals/header` or `/globals/footer` | `depth=1` |
 | `searchPosts(q)` | `GET /search` | `limit=12`, `or` of `like` on title, meta.title, meta.description, slug |
 | `getRedirects()` | `GET /redirects` | `limit=0`, `pagination=false` |
 | `getAllSlugs(c)` | `GET /pages` or `/posts` | `limit=0`, `pagination=false`, `select` slug/updatedAt, `where[_status][equals]=published` |
@@ -139,7 +140,7 @@ There is no captcha, honeypot or rate limit.
 | Constant | Value | Used by |
 |---|---|---|
 | `DRAFT_COOKIE` | `athena-draft` | `lib/draft.ts` |
-| `CACHE_TAGS` | `pages`, `posts`, `global_header`, `global_footer`, `redirects`, `sitemap` | CMS hooks, `/api/invalidate` |
+| `CACHE_TAGS` | `pages`, `posts`, `global_site`, `global_header`, `global_footer`, `redirects`, `sitemap` | CMS hooks, `/api/invalidate` |
 | `COLLECTION_SLUGS` | REST collection slugs | both apps |
 | `IMAGE_SIZES` | Media rendition names | web media helpers |
 

@@ -3,12 +3,14 @@ import '@fontsource/geist-sans/400.css'
 import '@fontsource/geist-sans/600.css'
 import '@fontsource/geist-sans/700.css'
 import '@fontsource/geist-mono/400.css'
+import '@fontsource/geist-mono/600.css'
 import '@/styles/global.css'
 
 import Footer from '@/components/Footer.astro'
 import Header from '@/components/Header.astro'
 import { isDraft } from '@/lib/draft'
-import { SITE_NAME, type PageMeta } from '@/lib/seo'
+import { DEFAULT_OG_IMAGE, type PageMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
 import { webURL } from '@/lib/env'
 import SpeedInsights from '@vercel/speed-insights/astro'
 
@@ -17,10 +19,11 @@ type Props = {
 }
 
 const { meta } = Astro.props
+const site = await getSite(Astro.request)
 
-const title = meta?.title ?? SITE_NAME
-const description = meta?.description
-const ogImage = meta?.ogImage ?? `${webURL()}/website-template-OG.webp`
+const title = meta?.title ?? site.siteName
+const description = meta?.description ?? site.description
+const ogImage = meta?.ogImage ?? `${webURL()}${DEFAULT_OG_IMAGE}`
 const url = meta?.url ?? `${webURL()}${Astro.url.pathname}`
 
 const draft = isDraft(Astro.cookies)
@@ -31,14 +34,14 @@ if (draft) {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:site_name" content={site.siteName} />
     <meta property="og:title" content={title} />
     {description && <meta property="og:description" content={description} />}
     <meta property="og:image" content={ogImage} />
@@ -46,6 +49,7 @@ if (draft) {
     <meta name="twitter:card" content="summary_large_image" />
     <link href="/favicon.ico" rel="icon" sizes="32x32" />
     <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
+    <link rel="alternate" type="application/rss+xml" title={site.siteName} href="/rss.xml" />
     <SpeedInsights />
     <slot name="head" />
     <script is:inline>
@@ -74,21 +78,53 @@ if (draft) {
       })()
     </script>
   </head>
-  <body>
+  <body class="bg-base-100 text-base-content">
     {
       draft && (
-        <div class="relative z-30 flex items-center justify-center gap-3 bg-warning px-4 py-2 text-sm font-medium text-warning-content">
-          Draft preview
+        <div class="relative z-30 flex items-center justify-center gap-3 bg-warning px-4 py-2 font-mono text-sm text-warning-content">
+          下書きプレビュー中
           <a class="underline" href={`/api/exit-preview?path=${Astro.url.pathname}`}>
-            Exit
+            終了
           </a>
         </div>
       )
     }
-    <Header />
+    <Header site={site} />
     <main>
       <slot />
     </main>
-    <Footer />
+    <Footer site={site} />
+    <script is:inline>
+      // Terminal-style shortcuts: "/" search, j/k move through post lists, t theme.
+      ;(function () {
+        document.addEventListener('keydown', function (event) {
+          if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return
+          var target = event.target
+          var tag = target && target.tagName
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable)) {
+            if (event.key === 'Escape' && target.blur) target.blur()
+            return
+          }
+
+          if (event.key === '/') {
+            var input = document.querySelector('[data-search-input]')
+            event.preventDefault()
+            if (input) input.focus()
+            else window.location.href = '/search'
+          } else if (event.key === 'j' || event.key === 'k') {
+            var rows = Array.prototype.slice.call(document.querySelectorAll('[data-post-row]'))
+            if (rows.length === 0) return
+            var index = rows.indexOf(document.activeElement)
+            var next = event.key === 'j' ? index + 1 : index - 1
+            if (index === -1) next = event.key === 'j' ? 0 : rows.length - 1
+            next = Math.max(0, Math.min(rows.length - 1, next))
+            event.preventDefault()
+            rows[next].focus()
+          } else if (event.key === 't' && window.__toggleTheme) {
+            window.__toggleTheme()
+          }
+        })
+      })()
+    </script>
   </body>
 </html>

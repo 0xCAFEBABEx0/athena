@@ -1,0 +1,36 @@
+---
+/**
+ * Terminal-style section opener:
+ *   ❯ ls posts --sort=date
+ *   ● 最近の記事 (8)
+ */
+type Props = {
+  command?: string
+  heading?: string
+  count?: number
+  /** Heading level for `heading`. */
+  as?: 'h1' | 'h2'
+  id?: string
+  class?: string
+}
+
+const { command, heading, count, as: Tag = 'h2', id, class: className } = Astro.props
+---
+
+<div class:list={['font-mono text-sm', className]}>
+  {
+    command && (
+      <p class="text-base-content/60">
+        <span class="text-primary" aria-hidden="true">❯</span> {command}
+      </p>
+    )
+  }
+  {
+    heading && (
+      <Tag id={id} class:list={['font-semibold text-base-content', command && 'mt-3']}>
+        <span class="text-primary" aria-hidden="true">●</span> {heading}
+        {typeof count === 'number' && <span class="font-normal text-base-content/60"> ({count})</span>}
+      </Tag>
+    )
+  }
+</div>

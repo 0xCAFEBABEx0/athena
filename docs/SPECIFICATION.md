@@ -25,8 +25,11 @@ all managed by editors without code changes.
 
 ### 2.1 Pages
 
-- **F-PAGE-1** A published page with slug `s` is served at `/s`; slug `home`
-  is served at `/`.
+- **F-HOME-1** `/` shows the intro box from the `site` global (welcome line,
+  author name, intro, post count, last update, social links), the 8 newest
+  posts, the `site.projects` list and a search box. `/home` redirects there.
+- **F-PAGE-1** A published page with slug `s` is served at `/s` (e.g. `/about`).
+  The CMS page with slug `home` is no longer routed.
 - **F-PAGE-2** A page shows its hero (none / low / medium / high impact) then
   its layout blocks in order: Call to Action, Content (1–4 columns), Media,
   Archive, Form.
@@ -35,14 +38,16 @@ all managed by editors without code changes.
 
 ### 2.2 Blog
 
-- **F-POST-1** `/posts` lists published posts, newest `publishedAt` first, 12
-  per page, with a "Showing X–Y of Z" range and pagination.
-- **F-POST-2** `/posts/page/n` shows page `n`; `n` below 1, non-numeric or past
-  the last page returns 404.
-- **F-POST-3** `/posts/{slug}` shows the post hero (title, categories,
-  authors, publish date, hero image), the rich-text body (headings, lists,
-  links, banners, code blocks, images, horizontal rules) and up to
-  the editor-selected related posts.
+- **F-POST-1** `/posts` lists published posts as one-line rows (date, title,
+  first category), newest `publishedAt` first, 12 per page, with pagination.
+- **F-POST-2** `/posts/page/n` shows page `n`; `/posts/page/1` redirects to
+  `/posts`; `n` below 1, non-numeric or past the last page returns 404.
+- **F-POST-3** `/posts/{slug}` shows a breadcrumb, the title, date, reading
+  time, authors and categories, the meta description as an "概要" box, the
+  hero image, the rich-text body (headings, lists, links, banners, code
+  blocks, images, horizontal rules), the editor-selected related posts and
+  links to the previous and next post by `publishedAt`.
+- **F-POST-5** `/rss.xml` is an RSS 2.0 feed of the 30 newest posts.
 - **F-POST-4** Author names come from `populatedAuthors`; no other user data
   is public.
 
@@ -58,7 +63,7 @@ all managed by editors without code changes.
 - **F-SRCH-1** `/search?q=term` returns up to 12 published posts whose title,
   meta title, meta description or slug contains the term.
 - **F-SRCH-2** An empty query lists the first 12 indexed posts; no matches
-  shows "No results found."
+  shows "見つかりませんでした"
 
 ### 2.5 Forms
 
@@ -73,12 +78,16 @@ all managed by editors without code changes.
 ### 2.6 Navigation, theme and layout
 
 - **F-NAV-1** Header and footer show up to 6 links each from the Header and
-  Footer globals; the header always has a search link.
+  Footer globals. With no Header links set, the header shows `home` and
+  `posts`. The footer always links to `/rss.xml`.
+- **F-NAV-3** Keyboard shortcuts outside text fields: `/` focuses the search
+  box (or opens `/search`), `j`/`k` move through post rows, `t` toggles the
+  theme.
 - **F-NAV-2** If the CMS cannot be reached, header and footer render without
   links instead of failing the page.
 - **F-THEME-1** Light and dark themes. Initial theme comes from
-  `localStorage['payload-theme']`, else the OS preference; the footer theme
-  selector changes and stores it. No flash of the wrong theme (inline script
+  `localStorage['payload-theme']`, else the OS preference; the header
+  `[dark]`/`[light]` toggle changes and stores it. No flash of the wrong theme (inline script
   in `<head>`).
 - **F-A11Y-1** Every page has a single `<main>` landmark.
 

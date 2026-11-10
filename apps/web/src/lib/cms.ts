@@ -1,6 +1,14 @@
 import { stringify } from 'qs-esm'
 
-import type { Footer, Header, Page, Post, Redirect, Search } from '@athena/shared/payload-types'
+import type {
+  Footer,
+  Header,
+  Page,
+  Post,
+  Redirect,
+  Search,
+  Site,
+} from '@athena/shared/payload-types'
 
 import { cmsProtectionBypass, cmsURL, env } from './env'
 
@@ -44,7 +52,11 @@ export const isVercelSsoLocation = (location: string | null | undefined): boolea
   try {
     const url = new URL(location, 'https://vercel.com')
     if (url.hostname !== 'vercel.com') return false
-    return url.pathname === '/sso-api' || url.pathname.startsWith('/sso-api/') || url.pathname === '/login'
+    return (
+      url.pathname === '/sso-api' ||
+      url.pathname.startsWith('/sso-api/') ||
+      url.pathname === '/login'
+    )
   } catch {
     return false
   }
@@ -186,10 +198,35 @@ export const getPosts = async (
         slug: true,
         categories: true,
         meta: true,
+        publishedAt: true,
       },
     },
     opts,
   )
+
+/** The posts published just before and after `publishedAt` (for prev/next links). */
+export const getAdjacentPosts = async (
+  publishedAt: string,
+): Promise<{ prev: Post | null; next: Post | null }> => {
+  const select = { title: true, slug: true, publishedAt: true }
+  const [older, newer] = await Promise.all([
+    cmsFetch<PaginatedDocs<Post>>('/posts', {
+      depth: 0,
+      limit: 1,
+      sort: '-publishedAt',
+      select,
+      where: { publishedAt: { less_than: publishedAt } },
+    }),
+    cmsFetch<PaginatedDocs<Post>>('/posts', {
+      depth: 0,
+      limit: 1,
+      sort: 'publishedAt',
+      select,
+      where: { publishedAt: { greater_than: publishedAt } },
+    }),
+  ])
+  return { prev: older.docs[0] ?? null, next: newer.docs[0] ?? null }
+}
 
 /** Posts for the Archive block (populateBy=collection), optionally category-filtered. */
 export const getArchivePosts = async ({
@@ -207,8 +244,8 @@ export const getArchivePosts = async ({
   return result.docs
 }
 
-export const getGlobal = async <T extends Header | Footer>(
-  slug: 'header' | 'footer',
+export const getGlobal = async <T extends Header | Footer | Site>(
+  slug: 'header' | 'footer' | 'site',
   opts: FetchOptions = {},
 ): Promise<T> => cmsFetch<T>(`/globals/${slug}`, { depth: 1 }, opts)
 

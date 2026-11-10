@@ -61,7 +61,7 @@ Defined in `apps/cms/src/access/`:
 | pages, posts | authenticated | authenticatedOrPublished | authenticated | authenticated |
 | media, categories | authenticated | anyone | authenticated | authenticated |
 | users | authenticated | authenticated | authenticated | authenticated (also `admin`) |
-| header, footer | n/a | anyone | (Payload default: authenticated) | n/a |
+| site, header, footer | n/a | anyone | (Payload default: authenticated) | n/a |
 
 There is no role field. Any user who can log in can edit everything, including
 other users. The `web-frontend` service account is a normal user whose API key
@@ -153,6 +153,20 @@ Timestamps on. Create or rotate the web service account with
 
 ## 4. Globals
 
+`site` holds what the public site shows about you (`Site/config.ts`):
+
+| Field | Type | Used for |
+|---|---|---|
+| `siteName` | text, required, default `findb.uk` | Header brand, page titles, RSS title |
+| `authorName` | text | Home heading, copyright line |
+| `welcome` | text, default `findb.uk へようこそ` | First line of the home intro box |
+| `intro` | textarea | Sentence(s) under the name on the home page |
+| `description` | textarea | Default meta description, RSS description |
+| `socialLinks` | array (max 8) of `label`, `url` | Links in the home intro box |
+| `projects` | array (max 12) of `name`, `url`, `description` | "作ったもの" list on the home page |
+
+Hook: `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
+
 `header` and `footer` share the same shape:
 
 | Field | Type |
@@ -236,6 +250,7 @@ both apps, plus `bun run generate:types`.
 | `populateAuthors` | Posts `afterRead` | Fills `populatedAuthors` with `{ id, name }`. |
 | `revalidatePage` / `revalidateDelete` | Pages | Invalidates `/` or `/{slug}` (old path too on unpublish) with tags `pages`, `sitemap`. |
 | `revalidatePost` / `revalidateDelete` | Posts | Invalidates `/posts/{slug}` and `/posts` with tags `posts`, `sitemap`. |
+| `revalidateSite` | Global | Paths `/`, `/posts`; tag `global_site`. |
 | `revalidateHeader` / `revalidateFooter` | Globals | Tag `global_header` / `global_footer`. |
 | `revalidateRedirects` | Redirects | Tag `redirects`. |
 | `formatSlugHook` | slug field | Formats slug before validation. |

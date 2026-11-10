@@ -5,6 +5,7 @@ import RenderHero from '@/components/heros/RenderHero.astro'
 import { getPage } from '@/lib/cms'
 import { isDraft } from '@/lib/draft'
 import { buildMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
 
 const draft = isDraft(Astro.cookies)
 const slugParam = Astro.params.slug
@@ -15,7 +16,13 @@ if (slugParam && slugParam.includes('/')) {
   return Astro.rewrite('/404')
 }
 
-const slug = slugParam || 'home'
+// The home page is pages/index.astro (site settings + recent posts); the old
+// CMS "home" page is no longer routed.
+if (!slugParam || slugParam === 'home') {
+  return Astro.redirect('/', 301)
+}
+
+const slug = slugParam
 const page = await getPage(slug, { draft })
 
 if (!page) {
@@ -23,11 +30,12 @@ if (!page) {
 }
 
 const { hero, layout } = page
-const meta = buildMeta(page, slug === 'home' ? '/' : `/${slug}`)
+const site = await getSite(Astro.request)
+const meta = buildMeta(page, `/${slug}`, site)
 ---
 
 <Layout meta={meta}>
-  <article class="pb-24 pt-16">
+  <article class="pb-8 pt-8">
     <RenderHero hero={hero} />
     <RenderBlocks blocks={layout} />
   </article>

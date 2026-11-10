@@ -5,9 +5,10 @@
  */
 import '@fontsource/geist-sans/400.css'
 import '@fontsource/geist-sans/600.css'
+import '@fontsource/geist-mono/400.css'
 import '@/styles/global.css'
 
-import { SITE_NAME } from '@/lib/seo'
+import { DEFAULT_SITE_NAME } from '@/lib/site'
 
 type Props = {
   error?: unknown
@@ -21,11 +22,11 @@ Astro.response.status = 500
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Error | {SITE_NAME}</title>
+    <title>Error | {DEFAULT_SITE_NAME}</title>
     <script is:inline>
       ;(function () {
         var theme = 'light'
@@ -40,21 +41,29 @@ Astro.response.status = 500
       })()
     </script>
   </head>
-  <body>
-    <main class="container flex flex-col items-center py-32 text-center">
-      <p class="text-sm font-medium uppercase tracking-wider text-base-content/50">Error 500</p>
-      <h1 class="heading-display mt-4 text-5xl md:text-6xl">Something went wrong</h1>
-      <p class="mt-4 max-w-[28rem] text-base-content/60">
-        This page could not be rendered. Please try again in a moment.
+  <body class="bg-base-100 text-base-content">
+    <main class="container pt-12">
+      <p class="font-mono text-sm text-base-content/60">
+        <span class="text-primary" aria-hidden="true">❯</span> render {Astro.url.pathname}
+      </p>
+      <h1 class="mt-3 font-mono text-sm">
+        <span class="text-error" aria-hidden="true">●</span> ページを表示できませんでした
+        <span class="text-base-content/60">(500)</span>
+      </h1>
+      <p class="mt-1 flex gap-2 pl-5 text-base-content/85">
+        <span class="font-mono text-base-content/60" aria-hidden="true">⎿</span>
+        しばらくしてから、もう一度開いてください。
       </p>
       {
         isDev && message && (
-          <pre class="mt-8 max-w-[40rem] w-full whitespace-pre-wrap break-words rounded-box bg-base-200 p-4 text-left text-sm text-base-content/80">
+          <pre class="mt-6 w-full whitespace-pre-wrap break-words rounded-box border border-base-300 bg-base-200 p-4 font-mono text-[13px] text-base-content/80">
             {message}
           </pre>
         )
       }
-      <a class="btn btn-primary mt-8 font-medium" href="/"> Go home </a>
+      <p class="mt-4 pl-5 font-mono text-sm">
+        <a class="link-term" href="/">ホームへ戻る</a>
+      </p>
     </main>
   </body>
 </html>

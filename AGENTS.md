@@ -23,7 +23,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 ## Tech Stack
 
 - **CMS**: Payload CMS 3 + Next.js 16 (App Router); admin styling is Payload's own SCSS (no Tailwind)
-- **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (Linear-inspired light/dark themes in `src/styles/global.css`)
+- **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (terminal-inspired light/dark themes in `src/styles/global.css`: warm paper, one orange accent, mono for dates/nav/labels)
 - **Language**: TypeScript (strict mode). `apps/cms` is on TypeScript 7 (native `tsc`); `apps/web` stays on 6 until `astro check` supports 7
 - **Runtime**: Node.js 24 LTS (pinned to 24.22.1 via `.nvmrc`; Vercel runs the latest 24.x via `engines.node: "24.x"` in each app)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
@@ -53,6 +53,7 @@ bun run deploy:production     # Open a preview -> main PR and enable auto-merge
 apps/cms/src/
 ├── app/(payload)/            # Payload admin panel + API routes
 ├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only; rendering lives in apps/web
+├── Site/ Header/ Footer/     # globals (Site = name, intro, links, projects shown by the web app)
 ├── utilities/                # invalidateWeb.ts, generatePreviewPath.ts, env.ts, getURL.ts
 └── payload.config.ts         # Main Payload CMS configuration
 
@@ -61,7 +62,7 @@ apps/cms/config/next.config.mjs   # Real Next.js config (root next.config.mjs re
 apps/web/src/
 ├── pages/                    # [...slug], posts/*, search, sitemaps, 404, api/* endpoints
 ├── components/               # Block/hero renderers (blocks/, heros/, ...)
-├── lib/                      # cms.ts (REST client), richtext.ts, draft.ts, seo.ts, media.ts
+├── lib/                      # cms.ts (REST client), site.ts (site global), richtext.ts, draft.ts, seo.ts, media.ts
 ├── layouts/Layout.astro      # Theme init, meta tags, Header/Footer
 └── middleware.ts             # Redirects-collection handling
 
@@ -206,7 +207,11 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
     (`astro check` via `@volar/kit`) resolves TypeScript from the repo root and
     crashes on TS 7. `apps/cms` gets TS 7 nested in its own `node_modules`.
     Don't remove the root pin until `astro check` supports TS 7.
-12. **Never enable Vercel Deployment Protection on athena-cms Production.** It
+12. **New tables or columns need manual SQL in production and on the preview
+    Neon branch** (schema push is off there). Write idempotent SQL and record it
+    in `docs/UPGRADE_NOTES.md` (procedure: `docs/DATABASE.md`). The web app
+    falls back to defaults while the `site` table is missing.
+13. **Never enable Vercel Deployment Protection on athena-cms Production.** It
     302s `/api/*` to Vercel SSO, and athena-web HTML routes 500. Protect
     Preview only; Payload already gates `/admin`. If Production must stay
     protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches

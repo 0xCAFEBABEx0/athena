@@ -1,0 +1,46 @@
+---
+/**
+ * Light/dark toggle, persisted in localStorage under the same
+ * 'payload-theme' key the cms admin uses (see the theme script in Layout).
+ * The label shows the theme you switch to, like a terminal flag: [dark].
+ */
+---
+
+<button
+  type="button"
+  id="theme-toggle"
+  class="btn btn-ghost btn-sm min-h-11 px-2 font-mono font-normal text-base-content/60 hover:text-base-content"
+  aria-label="テーマを切り替え"
+>
+  <span class="theme-label-light">[dark]</span>
+  <span class="theme-label-dark hidden">[light]</span>
+</button>
+
+<script is:inline>
+  ;(function () {
+    var key = 'payload-theme'
+    var button = document.getElementById('theme-toggle')
+    if (!button) return
+
+    var sync = function () {
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark'
+      button.querySelector('.theme-label-light').classList.toggle('hidden', dark)
+      button.querySelector('.theme-label-dark').classList.toggle('hidden', !dark)
+      button.setAttribute('aria-label', dark ? 'ライトモードに切り替え' : 'ダークモードに切り替え')
+    }
+
+    window.__toggleTheme = function () {
+      var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+      try {
+        window.localStorage.setItem(key, next)
+      } catch (_err) {
+        /* private mode: theme still switches for this page */
+      }
+      document.documentElement.setAttribute('data-theme', next)
+      sync()
+    }
+
+    button.addEventListener('click', window.__toggleTheme)
+    sync()
+  })()
+</script>

@@ -1,8 +1,8 @@
 ---
-import Card, { type CardPostData } from '@/components/Card.astro'
+import PostList, { type PostListItem } from '@/components/PostList.astro'
 
 type Props = {
-  posts: CardPostData[]
+  posts: PostListItem[]
   class?: string
 }
 
@@ -10,14 +10,5 @@ const { posts, class: className } = Astro.props
 ---
 
 <div class:list={['container', className]}>
-  <div>
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {
-        posts?.map((post) => {
-          if (typeof post !== 'object' || post === null) return null
-          return <Card class="h-full" doc={post} relationTo="posts" showCategories />
-        })
-      }
-    </div>
-  </div>
+  <PostList posts={posts} />
 </div>

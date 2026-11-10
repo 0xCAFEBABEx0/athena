@@ -2,9 +2,14 @@
 import type { Footer } from '@athena/shared/payload-types'
 
 import CMSLink from '@/components/CMSLink.astro'
-import Logo from '@/components/Logo.astro'
-import ThemeSelector from '@/components/ThemeSelector.astro'
 import { getGlobal } from '@/lib/cms'
+import type { SiteData } from '@/lib/site'
+
+type Props = {
+  site: SiteData
+}
+
+const { site } = Astro.props
 
 let navItems: NonNullable<Footer['navItems']> = []
 try {
@@ -13,26 +18,29 @@ try {
 } catch (error) {
   console.error('[footer] failed to load nav', error)
 }
+
+const path = Astro.originPathname === '/' ? '~' : `~${Astro.originPathname.replace(/\/$/, '')}`
+const year = new Date().getFullYear()
 ---
 
-<footer class="mt-auto border-t border-base-300/60 bg-base-100">
-  <div class="container flex flex-col gap-8 py-12 md:flex-row md:items-center md:justify-between">
-    <a class="flex items-center opacity-80 transition-opacity hover:opacity-100" href="/">
-      <Logo class="invert dark:invert-0" />
-    </a>
-
-    <div class="flex flex-col-reverse items-start gap-4 md:flex-row md:items-center md:gap-6">
-      <ThemeSelector />
-      <nav class="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
-        {
-          navItems.map(({ link }) => (
-            <CMSLink
-              class="text-sm text-base-content/60 no-underline transition-colors hover:text-base-content"
-              {...link}
-            />
-          ))
-        }
-      </nav>
-    </div>
+<footer class="container mt-auto pb-8 pt-14">
+  <div
+    class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-base-300 pt-3.5 font-mono text-xs text-base-content/60"
+  >
+    <span class="inline-flex items-center gap-2">
+      <span class="status status-success" aria-hidden="true"></span>
+      <span>{site.siteName}</span>
+      <span aria-hidden="true">·</span>
+      <span>{path}</span>
+    </span>
+    <span class="inline-flex flex-wrap items-center gap-x-4 gap-y-1">
+      {
+        navItems.map(({ link }) => (
+          <CMSLink class="text-base-content/60 no-underline hover:text-base-content" {...link} />
+        ))
+      }
+      <a class="text-base-content/60 no-underline hover:text-base-content" href="/rss.xml">rss</a>
+      <span>© {year} {site.authorName || site.siteName}</span>
+    </span>
   </div>
 </footer>
