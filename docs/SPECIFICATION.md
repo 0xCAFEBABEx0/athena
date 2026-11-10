@@ -19,7 +19,7 @@ all managed by editors without code changes.
 | Editor / Admin | Payload admin (athena-cms `/admin`) | email + password |
 | Web app (system) | CMS REST API | `web-frontend` API key (drafts only) |
 | CMS (system) | Web `/api/invalidate` | `REVALIDATE_SECRET` |
-| Vercel Cron (system) | CMS jobs runner | `CRON_SECRET` |
+| Vercel Schedules (system) | CMS jobs runner | `CRON_SECRET` |
 
 ## 2. Public Website
 
@@ -115,8 +115,8 @@ all managed by editors without code changes.
   targeted refresh within 5 minutes.
 - **F-ED-5** **Unpublish** or delete removes the document from the public site
   and refreshes its old URL.
-- **F-ED-6** **Schedule publish** queues a publish; it runs on the next daily
-  jobs run (00:00 UTC).
+- **F-ED-6** **Schedule publish** queues a publish; it runs on the next hourly
+  jobs run (Vercel Schedule `0 * * * *` UTC, starting up to 15 minutes late).
 - **F-ED-7** Slugs are generated from the title until the editor unlocks and
   edits the slug field.
 - **F-ED-8** SEO tab: meta title (with a generate button), description, image
