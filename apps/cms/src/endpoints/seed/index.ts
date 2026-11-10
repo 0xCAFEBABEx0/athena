@@ -320,25 +320,11 @@ export const seed = async ({
     }),
     payload.updateGlobal({
       slug: 'footer',
+      // Empty on purpose: the footer always shows the version, rss and ©;
+      // editors add their own links (the template's Source Code / Payload
+      // links pointed at Payload's repository, not this site).
       data: {
-        navItems: [
-          {
-            link: {
-              type: 'custom',
-              label: 'Source Code',
-              newTab: true,
-              url: 'https://github.com/payloadcms/payload/tree/main/templates/website',
-            },
-          },
-          {
-            link: {
-              type: 'custom',
-              label: 'Payload',
-              newTab: true,
-              url: 'https://payloadcms.com/',
-            },
-          },
-        ],
+        navItems: [],
       },
       context: { disableRevalidate: true },
     }),
