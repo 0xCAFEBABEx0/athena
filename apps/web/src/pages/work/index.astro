@@ -10,8 +10,8 @@ import { getWork } from '@/lib/work'
 
 const locale = localeOf(Astro)
 const t = dict(locale)
-const site = await getSite(Astro.request, locale)
-const items = await getWork(Astro.request, locale)
+const site = await getSite(Astro.locals, locale)
+const items = await getWork(Astro.locals, locale)
 const meta = routeMeta(t.workTitle, localizePath(locale, '/work'), site)
 ---
 

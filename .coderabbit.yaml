@@ -98,6 +98,15 @@ reviews:
         request must set `depth` and `limit` explicitly, and draft fetches
         must authenticate with the `PAYLOAD_API_KEY` service account. The
         API key must never reach client-side code.
+    - path: 'apps/web/src/{middleware.ts,layouts/Layout.astro,lib/{site,work,nav}.ts}'
+      instructions: |
+        On a cache miss the middleware starts the layout's CMS requests
+        together; the memos in site.ts, work.ts and nav.ts are keyed by
+        `Astro.locals`, so callers must pass `Astro.locals` (not
+        `Astro.request`) or the page fetches everything a second time.
+        Layout.astro prerenders hovered links: any script that must run only
+        when the page is shown (analytics, settings from localStorage) waits
+        for `prerenderingchange` when `document.prerendering` is true.
     - path: '**/vercel.json'
       instructions: |
         `git.deploymentEnabled` is a whitelist: keep `"**": false` with only

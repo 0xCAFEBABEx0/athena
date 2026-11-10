@@ -1,0 +1,38 @@
+name: Warm cache
+
+# Vercel reports each deployment back to GitHub. A new athena-web deployment
+# starts with an empty page cache, so request every page once right away
+# instead of making the first visitors wait for renders.
+on: deployment_status
+
+permissions:
+  contents: read
+
+jobs:
+  warm:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      contains(github.event.deployment.environment, 'athena-web')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts
+
+      - name: Request every page
+        env:
+          ENVIRONMENT: ${{ github.event.deployment.environment }}
+          REF: ${{ github.event.deployment.ref }}
+          SHA: ${{ github.event.deployment.sha }}
+          # Deployment URLs sit behind Vercel Authentication; the custom
+          # domains do not. Override with repository variables when they move.
+          PRODUCTION_WEB_URL: ${{ vars.PRODUCTION_WEB_URL || 'https://www.findb.uk' }}
+          PREVIEW_WEB_URL: ${{ vars.PREVIEW_WEB_URL || 'https://preview.whoa.me' }}
+        run: |
+          case "$ENVIRONMENT" in
+            Production*) url="$PRODUCTION_WEB_URL" ;;
+            *) if [ "$REF" = preview ]; then url="$PREVIEW_WEB_URL"; else echo "No site for $REF."; exit 0; fi ;;
+          esac
+          bash scripts/warm-cache.sh "$url" "$SHA"

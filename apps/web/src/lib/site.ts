@@ -41,17 +41,18 @@ const normalize = (site: Partial<Site> | null | undefined): SiteData => ({
 })
 
 // One fetch per request: Layout, Header, Footer and the page all ask for it.
-const perRequest = new WeakMap<Request, Map<Locale, Promise<SiteData>>>()
+// Keyed by `Astro.locals` (see lib/nav.ts).
+const perRequest = new WeakMap<object, Map<Locale, Promise<SiteData>>>()
 
 /**
  * Site-wide settings from the CMS `site` global. Never throws: a CMS outage
  * (or a database without the `site` table yet) falls back to defaults.
  */
-export const getSite = (request: Request, locale: Locale): Promise<SiteData> => {
-  let byLocale = perRequest.get(request)
+export const getSite = (scope: object, locale: Locale): Promise<SiteData> => {
+  let byLocale = perRequest.get(scope)
   if (!byLocale) {
     byLocale = new Map()
-    perRequest.set(request, byLocale)
+    perRequest.set(scope, byLocale)
   }
   let pending = byLocale.get(locale)
   if (!pending) {

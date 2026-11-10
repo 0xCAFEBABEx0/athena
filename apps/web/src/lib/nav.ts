@@ -5,16 +5,18 @@ import type { Locale } from './i18n'
 import type { CMSLinkData } from './links'
 
 /**
- * Per-request memo: the CLI header and the modern sidebar both render on
- * every page (CSS shows one of them), so each CMS call should happen once.
+ * Per-request memo, keyed by `Astro.locals` (one object per request, kept
+ * across the locale rewrite in middleware): the CLI header and the modern
+ * sidebar both render on every page (CSS shows one of them), so each CMS call
+ * happens once, and the middleware can start it before the page renders.
  */
 const memo = <T>(load: (locale: Locale) => Promise<T>) => {
-  const cache = new WeakMap<Request, Map<Locale, Promise<T>>>()
-  return (request: Request, locale: Locale): Promise<T> => {
-    let byLocale = cache.get(request)
+  const cache = new WeakMap<object, Map<Locale, Promise<T>>>()
+  return (scope: object, locale: Locale): Promise<T> => {
+    let byLocale = cache.get(scope)
     if (!byLocale) {
       byLocale = new Map()
-      cache.set(request, byLocale)
+      cache.set(scope, byLocale)
     }
     let pending = byLocale.get(locale)
     if (!pending) {

@@ -17,14 +17,14 @@ const locale = localeOf(Astro)
 const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
 const slug = Astro.params.slug ?? ''
-const items = await getWork(Astro.request, locale)
+const items = await getWork(Astro.locals, locale)
 const item = items.find((entry) => entry.slug === slug)
 
 if (!item) {
   return Astro.rewrite('/404')
 }
 
-const site = await getSite(Astro.request, locale)
+const site = await getSite(Astro.locals, locale)
 const meta = {
   ...routeMeta(item.title, lp(`/work/${item.slug}`), site),
   description: item.description || site.description,

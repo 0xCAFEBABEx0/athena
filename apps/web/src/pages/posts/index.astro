@@ -9,8 +9,10 @@ import { getSite } from '@/lib/site'
 const locale = localeOf(Astro)
 const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
-const site = await getSite(Astro.request, locale)
-const posts = await getPosts({ page: 1 }, { locale })
+const [site, posts] = await Promise.all([
+  getSite(Astro.locals, locale),
+  getPosts({ page: 1 }, { locale }),
+])
 const meta = routeMeta(t.allPosts, lp('/posts'), site)
 ---
 

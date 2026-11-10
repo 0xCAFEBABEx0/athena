@@ -12,7 +12,7 @@ type Props = {
 const { site } = Astro.props
 const locale = localeOf(Astro)
 
-const navLinks = await getFooterNav(Astro.request, locale)
+const navLinks = await getFooterNav(Astro.locals, locale)
 
 // A /404 rewrite reports the unprefixed path, so prefix it from the locale.
 const here = localizePath(locale, splitLocale(Astro.originPathname).path)

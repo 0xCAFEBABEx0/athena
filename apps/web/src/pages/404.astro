@@ -9,7 +9,7 @@ import { dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 const locale = localeOf(Astro)
 const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
-const site = await getSite(Astro.request, locale)
+const site = await getSite(Astro.locals, locale)
 const meta = routeMeta('404', Astro.originPathname, site)
 const path = lp(splitLocale(Astro.originPathname).path)
 

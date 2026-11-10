@@ -21,9 +21,9 @@ const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
 
 const [navLinks, recent, work] = await Promise.all([
-  getHeaderNav(Astro.request, locale),
-  getRecentPosts(Astro.request, locale),
-  getWork(Astro.request, locale),
+  getHeaderNav(Astro.locals, locale),
+  getRecentPosts(Astro.locals, locale),
+  getWork(Astro.locals, locale),
 ])
 // Threads in the sidebar: what is in progress first, like an agent app.
 const sideWork = work

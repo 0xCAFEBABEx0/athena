@@ -141,14 +141,15 @@ const loadWork = async (locale: Locale): Promise<WorkItem[]> => {
 }
 
 // One fetch per request: the page and the ADE sidebar both ask for it.
-const perRequest = new WeakMap<Request, Map<Locale, Promise<WorkItem[]>>>()
+// Keyed by `Astro.locals` (see lib/nav.ts).
+const perRequest = new WeakMap<object, Map<Locale, Promise<WorkItem[]>>>()
 
 /** All visible work threads, most recently active first within each status. Never throws. */
-export const getWork = (request: Request, locale: Locale): Promise<WorkItem[]> => {
-  let byLocale = perRequest.get(request)
+export const getWork = (scope: object, locale: Locale): Promise<WorkItem[]> => {
+  let byLocale = perRequest.get(scope)
   if (!byLocale) {
     byLocale = new Map()
-    perRequest.set(request, byLocale)
+    perRequest.set(scope, byLocale)
   }
   let pending = byLocale.get(locale)
   if (!pending) {

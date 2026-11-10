@@ -6,6 +6,9 @@ import { tagAsContent } from '@/lib/cache'
 import { getRedirects } from '@/lib/cms'
 import { DEFAULT_LOCALE, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
+import { getFooterNav, getHeaderNav, getRecentPosts } from '@/lib/nav'
+import { getSite } from '@/lib/site'
+import { getWork } from '@/lib/work'
 
 // Per-instance cache, kept short: it only coalesces the burst of renders that
 // follows a publish. Pages are cached at Vercel, so a render is rare, and a
@@ -41,6 +44,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (pathname.startsWith('/_') || pathname.includes('.')) {
     return render()
   }
+
+  // Every page's layout needs the same CMS data (site settings, header and
+  // footer nav, recent posts and work for the sidebar). Start those requests
+  // now, alongside the redirect lookup, instead of one after another as the
+  // components render; the per-request memos hand the same promises to the
+  // page. None of them throws, so an unused one costs nothing but a fetch.
+  void Promise.all([
+    getSite(context.locals, locale),
+    getHeaderNav(context.locals, locale),
+    getFooterNav(context.locals, locale),
+    getRecentPosts(context.locals, locale),
+    getWork(context.locals, locale),
+  ])
 
   let redirects: Redirect[] = []
   try {

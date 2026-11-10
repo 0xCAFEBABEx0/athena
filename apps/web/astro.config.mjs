@@ -23,7 +23,8 @@ export default defineConfig({
   // function bundling, the deploy upload and cold starts.
   image: { service: passthroughImageService() },
   adapter: vercel({
-    webAnalytics: { enabled: true },
+    // Web Analytics is loaded by Layout.astro instead, so prerendered pages
+    // are counted only when shown.
     isr: {
       bypassToken: isrBypassToken(process.env.REVALIDATE_SECRET),
       // ISR keys the cache by path and drops the query string, so the search

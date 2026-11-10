@@ -28,7 +28,7 @@ if (!post) {
   return Astro.rewrite('/404')
 }
 
-const site = await getSite(Astro.request, locale)
+const site = await getSite(Astro.locals, locale)
 
 const relatedPosts = (post.relatedPosts ?? []).filter(
   (related): related is Post => typeof related === 'object' && related !== null,

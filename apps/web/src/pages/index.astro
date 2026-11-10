@@ -17,19 +17,17 @@ const RECENT = 8
 const locale = localeOf(Astro)
 const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
-const site = await getSite(Astro.request, locale)
-
-let posts: Post[] = []
-let totalPosts = 0
-try {
-  const result = await getPosts({ page: 1, limit: RECENT }, { locale })
-  posts = result.docs
-  totalPosts = result.totalDocs
-} catch (error) {
-  console.error('[home] failed to load posts', error)
-}
-
-const work = await getWork(Astro.request, locale)
+// All three in parallel (site and work were already started by the middleware).
+const [site, recent, work] = await Promise.all([
+  getSite(Astro.locals, locale),
+  getPosts({ page: 1, limit: RECENT }, { locale }).catch((error: unknown) => {
+    console.error('[home] failed to load posts', error)
+    return null
+  }),
+  getWork(Astro.locals, locale),
+])
+const posts: Post[] = recent?.docs ?? []
+const totalPosts = recent?.totalDocs ?? 0
 const pinnedWork = (
   work.some((item) => item.pinned)
     ? work.filter((item) => item.pinned).sort((a, b) => a.order - b.order)

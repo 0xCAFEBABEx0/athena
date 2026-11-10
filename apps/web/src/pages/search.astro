@@ -11,7 +11,7 @@ import { getSite } from '@/lib/site'
 const locale = localeOf(Astro)
 const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
-const site = await getSite(Astro.request, locale)
+const site = await getSite(Astro.locals, locale)
 const query = (Astro.url.searchParams.get('q') ?? '').trim()
 const results = await searchPosts(query, locale)
 

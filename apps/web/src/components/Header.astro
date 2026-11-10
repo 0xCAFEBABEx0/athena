@@ -21,7 +21,7 @@ const { site } = Astro.props
 const locale = localeOf(Astro)
 const t = dict(locale)
 
-const navLinks = await getHeaderNav(Astro.request, locale)
+const navLinks = await getHeaderNav(Astro.locals, locale)
 // Until nav is set up in the CMS, keep the two routes every visitor needs.
 const fallbackNav: CMSLinkData[] = [
   { type: 'custom', url: '/', label: t.home },
@@ -128,11 +128,14 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
   <div class="ms-auto flex shrink-0 items-center gap-2">
     <button
       type="button"
-      class="btn btn-ghost btn-sm btn-square lg:hidden"
+      class="topbar-search btn btn-ghost btn-square lg:hidden"
       aria-label={t.searchOpen}
       data-search-open
     >
-      ⌕
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="10.5" cy="10.5" r="6.5"></circle>
+        <path d="m15.5 15.5 5 5"></path>
+      </svg>
     </button>
     <ViewToggle variant="segmented" />
     <div class="tabs tabs-box tabs-xs" role="group" aria-label={t.language}>

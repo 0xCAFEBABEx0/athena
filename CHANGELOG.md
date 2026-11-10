@@ -43,8 +43,20 @@ First versioned release: the portfolio and blog redesign for whoa.me.
   functions no longer bundle sharp.
 - Higher text contrast in both themes.
 - Server functions of both apps run on Bun instead of Node.js.
-- Links are prefetched on hover, and pages crossfade on navigation, so
-  switching language or opening a post feels faster.
+- Links are prerendered on hover (Chrome and Edge; prefetched where the
+  browser declines), and pages crossfade on navigation, so switching
+  language or opening a post feels faster. Web Analytics counts a
+  prerendered page only when it is shown.
+- A page that is not cached yet renders faster: the layout's CMS requests
+  (site settings, header and footer, recent posts, work) start together in
+  the middleware instead of one after another.
+- After each Vercel deployment of the web app, a GitHub Actions workflow
+  requests every page once, so visitors do not wait for the first renders.
+  `/work` pages are in the sitemap.
+- Phones: larger tap targets in the ADE top bar (search icon, view and
+  language switches), the /status panel and /work group headings; search
+  fields no longer make iOS zoom in; rows react to a tap at once; keyboard
+  hints are hidden on touch screens.
 - The dev container installs the same Bun as the repo (1.4) next to Node.js 24,
   installs every workspace from `bun.lock`, and exposes the web dev server.
 

@@ -32,7 +32,7 @@ if (!page) {
 }
 
 const { hero, layout } = page
-const site = await getSite(Astro.request, locale)
+const site = await getSite(Astro.locals, locale)
 const meta = buildMeta(page, localizePath(locale, `/${slug}`), site)
 ---
 

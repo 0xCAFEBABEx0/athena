@@ -25,7 +25,7 @@ type Props = {
 const { meta } = Astro.props
 const locale = localeOf(Astro)
 const t = dict(locale)
-const site = await getSite(Astro.request, locale)
+const site = await getSite(Astro.locals, locale)
 // The unprefixed path, shared by every language version of this page.
 const barePath = splitLocale(Astro.originPathname).path
 const alternates = LOCALES.map((code) => ({
@@ -38,26 +38,27 @@ const description = meta?.description ?? site.description
 const ogImage = meta?.ogImage ?? `${webURL()}${DEFAULT_OG_IMAGE}`
 const url = meta?.url ?? `${webURL()}${Astro.originPathname}`
 
-// Chrome and Edge fetch a page once a link is hovered (or pressed on touch)
-// and keep it for the click. Unlike <link rel="prefetch">, this copy is used
-// even though pages are sent with `max-age=0, must-revalidate`. Pages come
-// from the Vercel cache, so this costs CDN hits, not renders. Other browsers
-// ignore the rules.
-const speculationRules = JSON.stringify({
-  prefetch: [
-    {
-      source: 'document',
-      where: {
-        and: [
-          { href_matches: '/*' },
-          { not: { href_matches: ['/api/*', '/admin', '/admin/*', '/*.xml', '/*/*.xml'] } },
-          { not: { selector_matches: '[target=_blank], [download]' } },
-        ],
-      },
-      eagerness: 'moderate',
-    },
+// Chrome and Edge prerender a page once a link is hovered (or pressed on
+// touch): the next page is fetched, laid out and its scripts run in the
+// background, so the click swaps it in at once. Unlike <link rel="prefetch">,
+// the copy is used even though pages are sent with `max-age=0,
+// must-revalidate`. Pages come from the Vercel cache, so this costs CDN hits,
+// not renders. The prefetch rule covers links the browser declines to
+// prerender (it keeps only a couple at a time). Other browsers ignore both.
+// Scripts that must not run before the page is shown (analytics, theme)
+// wait for `prerenderingchange`; see below.
+const speculationWhere = {
+  and: [
+    { href_matches: '/*' },
+    { not: { href_matches: ['/api/*', '/admin', '/admin/*', '/*.xml', '/*/*.xml'] } },
+    { not: { selector_matches: '[target=_blank], [download]' } },
   ],
+}
+const speculationRules = JSON.stringify({
+  prerender: [{ source: 'document', where: speculationWhere, eagerness: 'moderate' }],
+  prefetch: [{ source: 'document', where: speculationWhere, eagerness: 'moderate' }],
 })
+const webAnalytics = import.meta.env.PROD
 
 const draft = isDraft(Astro.cookies)
 if (draft) {
@@ -99,6 +100,30 @@ if (draft) {
     <script type="speculationrules" is:inline set:html={speculationRules} />
     <SpeedInsights />
     <slot name="head" />
+    {
+      webAnalytics && (
+        <script is:inline>
+          // Vercel Web Analytics (replaces the adapter's injected snippet): a
+          // prerendered page loads it only when it is actually shown, so pages
+          // hovered but never opened are not counted as views.
+          ;(function () {
+            window.va =
+              window.va ||
+              function () {
+                ;(window.vaq = window.vaq || []).push(arguments)
+              }
+            function load() {
+              var script = document.createElement('script')
+              script.defer = true
+              script.src = '/_vercel/insights/script.js'
+              document.head.appendChild(script)
+            }
+            if (document.prerendering) document.addEventListener('prerenderingchange', load, { once: true })
+            else load()
+          })()
+        </script>
+      )
+    }
     <script is:inline>
       ;(function () {
         function getImplicitPreference() {
@@ -111,6 +136,7 @@ if (draft) {
           return theme === 'light' || theme === 'dark'
         }
 
+        function apply() {
         var themeToSet = 'light'
         var preference = window.localStorage.getItem('payload-theme')
 
@@ -141,6 +167,13 @@ if (draft) {
         } catch (_err) {
           /* storage blocked: keep the default */
         }
+        }
+
+        apply()
+        // A prerendered page ran this when the link was hovered; the visitor
+        // may have switched theme or view since, so apply the settings again
+        // when it is shown.
+        if (document.prerendering) document.addEventListener('prerenderingchange', apply, { once: true })
       })()
     </script>
   </head>
