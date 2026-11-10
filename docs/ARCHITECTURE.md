@@ -239,15 +239,20 @@ because Hobby Cron is limited to once a day; Hobby Schedules may run as often
 as every 15 minutes and start within a 15-minute jitter window. Unauthenticated
 calls must carry `Authorization: Bearer ${CRON_SECRET}` (Schedules sends it the
 same way Cron did). The queue powers **scheduled publish** on Pages and Posts,
-so a scheduled publish takes effect on the next run (up to about 75 minutes
-later), not at the exact minute chosen.
+so a scheduled publish takes effect on the next run (usually within about 75
+minutes), not at the exact minute chosen. Each run processes at most 10 jobs
+(Payload's default `limit`), so if more are due at once the rest wait for later
+runs.
 
 Keep the interval at hourly or longer: every run wakes the Neon compute, which
 then stays active for 5 minutes (scale to zero is fixed on the Neon Free plan),
 and all branches share the project's 100 CU-hours a month. Hourly costs at most
 about 15 CU-hours a month at 0.25 CU; every 15 minutes would cost about 62.
-Static schedules are inactive on Preview branches by default, so the preview
-Neon branch is not woken unless the schedule is enabled there.
+Static schedules are inactive on Preview branches by default. Leave the
+`preview` branch's schedule disabled: enabling it runs scheduled publishes
+against whatever database the preview CMS points at (live content if that is
+production, see [SPECIFICATION §5](./SPECIFICATION.md#5-environments)) and adds
+a second hourly wake-up to the shared CU-hour budget.
 
 ## 4. Security Model
 
