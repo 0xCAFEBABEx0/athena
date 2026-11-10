@@ -110,6 +110,7 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-10 | Preview 083e6da (via Vercel share link) | — | not run (proxy blocks direct access) | TC-P-01 HIT + br ✓; P-02 immutable + br ✓; P-03 `?q=b` HIT on the page cached for `?q=a` ✓; P-04 second hit HIT ✓; P-05 first hit MISS (second not checked); P-06 ✓; P-07 ✗: every request got 302 (preview behind Vercel Authentication), fixed in b965bdf, needs the bypass secret; SEO head (canonical, hreflang, noindex on /search and 404, BlogPosting, WebSite) ✓. |
 | 2026-11-10 | local dev (tagline set in en/ja, empty in zh), local build | 39/39 | 50/50 | `/admin` nav filter removed (Master: controlled in the CMS); TC-E-39 stays as a content check. |
 | 2026-11-10 | local dev (SEO changes), local build | 38/38 | 48/48 | First TC-E-31 run flagged `/ja` sharing the home title with `/` (the site name); language versions may share a title, so uniqueness is now checked per language. Found and fixed: `programmingLanguage` listed GitHub's "Other". |
 | 2026-11-10 | local dev (5aa41a2 + working tree), local build | 32/32 | 40/40 | Found and fixed: `/search` rewrote the `/status` suggestion text (attribute name clash); the 500 page still pulled every font subset. TC-P-* pending the preview deploy (needs the banner SQL). |
