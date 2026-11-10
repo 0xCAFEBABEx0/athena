@@ -85,7 +85,8 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 ### Removed
 
 - Leftovers of the Payload website template: its footer links (Source Code,
-  Payload) in new databases, its share image, and its static `/llms.txt`,
-  which is now built from the CMS.
+  Payload) in new databases, its share image, its static `/llms.txt`
+  (now built from the CMS), its "| Payload Website Template" SEO title
+  suffix and the Checkly example checks.
 - The Admin link in the footer. The public nav never links to the CMS admin,
   even if an editor adds one.
