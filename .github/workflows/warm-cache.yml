@@ -24,15 +24,16 @@ jobs:
       - name: Request every page
         env:
           ENVIRONMENT: ${{ github.event.deployment.environment }}
-          REF: ${{ github.event.deployment.ref }}
           SHA: ${{ github.event.deployment.sha }}
           # Deployment URLs sit behind Vercel Authentication; the custom
           # domains do not. Override with repository variables when they move.
           PRODUCTION_WEB_URL: ${{ vars.PRODUCTION_WEB_URL || 'https://www.findb.uk' }}
           PREVIEW_WEB_URL: ${{ vars.PREVIEW_WEB_URL || 'https://preview.whoa.me' }}
         run: |
+          # Vercel reports the commit SHA as the ref, not the branch. Only
+          # main (Production) and preview deploy (vercel.json whitelist).
           case "$ENVIRONMENT" in
             Production*) url="$PRODUCTION_WEB_URL" ;;
-            *) if [ "$REF" = preview ]; then url="$PREVIEW_WEB_URL"; else echo "No site for $REF."; exit 0; fi ;;
+            *) url="$PREVIEW_WEB_URL" ;;
           esac
           bash scripts/warm-cache.sh "$url" "$SHA"
