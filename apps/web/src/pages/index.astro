@@ -41,7 +41,7 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
         {
           site.welcome && (
             <p class="home-welcome font-mono text-[13px] text-primary">
-              <span class="cli-only" aria-hidden="true">✳ </span>
+              <span class="cli-only" aria-hidden="true"># </span>
               {site.welcome}
             </p>
           )
