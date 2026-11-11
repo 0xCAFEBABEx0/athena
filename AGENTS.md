@@ -23,7 +23,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 ## Tech Stack
 
 - **CMS**: Payload CMS 3 + Next.js 16 (App Router); admin styling is Payload's own SCSS (no Tailwind)
-- **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (terminal-inspired light/dark themes in `src/styles/global.css`: warm paper, one orange accent, mono for dates/nav/labels)
+- **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (themes in `src/styles/global.css`; design rules in [`docs/BASELINE.md`](./docs/BASELINE.md))
 - **Language**: TypeScript (strict mode). `apps/cms` is on TypeScript 7 (native `tsc`); `apps/web` stays on 6 until `astro check` supports 7
 - **Runtime**: Vercel Functions of both apps run on **Bun 1.4** (`"bunVersion": "1.4.x"` in each `vercel.json`, Vercel's Bun runtime, beta), and both production builds run under Bun (`bun --bun next build` / `bun --bun astro build`; the Astro adapter derives `bun1.x` from the build process, which Vercel maps to Bun 1.3, so `apps/web/scripts/pin-bun-runtime.mjs` rewrites it to `bunVersion` after the build). Do not add `engines.node` to the app `package.json` files: it overrides `bunVersion` and puts functions back on Node. Node.js 24 LTS (pinned to 24.22.1 via `.nvmrc`, Vercel project setting 24.x) still runs tooling (`astro check`, Payload CLI, CI) and the CMS dev server (`next dev` under Bun fails to resolve Turbopack's hashed externals)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
@@ -92,9 +92,8 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 - **Path alias**: `@/*` maps to `./src/*` in both apps - use consistently
 - **Never edit** `packages/shared/src/payload-types.ts` - regenerate with `bun run generate:types`
 - **CMS**: Server Components by default; add `'use client'` only when needed
-- **Dark mode**: Controlled by `data-theme="dark"` attribute, not OS media query (theme stored under the `payload-theme` localStorage key in both apps)
+- **Front-end design and browser support** (`apps/web`): read [`docs/BASELINE.md`](./docs/BASELINE.md) before changing UI, CSS or client-side JS. It holds the Baseline target (Widely available freely; Newly available and Limited only as progressive enhancement), the features in use and their fallbacks, and the design rules: themes and dark mode (`data-theme`, not the OS media query), the daisyUI `include:` list, motion, switches, narrow widths
 - **Prefix unused vars** with `_` to suppress lint warnings
-- **daisyUI** ships only the components in the `include:` list in `apps/web/src/styles/global.css`; add a component there before using it
 - **Links from data**: a URL from the CMS, GitHub or a query string becomes an `href` or redirect only through `safeHref` / `httpUrl` / `isLocalPath` (`apps/web/src/lib/safe-url.ts`)
 - **Search** (`/search`) is one ISR page per language filtered in the browser; never read `?q=` on the server
 - **Tests**: add or update a case in `docs/TESTING.md` with each behavior change, and run both web suites before pushing

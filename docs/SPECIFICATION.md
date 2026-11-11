@@ -201,6 +201,7 @@ all managed by editors without code changes.
 | NF-OBS-1 | Errors are reported. | Sentry in the CMS (client, server, edge); Vercel Analytics and Speed Insights on the web. |
 | NF-MAINT-1 | Both apps agree on types and constants. | `packages/shared`, regenerated with `bun run generate:types`. |
 | NF-COMPAT-1 | Runtime | Node.js 24.x LTS (24.22.1 locally and in CI), Bun 1.4.x. |
+| NF-COMPAT-2 | Browsers | Works in every browser with Baseline Widely available features (floor: Safari 16.4, Chrome 111, Firefox 128 for Tailwind v4); newer features only as progressive enhancement. See `docs/BASELINE.md`. |
 
 ## 5. Environments
 
