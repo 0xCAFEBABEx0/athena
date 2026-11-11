@@ -4,6 +4,25 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.0.3] - 2026-11-11
+
+### Fixed
+
+- Unpublished posts could stay listed on `/posts` and the home page: the
+  CMS asked the site to re-render before its own save was committed, so the
+  re-render read the old data. The CMS now notifies the site after the save
+  has finished.
+- Publishing or unpublishing several posts at once no longer logs
+  "Web invalidation unreachable" in the CMS: the CMS sends the notice after
+  the save has finished and waits up to 25 s (was 5 s) for the site to
+  re-render the changed pages.
+- On a deployment behind Vercel Authentication, those re-renders now pass the
+  project's Protection Bypass for Automation. An unpublished post's page
+  answering 404 counts as re-rendered, and the CMS warns about pages that
+  could not be re-rendered instead of reporting success.
+- The CMS API functions may run for 60 s (was 30 s): a bulk save on a cold
+  preview database plus the site's re-renders could pass 30 s and be cut off.
+
 ## [1.0.2] - 2026-11-11
 
 ### Changed

@@ -1,3 +1,4 @@
+import { after } from 'next/server'
 import type { Payload } from 'payload'
 
 import type { CacheTag } from '@athena/shared/constants'
@@ -19,8 +20,24 @@ type InvalidateArgs = {
  * Vercel login) is reported as a failure instead of being followed.
  *
  * Never throws — cache invalidation must not break a publish.
+ *
+ * Inside a request (admin saves, REST) the call is deferred with Next's
+ * `after()` until the response has been sent. Hooks run before Payload
+ * commits the transaction, so a web re-render started from the hook could
+ * read the old data and cache it again: a bulk unpublish on 2026-11-11 left
+ * the posts listed on /posts that way. Outside a request (scripts, jobs,
+ * tests) `after()` throws and the call runs right away.
  */
-export const invalidateWeb = async ({ paths = [], tags = [], payload }: InvalidateArgs) => {
+export const invalidateWeb = async (args: InvalidateArgs): Promise<void> => {
+  try {
+    after(() => sendInvalidation(args))
+    return
+  } catch {
+    await sendInvalidation(args)
+  }
+}
+
+const sendInvalidation = async ({ paths = [], tags = [], payload }: InvalidateArgs) => {
   const webURL = process.env.WEB_URL
   if (!webURL || !process.env.REVALIDATE_SECRET) {
     payload.logger.warn(
@@ -40,7 +57,11 @@ export const invalidateWeb = async ({ paths = [], tags = [], payload }: Invalida
       },
       redirect: 'manual',
       body: JSON.stringify({ paths, tags }),
-      signal: AbortSignal.timeout(5_000),
+      // The web app answers once the changed pages are re-rendered (up to
+      // ~15 localized paths); this runs after the admin's response, so a
+      // generous limit costs the editor nothing. It must stay below the API
+      // route's maxDuration (apps/cms/vercel.json), which also covers the save.
+      signal: AbortSignal.timeout(25_000),
     })
     if (!res.ok) {
       const where = res.headers.get('location')
@@ -48,7 +69,15 @@ export const invalidateWeb = async ({ paths = [], tags = [], payload }: Invalida
         `Web invalidation failed: ${res.status} ${where ? `redirect to ${where}` : (await res.text()).slice(0, 300)}`,
       )
     } else {
-      payload.logger.info(`Web invalidated: paths=[${paths.join(', ')}] tags=[${tags.join(', ')}]`)
+      // The web app answers 200 even when a re-render failed; those pages
+      // stay stale until their next visit, so say so instead of "invalidated".
+      const result = (await res.json().catch(() => ({}))) as { failed?: unknown }
+      const failed = Array.isArray(result.failed) ? result.failed.map(String) : []
+      if (failed.length) {
+        payload.logger.warn(`Web invalidated, but re-render failed: ${failed.join(', ')}`)
+      } else {
+        payload.logger.info(`Web invalidated: paths=[${paths.join(', ')}] tags=[${tags.join(', ')}]`)
+      }
     }
   } catch (err) {
     payload.logger.error(`Web invalidation unreachable: ${String(err)}`)

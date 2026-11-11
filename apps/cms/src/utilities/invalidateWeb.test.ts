@@ -57,6 +57,23 @@ describe('TC-U-31 invalidateWeb', () => {
     expect(lines[0]?.level).toBe('info')
   })
 
+  test('warns when the web app could not re-render some pages', async () => {
+    process.env.WEB_URL = 'https://web.example'
+    process.env.REVALIDATE_SECRET = 's3cret'
+    globalThis.fetch = (async () =>
+      Response.json({
+        invalidated: true,
+        revalidated: ['/'],
+        failed: ['/posts'],
+        tags: [],
+      })) as unknown as typeof fetch
+    const { lines, payload } = logger()
+    await invalidateWeb({ paths: ['/', '/posts'], payload })
+    expect(lines).toEqual([
+      { level: 'warn', msg: 'Web invalidated, but re-render failed: /posts' },
+    ])
+  })
+
   test('reports a redirect (for example to the Vercel login) as a failure', async () => {
     process.env.WEB_URL = 'https://web.example'
     process.env.REVALIDATE_SECRET = 's3cret'

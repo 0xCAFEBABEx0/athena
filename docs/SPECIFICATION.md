@@ -195,7 +195,7 @@ all managed by editors without code changes.
 | NF-PERF-3 | Page-to-page navigation feels instant. | Speculation rules prefetch a page when a link is hovered or pressed (Chrome, Edge); a 120 ms cross-document view transition replaces the blank flash (off with reduced motion). The CLI / ADE and theme switches change attributes in place without a reload. |
 | NF-PERF-2 | Responsive images. | `srcset` from renditions, lazy loading, `decoding=async`. |
 | NF-AVAIL-1 | A CMS outage degrades the site rather than taking it down. | Cached HTML keeps serving; header/footer/redirects fail open; sitemaps return 503; standalone 500 page. |
-| NF-AVAIL-2 | A web outage never blocks publishing. | `invalidateWeb` logs and never throws; 5 s timeout. |
+| NF-AVAIL-2 | A web outage never blocks publishing. | `invalidateWeb` logs and never throws; it runs after the admin response (`after()`), 25 s timeout. |
 | NF-SEC-1 | Drafts are never publicly visible or cached. | Draft reads need the API key; draft responses are `private, no-store`; cookie is HttpOnly. |
 | NF-SEC-2 | Secrets never reach the browser. | All CMS reads with credentials run server-side; only the public CMS origin is embedded in form markup. |
 | NF-OBS-1 | Errors are reported. | Sentry in the CMS (client, server, edge); Vercel Analytics and Speed Insights on the web. |
