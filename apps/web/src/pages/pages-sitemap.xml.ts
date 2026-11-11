@@ -2,22 +2,30 @@ import type { APIRoute } from 'astro'
 
 import { getAllSlugs } from '@/lib/cms'
 import { webURL } from '@/lib/env'
-import { sitemapResponse, sitemapXML, type SitemapEntry } from '@/lib/sitemap'
+import { DEFAULT_LOCALE } from '@/lib/i18n'
+import { localizedEntries, sitemapResponse, sitemapXML, type SitemapEntry } from '@/lib/sitemap'
+import { getWork } from '@/lib/work'
 
 export const GET: APIRoute = async ({ url }) => {
   const base = url.origin || webURL()
-  const now = new Date().toISOString()
 
   try {
-    const docs = await getAllSlugs('pages')
+    // getWork never throws (a CMS outage just leaves /work out).
+    const [docs, work] = await Promise.all([getAllSlugs('pages'), getWork({}, DEFAULT_LOCALE)])
 
+    // Fixed routes carry no <lastmod>: Google uses it only when it is
+    // accurate, and "now" on every request is not. /search is left out (its
+    // pages are noindex), and the CMS "home" page redirects to "/".
     const entries: SitemapEntry[] = [
-      ...docs.map((doc) => ({
-        loc: doc.slug === 'home' ? `${base}/` : `${base}/${doc.slug}`,
-        lastmod: doc.updatedAt,
-      })),
-      { loc: `${base}/search`, lastmod: now },
-      { loc: `${base}/posts`, lastmod: now },
+      ...localizedEntries(base, '/'),
+      ...docs
+        .filter((doc) => doc.slug && doc.slug !== 'home')
+        .flatMap((doc) => localizedEntries(base, `/${doc.slug}`, doc.updatedAt)),
+      ...localizedEntries(base, '/posts'),
+      ...(work.length > 0 ? localizedEntries(base, '/work') : []),
+      ...work.flatMap((item) =>
+        localizedEntries(base, `/work/${item.slug}`, item.pushedAt || undefined),
+      ),
     ]
 
     return sitemapResponse(sitemapXML(entries))

@@ -87,25 +87,63 @@ reviews:
         Endpoints that gate drafts and cache invalidation. Verify the
         `PREVIEW_SECRET` / `REVALIDATE_SECRET` checks happen before any side
         effect, that comparisons do not leak secrets, and that the
-        `athena-draft` cookie stays HttpOnly. Astro skips underscore-prefixed
-        files, so endpoint file names must not start with `_`.
+        `athena-draft` and `__prerender_bypass` cookies stay HttpOnly (the
+        latter holds the derived ISR bypass token, never REVALIDATE_SECRET
+        itself). `/api/invalidate` must keep calling `invalidateContent()`
+        before it re-renders paths. Redirect targets taken from the query
+        string must pass `isLocalPath` (`lib/safe-url.ts`), and draft mode
+        must keep requiring the matching `__prerender_bypass` cookie
+        (`isDraft`), not `athena-draft` alone. Astro skips
+        underscore-prefixed files, so endpoint file names must not start
+        with `_`.
     - path: 'apps/web/src/lib/cms.ts'
       instructions: |
         Payload REST defaults to `limit=10` and drafts require auth. Every
         request must set `depth` and `limit` explicitly, and draft fetches
         must authenticate with the `PAYLOAD_API_KEY` service account. The
         API key must never reach client-side code.
+    - path: 'apps/web/src/{middleware.ts,layouts/Layout.astro,lib/{site,work,nav}.ts}'
+      instructions: |
+        On a cache miss the middleware starts the layout's CMS requests
+        together; the memos in site.ts, work.ts and nav.ts are keyed by
+        `Astro.locals`, so callers must pass `Astro.locals` (not
+        `Astro.request`) or the page fetches everything a second time.
+        Layout.astro prerenders hovered links: any script that must run only
+        when the page is shown (analytics, settings from localStorage) waits
+        for `prerenderingchange` when `document.prerendering` is true.
+        The middleware answers dotted paths that are not in DOTTED_ROUTES
+        with a plain 404 and no CMS request; a new dotted route must be added
+        there.
+    - path: 'apps/web/src/{pages/search.astro,styles/global.css}'
+      instructions: |
+        /search is one ISR page per language (ISR ignores ?q=) and filters
+        in the browser; it must not read the query on the server or call the
+        CMS per query. global.css lists the daisyUI components it ships
+        (`include:`); a component used without being listed renders
+        unstyled.
     - path: '**/vercel.json'
       instructions: |
         `git.deploymentEnabled` is a whitelist: keep `"**": false` with only
         `main` and `preview` enabled, or every PR branch will deploy and
-        exhaust the Hobby build quota. Keep the `ignoreCommand` that skips
-        rebuilding `preview -> main` release merge commits.
+        exhaust the Hobby build quota. Keep `ignoreCommand` pointing at
+        `scripts/vercel-ignore-build.sh`, which skips rebuilding
+        `preview -> main` release merge commits and apps with no changes since
+        the last deployment; it must exit 1 (build) whenever it is unsure,
+        including a redeploy of the same commit (env var changes).
+        Keep `"bunVersion": "1.4.x"`: functions run on Bun, and the app
+        `package.json` must not set `engines.node` (it overrides
+        `bunVersion`) while its build script keeps `bun --bun`.
     - path: '.github/workflows/**'
       instructions: |
         Node is pinned to 24.22.1 (`.nvmrc`) and Bun to the version in the
         root `package.json` `packageManager` field; flag drift. Bun is the
         only package manager: flag any `npm`, `pnpm` or `yarn` usage.
+    - path: '{CHANGELOG.md,.github/workflows/release.yml}'
+      instructions: |
+        Versioning rules live in docs/VERSIONING.md. A PR that bumps the root
+        `package.json` `version` must add a matching `## [X.Y.Z]` section at
+        the top of CHANGELOG.md. The release workflow must stay idempotent
+        (skip when the tag `vX.Y.Z` exists) and never move or delete tags.
     - path: '**/package.json'
       instructions: |
         Bun is the only package manager; a `package-lock.json` or

@@ -133,8 +133,9 @@ if (shouldUseSentry && hasSentryConfig) {
 
       // Source map configuration using newer options
       sourcemaps: {
-        // Use improved source map handling
-        disable: false,
+        // Upload only for Production builds: it adds ~10 s to every Vercel
+        // build, and Preview stack traces can stay minified.
+        disable: process.env.VERCEL_ENV !== 'production',
         // Clean up source maps after upload for better security
         deleteSourcemapsAfterUpload: true,
         // Custom source rewriting to improve source map references

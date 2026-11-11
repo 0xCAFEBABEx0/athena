@@ -1,21 +1,27 @@
 ---
+import { dict, localeOf, localizePath } from '@/lib/i18n'
 import type { Post } from '@athena/shared/payload-types'
 
 import Media from '@/components/Media.astro'
-import { formatAuthors, formatDateTime } from '@/lib/format'
+import { categoryTitles, formatAuthors, formatDate } from '@/lib/format'
 
 type Props = {
   post: Post
+  readingMinutes?: number
 }
 
-const { post } = Astro.props
-const { categories, heroImage, populatedAuthors, publishedAt, title } = post
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+const { post, readingMinutes } = Astro.props
+const { categories, heroImage, populatedAuthors, publishedAt, slug, title, meta } = post
 
 const authors = (populatedAuthors ?? []).filter(
   (author): author is NonNullable<typeof author> => author !== null,
 )
 const authorText = formatAuthors(authors)
-const hasAuthors = authorText !== ''
+const date = formatDate(publishedAt)
+const tags = categoryTitles(categories)
 
 const hasImage =
   heroImage &&
@@ -23,57 +29,51 @@ const hasImage =
   'url' in heroImage &&
   heroImage.url &&
   (heroImage.url.startsWith('http') || heroImage.url.startsWith('/'))
-
-const categoryTitles = (categories ?? [])
-  .filter((category) => typeof category === 'object' && category !== null)
-  .map((category) => (typeof category === 'object' ? category.title || 'Untitled category' : ''))
 ---
 
-<div class="pb-8">
-  <div class="container">
-    <div class="mx-auto max-w-[48rem]">
-      {
-        categoryTitles.length > 0 && (
-          <div class="mb-6 flex flex-wrap gap-2">
-            {categoryTitles.map((categoryTitle) => (
-              <span class="badge badge-ghost border-base-300/60 text-xs font-medium uppercase tracking-wider text-base-content/60">
-                {categoryTitle}
-              </span>
-            ))}
-          </div>
-        )
-      }
-
-      <h1 class="heading-display mb-6 text-4xl md:text-5xl lg:text-6xl">{title}</h1>
-
-      <div class="flex flex-col gap-4 text-sm md:flex-row md:items-center md:gap-8">
-        {
-          hasAuthors && (
-            <div class="flex items-center gap-2">
-              <span class="text-base-content/50">Author</span>
-              <span class="font-medium">{authorText}</span>
-            </div>
-          )
-        }
-        {
-          publishedAt && (
-            <div class="flex items-center gap-2">
-              <span class="text-base-content/50">Published</span>
-              <time class="font-medium" datetime={publishedAt}>
-                {formatDateTime(publishedAt)}
-              </time>
-            </div>
-          )
-        }
-      </div>
-    </div>
-
-    {
-      hasImage && (
-        <div class="mx-auto mt-12 max-w-[64rem] select-none overflow-hidden rounded-box border border-base-300/60">
-          <Media loading="eager" imgClass="w-full object-cover" resource={heroImage} />
-        </div>
-      )
-    }
+<header>
+  <div class="cli-only breadcrumbs pt-8 font-mono text-[13px] text-base-content/65">
+    <ul>
+      <li><a href={lp('/')}>~</a></li>
+      <li><a href={lp('/posts')}>posts</a></li>
+      <li aria-current="page">{slug}</li>
+    </ul>
   </div>
-</div>
+
+  <h1 class="post-title heading-display mt-3 text-[26px] leading-snug md:text-3xl md:leading-snug">{title}</h1>
+
+  <p class="post-meta mt-3 flex flex-wrap gap-x-2 font-mono text-[13px] text-base-content/65">
+    {date && <time datetime={publishedAt ?? undefined}>{date}</time>}
+    {readingMinutes && <span><span class="cli-only">· </span>{t.minRead(readingMinutes)}</span>}
+    {authorText && <span><span class="cli-only">· </span>{authorText}</span>}
+    {tags.length > 0 && <span><span class="cli-only">· </span>{tags.map((tag) => `#${tag}`).join(' ')}</span>}
+  </p>
+
+  {
+    meta?.description && (
+      <section
+        class="post-summary card card-border mt-7 border-l-[3px] border-l-primary bg-base-200"
+        aria-label={t.summary}
+      >
+        <div class="card-body gap-1 px-5 py-3.5">
+          <p class="font-mono text-[13.5px] font-semibold">
+            <span class="cli-only text-primary" aria-hidden="true">●</span> {t.summary}
+          </p>
+          <p class="flex gap-2 text-[15px] leading-relaxed text-base-content/85">
+            <span class="cli-only shrink-0 font-mono text-base-content/65" aria-hidden="true">⎿</span>
+            <span class="modern-only modern-check mt-1" aria-hidden="true">✓</span>
+            <span>{meta.description}</span>
+          </p>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    hasImage && (
+      <figure class="mt-8 select-none overflow-hidden rounded-box border border-base-300">
+        <Media loading="eager" imgClass="w-full object-cover" resource={heroImage} />
+      </figure>
+    )
+  }
+</header>

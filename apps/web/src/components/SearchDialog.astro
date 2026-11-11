@@ -1,0 +1,344 @@
+---
+/**
+ * Popup search (⌘K / Ctrl+K, "/" or any [data-search-open] button). Keyword
+ * search only: on first open the browser loads /search-index.json (cached at
+ * Vercel like a page) and filters it locally, so typing sends no requests.
+ * Enter with nothing selected opens the full /search page.
+ */
+import { dict, localeOf, localizePath } from '@/lib/i18n'
+
+const locale = localeOf(Astro)
+const t = dict(locale)
+const strings = {
+  posts: t.groupPosts,
+  pages: t.groupPages,
+  loading: t.searchLoading,
+  failed: t.searchFailed,
+  empty: t.notFound,
+  count: [t.resultCount(0), t.resultCount(1), t.resultCount(2)],
+  statusCommand: t.statusCommand,
+}
+---
+
+<dialog
+  class="modal items-start pt-[10vh] sm:pt-[14vh]"
+  aria-label={t.searchTitle}
+  data-search-dialog
+  data-index-url={localizePath(locale, '/search-index.json')}
+  data-strings={JSON.stringify(strings)}
+>
+  <div
+    class="modal-box w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-2xl border border-base-300 p-0 shadow-2xl"
+  >
+    <form
+      action={localizePath(locale, '/search')}
+      method="get"
+      role="search"
+      class="flex items-center gap-3 border-b border-base-300 px-5 py-3.5"
+      data-search-form
+    >
+      <span class="text-lg text-base-content/50" aria-hidden="true">⌕</span>
+      <label class="sr-only" for="search-dialog-input">{t.searchOpen}</label>
+      <input
+        id="search-dialog-input"
+        type="search"
+        name="q"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder={t.searchPlaceholder}
+        class="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-base-content/65"
+        role="combobox"
+        aria-expanded="true"
+        aria-controls="search-dialog-results"
+        aria-autocomplete="list"
+        data-search-query
+      />
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm btn-square text-base-content/65"
+        aria-label={t.searchClose}
+        data-search-close
+      >
+        ✕
+      </button>
+    </form>
+    <div
+      id="search-dialog-results"
+      role="listbox"
+      aria-label={t.searchResults}
+      class="max-h-[min(60vh,28rem)] overflow-y-auto p-2"
+      data-search-results
+    >
+    </div>
+    <div
+      class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-base-300 px-5 py-2.5 font-mono text-xs text-base-content/65"
+    >
+      <span class="hidden sm:inline">↑↓ {t.searchSelect}</span>
+      <span class="hidden sm:inline">↵ {t.searchOpenResult}</span>
+      <span class="hidden sm:inline">esc {t.searchCloseKey}</span>
+      <span class="ms-auto" aria-live="polite" data-search-status></span>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button tabindex="-1">{t.searchClose}</button>
+  </form>
+</dialog>
+
+<script>
+  import type { SearchHit, SearchIndex } from '@/pages/search-index.json'
+
+  type Strings = {
+    posts: string
+    pages: string
+    loading: string
+    failed: string
+    empty: string
+    count: [string, string, string]
+    statusCommand: string
+  }
+
+  const dialog = document.querySelector<HTMLDialogElement>('[data-search-dialog]')
+  const input = dialog?.querySelector<HTMLInputElement>('[data-search-query]')
+  const list = dialog?.querySelector<HTMLElement>('[data-search-results]')
+  const status = dialog?.querySelector<HTMLElement>('[data-search-status]')
+  const form = dialog?.querySelector<HTMLFormElement>('[data-search-form]')
+
+  if (dialog && input && list && status && form) {
+    const indexURL = dialog.dataset.indexUrl ?? '/search-index.json'
+    const strings = JSON.parse(dialog.dataset.strings ?? '{}') as Strings
+    const countLabel = (n: number) =>
+      n === 1 ? strings.count[1] : strings.count[2].replace('2', String(n))
+
+    let options: HTMLAnchorElement[] = []
+    let active = -1
+    let index: Promise<SearchIndex> | null = null
+
+    const select = (index: number) => {
+      options.forEach((option, i) => option.setAttribute('aria-selected', String(i === index)))
+      active = index
+      const current = options[index]
+      if (current) {
+        input.setAttribute('aria-activedescendant', current.id)
+        current.scrollIntoView({ block: 'nearest' })
+      } else {
+        input.removeAttribute('aria-activedescendant')
+      }
+    }
+
+    const icon = { posts: '▤', pages: '◎' } as const
+
+    // Slash commands (type "/status"): a little terminal easter egg.
+    const COMMANDS = [{ name: '/status', hint: strings.statusCommand }] as const
+    const runCommand = (name: string) => {
+      if (name !== '/status') return
+      dialog.close()
+      ;(window as Window & { __openStatus?: () => void }).__openStatus?.()
+    }
+
+    const renderCommands = (q: string) => {
+      const query = q.trim().toLowerCase()
+      if (!query.startsWith('/')) return
+      for (const command of COMMANDS) {
+        if (!command.name.startsWith(query)) continue
+        const option = document.createElement('a')
+        option.href = '#'
+        option.id = `search-hit-${options.length}`
+        option.dataset.command = command.name
+        option.setAttribute('role', 'option')
+        option.setAttribute('aria-selected', 'false')
+        option.className = 'search-hit font-mono'
+        const glyph = document.createElement('span')
+        glyph.className = 'search-hit-icon'
+        glyph.setAttribute('aria-hidden', 'true')
+        glyph.textContent = '❯'
+        const title = document.createElement('span')
+        title.className = 'min-w-0 flex-1 truncate'
+        title.textContent = command.name
+        const hint = document.createElement('span')
+        hint.className = 'hidden shrink-0 text-xs text-base-content/65 sm:inline'
+        hint.textContent = command.hint
+        const enter = document.createElement('span')
+        enter.className = 'search-hit-enter'
+        enter.setAttribute('aria-hidden', 'true')
+        enter.textContent = '↵'
+        option.append(glyph, title, hint, enter)
+        const index = options.length
+        option.addEventListener('mousemove', () => {
+          if (active !== index) select(index)
+        })
+        option.addEventListener('click', (event) => {
+          event.preventDefault()
+          runCommand(command.name)
+        })
+        options.push(option)
+        list.append(option)
+      }
+    }
+
+    const render = (data: SearchIndex, q = '') => {
+      list.replaceChildren()
+      options = []
+      renderCommands(q)
+      for (const group of ['posts', 'pages'] as const) {
+        const hits: SearchHit[] = data[group]
+        if (hits.length === 0) continue
+        const label = document.createElement('p')
+        label.className = 'px-3 pb-1 pt-2 text-xs text-base-content/65'
+        label.textContent = strings[group]
+        label.setAttribute('role', 'presentation')
+        list.append(label)
+        for (const hit of hits) {
+          const option = document.createElement('a')
+          option.href = hit.href
+          option.id = `search-hit-${options.length}`
+          option.setAttribute('role', 'option')
+          option.setAttribute('aria-selected', 'false')
+          option.className = 'search-hit'
+          const glyph = document.createElement('span')
+          glyph.className = 'search-hit-icon'
+          glyph.setAttribute('aria-hidden', 'true')
+          glyph.textContent = icon[group]
+          const title = document.createElement('span')
+          title.className = 'min-w-0 flex-1 truncate'
+          title.textContent = hit.title
+          option.append(glyph, title)
+          if (hit.tag) {
+            const tag = document.createElement('span')
+            tag.className =
+              'badge badge-outline badge-sm hidden shrink-0 font-mono text-base-content/65 sm:inline-flex'
+            tag.textContent = `#${hit.tag}`
+            option.append(tag)
+          }
+          const enter = document.createElement('span')
+          enter.className = 'search-hit-enter'
+          enter.setAttribute('aria-hidden', 'true')
+          enter.textContent = '↵'
+          option.append(enter)
+          const index = options.length
+          option.addEventListener('mousemove', () => {
+            if (active !== index) select(index)
+          })
+          options.push(option)
+          list.append(option)
+        }
+      }
+      const total = options.length
+      if (total === 0) {
+        const empty = document.createElement('p')
+        empty.className = 'px-3 py-6 text-center text-sm text-base-content/65'
+        empty.textContent = strings.empty
+        list.append(empty)
+      }
+      status.textContent = countLabel(total)
+      select(total > 0 ? 0 : -1)
+    }
+
+    // Loaded once per page view; a failed load is retried on the next search.
+    const loadIndex = (): Promise<SearchIndex> => {
+      index ??= fetch(indexURL).then(async (res) => {
+        if (!res.ok) throw new Error(String(res.status))
+        return (await res.json()) as SearchIndex
+      })
+      index.catch(() => {
+        index = null
+      })
+      return index
+    }
+
+    const LIMIT = { posts: 8, pages: 5 } as const
+
+    // Every word must appear in the title, slug, summary or tags; title
+    // matches of the whole query rank first. A blank query lists the newest
+    // posts.
+    const filter = (data: SearchIndex, q: string): SearchIndex => {
+      const query = q.trim().toLowerCase()
+      if (!query) return { posts: data.posts.slice(0, LIMIT.posts), pages: [] }
+      const words = query.split(/\s+/)
+      const pick = (hits: SearchHit[], limit: number) =>
+        hits
+          .map((hit) => {
+            const title = hit.title.toLowerCase()
+            const haystack = `${title} ${(hit.text ?? '').toLowerCase()}`
+            if (!words.every((word) => haystack.includes(word))) return null
+            return { hit, rank: title.includes(query) ? 0 : 1 }
+          })
+          .filter((match): match is { hit: SearchHit; rank: number } => match !== null)
+          .sort((a, b) => a.rank - b.rank)
+          .slice(0, limit)
+          .map((match) => match.hit)
+      return { posts: pick(data.posts, LIMIT.posts), pages: pick(data.pages, LIMIT.pages) }
+    }
+
+    let latest = 0
+    const search = async (q: string) => {
+      const run = ++latest
+      if (!index) status.textContent = strings.loading
+      try {
+        const data = await loadIndex()
+        if (run === latest) render(filter(data, q), q)
+      } catch {
+        if (run !== latest) return
+        list.replaceChildren()
+        options = []
+        select(-1)
+        status.textContent = strings.failed
+      }
+    }
+
+    const open = (query?: string) => {
+      if (dialog.open) return
+      if (typeof query === 'string') input.value = query
+      dialog.showModal()
+      input.focus()
+      input.select()
+      void search(input.value)
+    }
+
+    input.addEventListener('input', () => void search(input.value))
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if (options.length === 0) return
+        event.preventDefault()
+        const step = event.key === 'ArrowDown' ? 1 : -1
+        select((active + step + options.length) % options.length)
+      } else if (event.key === 'Escape') {
+        // A search input swallows the first Escape (it clears the value).
+        event.preventDefault()
+        dialog.close()
+      } else if (event.key === 'Enter' && !event.isComposing) {
+        const current = options[active]
+        if (current?.dataset.command) {
+          event.preventDefault()
+          runCommand(current.dataset.command)
+        } else if (current) {
+          event.preventDefault()
+          window.location.href = current.href
+        }
+      }
+    })
+
+    dialog.querySelector('[data-search-close]')?.addEventListener('click', () => dialog.close())
+
+    // Enter with nothing selected submits to the full /search page.
+    form.addEventListener('submit', () => dialog.close())
+
+    document.addEventListener('click', (event) => {
+      const trigger = (event.target as Element | null)?.closest('[data-search-open]')
+      if (!trigger) return
+      event.preventDefault()
+      open()
+    })
+
+    document.addEventListener('keydown', (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        if (dialog.open) dialog.close()
+        else open()
+      }
+    })
+
+    // The "/" shortcut in Layout calls this.
+    ;(window as Window & { __openSearch?: (query?: string) => void }).__openSearch = open
+  }
+</script>

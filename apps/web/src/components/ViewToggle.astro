@@ -1,0 +1,61 @@
+---
+import { dict, localeOf } from '@/lib/i18n'
+
+/**
+ * CLI ⇄ ADE switch (the ADE look is 'modern' in code and in the CMS). The choice lives in localStorage ('athena-view') and
+ * is applied before paint by the script in Layout, so one cached HTML page
+ * serves both looks. `flag` is the CLI header button, `segmented` the modern
+ * top bar control.
+ */
+type Props = {
+  variant?: 'flag' | 'segmented'
+}
+
+const { variant = 'flag' } = Astro.props
+const t = dict(localeOf(Astro))
+---
+
+{
+  variant === 'flag' ? (
+    <button
+      type="button"
+      class="btn btn-ghost btn-sm min-h-11 px-2 font-mono font-normal text-base-content/65 hover:text-base-content"
+      data-view-set="modern"
+      aria-label={t.toModern}
+    >
+      [{t.viewModern.toLowerCase()}]
+    </button>
+  ) : (
+    <div class="tabs tabs-box tabs-xs" role="group" aria-label={t.view}>
+      <button type="button" class="tab view-tab-cli" data-view-set="cli" aria-label={t.toCli}>
+        {t.viewCli}
+      </button>
+      <button type="button" class="tab view-tab-modern" data-view-set="modern" aria-label={t.toModern}>
+        {t.viewModern}
+      </button>
+    </div>
+  )
+}
+
+<script>
+  const KEY = 'athena-view'
+
+  const setView = (view: 'cli' | 'modern') => {
+    document.documentElement.setAttribute('data-view', view)
+    try {
+      window.localStorage.setItem(KEY, view)
+    } catch {
+      /* private mode: the view still switches for this page */
+    }
+  }
+
+  const toggle = () =>
+    setView(document.documentElement.getAttribute('data-view') === 'modern' ? 'cli' : 'modern')
+
+  ;(window as Window & { __toggleView?: () => void }).__toggleView = toggle
+  document.addEventListener('click', (event) => {
+    const button = (event.target as Element | null)?.closest<HTMLElement>('[data-view-set]')
+    const view = button?.dataset.viewSet
+    if (view === 'cli' || view === 'modern') setView(view)
+  })
+</script>

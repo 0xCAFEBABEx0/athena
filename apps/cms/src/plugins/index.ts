@@ -13,9 +13,9 @@ import { beforeSyncWithSearch } from '@/search/beforeSync'
 import type { Page, Post } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
 
-const generateTitle: GenerateTitle<Post | Page> = ({ doc }) => {
-  return doc?.title ? `${doc.title} | Payload Website Template` : 'Payload Website Template'
-}
+// The SEO tab's "Generate" button: the title alone. The web app adds
+// " | <site name>" from the Site global (lib/seo.ts pageTitle).
+const generateTitle: GenerateTitle<Post | Page> = ({ doc }) => doc?.title ?? ''
 
 const generateURL: GenerateURL<Post | Page> = ({ doc }) => {
   const url = getServerSideURL()

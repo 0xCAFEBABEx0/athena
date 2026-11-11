@@ -1,4 +1,4 @@
-import type { CollectionSlug, GlobalSlug, Payload, PayloadRequest, File } from 'payload'
+import type { CollectionSlug, Payload, PayloadRequest, File } from 'payload'
 
 import { contactForm as contactFormData } from './contact-form'
 import { contact as contactPageData } from './contact-page'
@@ -19,7 +19,7 @@ const collections: CollectionSlug[] = [
   'form-submissions',
   'search',
 ]
-const globals: GlobalSlug[] = ['header', 'footer']
+const globals: Array<'header' | 'footer'> = ['header', 'footer']
 
 // Next.js revalidation errors are normal when seeding the database without a server running
 // i.e. running `yarn seed` locally instead of using the admin UI within an active app
@@ -320,32 +320,11 @@ export const seed = async ({
     }),
     payload.updateGlobal({
       slug: 'footer',
+      // Empty on purpose: the footer always shows the version, rss and ©;
+      // editors add their own links (the template's Source Code / Payload
+      // links pointed at Payload's repository, not this site).
       data: {
-        navItems: [
-          {
-            link: {
-              type: 'custom',
-              label: 'Admin',
-              url: '/admin',
-            },
-          },
-          {
-            link: {
-              type: 'custom',
-              label: 'Source Code',
-              newTab: true,
-              url: 'https://github.com/payloadcms/payload/tree/main/templates/website',
-            },
-          },
-          {
-            link: {
-              type: 'custom',
-              label: 'Payload',
-              newTab: true,
-              url: 'https://payloadcms.com/',
-            },
-          },
-        ],
+        navItems: [],
       },
       context: { disableRevalidate: true },
     }),

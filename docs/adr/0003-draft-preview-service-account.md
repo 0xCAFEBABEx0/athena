@@ -28,3 +28,13 @@ belongs to the CMS origin, so the web app cannot reuse it.
   roles should give it read-only access.
 - Rotating the key means running `create-web-service-account.ts` and updating
   `PAYLOAD_API_KEY` on athena-web.
+
+## Update (2026-11)
+
+- `/api/preview` also sets `__prerender_bypass` to the ISR bypass token, and
+  pages treat a request as a draft only when that cookie matches
+  (`isDraft`). The `athena-draft` cookie alone, which anyone can set in
+  their browser, no longer asks the CMS for drafts.
+- The `path` parameters of `/api/preview` and `/api/exit-preview` accept only
+  a path on the site, so the endpoints cannot be used to redirect a visitor
+  to another origin.

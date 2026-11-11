@@ -24,6 +24,8 @@ same change that alters the behaviour they describe.
 | [Deployment Guide](./DEPLOYMENT.md) | The two Vercel projects, environment variables and release steps. |
 | [CI/CD Pipeline](./CI_CD.md) | GitHub Actions and Vercel triggers. |
 | [Sentry Setup](./SENTRY_SETUP.md) | Error tracking configuration. |
+| [Testing](./TESTING.md) | Unit and E2E suites, the numbered test cases, deployment checks and the results log. |
+| [Versioning](./VERSIONING.md) | The site's SemVer rules, `CHANGELOG.md` and the release workflow. |
 | [Upgrade Notes](./UPGRADE_NOTES.md) | Dependency upgrades, including the SQL each one needed. |
 | [Security Vulnerabilities](./SECURITY_VULNERABILITIES.md) | Historical CVE audit (January 2025). |
 

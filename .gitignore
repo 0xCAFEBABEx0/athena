@@ -3,6 +3,7 @@ dist/
 node_modules
 .DS_Store
 .env*
+!.env.example
 .next
 .vercel
 
@@ -17,3 +18,7 @@ node_modules
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Playwright
+apps/web/test-results/
+apps/web/playwright-report/

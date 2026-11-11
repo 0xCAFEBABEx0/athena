@@ -1,18 +1,20 @@
 ---
+import { dict, localeOf } from '@/lib/i18n'
 import type { Post } from '@athena/shared/payload-types'
 
-import Card from '@/components/Card.astro'
+import PostList from '@/components/PostList.astro'
+import Prompt from '@/components/Prompt.astro'
 
 type Props = {
   docs?: Post[]
   class?: string
 }
 
-const { docs, class: className } = Astro.props
+const t = dict(localeOf(Astro))
+const { docs = [], class: className } = Astro.props
 ---
 
-<div class:list={['lg:container', className]}>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-stretch">
-    {docs?.map((doc) => typeof doc === 'object' && <Card doc={doc} relationTo="posts" showCategories />)}
-  </div>
-</div>
+<section class={className} aria-labelledby="related-posts">
+  <Prompt heading={t.related} count={docs.length} id="related-posts" />
+  <PostList class="mt-1.5" posts={docs} />
+</section>

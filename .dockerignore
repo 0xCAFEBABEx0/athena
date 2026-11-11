@@ -1,13 +1,14 @@
-# Dependencies
-node_modules
+# Dependencies (nested ones too: apps/cms keeps its own TypeScript 7)
+**/node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # Build outputs
-.next/
-dist/
-build/
+**/.next/
+**/dist/
+**/build/
+**/.vercel/
 
 # Environment files
 .env

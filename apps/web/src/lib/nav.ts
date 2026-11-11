@@ -1,0 +1,63 @@
+import type { Footer, Header, Post } from '@athena/shared/payload-types'
+
+import { getGlobal, getPosts } from './cms'
+import type { Locale } from './i18n'
+import type { CMSLinkData } from './links'
+
+/**
+ * Per-request memo, keyed by `Astro.locals` (one object per request, kept
+ * across the locale rewrite in middleware): the CLI header and the modern
+ * sidebar both render on every page (CSS shows one of them), so each CMS call
+ * happens once, and the middleware can start it before the page renders.
+ */
+const memo = <T>(load: (locale: Locale) => Promise<T>) => {
+  const cache = new WeakMap<object, Map<Locale, Promise<T>>>()
+  return (scope: object, locale: Locale): Promise<T> => {
+    let byLocale = cache.get(scope)
+    if (!byLocale) {
+      byLocale = new Map()
+      cache.set(scope, byLocale)
+    }
+    let pending = byLocale.get(locale)
+    if (!pending) {
+      pending = load(locale)
+      byLocale.set(locale, pending)
+    }
+    return pending
+  }
+}
+
+const publicLinks = (items: { link: CMSLinkData }[] | null | undefined): CMSLinkData[] =>
+  (items ?? []).map(({ link }) => link)
+
+/** Header nav links. Never throws: a CMS outage renders the fallback nav. */
+export const getHeaderNav = memo(async (locale): Promise<CMSLinkData[]> => {
+  try {
+    const header = await getGlobal<Header>('header', { locale })
+    return publicLinks(header?.navItems)
+  } catch (error) {
+    console.error('[nav] failed to load header nav', error)
+    return []
+  }
+})
+
+export const getFooterNav = memo(async (locale): Promise<CMSLinkData[]> => {
+  try {
+    const footer = await getGlobal<Footer>('footer', { locale })
+    return publicLinks(footer?.navItems)
+  } catch (error) {
+    console.error('[nav] failed to load footer nav', error)
+    return []
+  }
+})
+
+/** Newest post titles for the modern sidebar. */
+export const getRecentPosts = memo(async (locale): Promise<Pick<Post, 'slug' | 'title'>[]> => {
+  try {
+    const result = await getPosts({ page: 1, limit: 6 }, { locale })
+    return result.docs.filter((post) => post.slug)
+  } catch (error) {
+    console.error('[nav] failed to load recent posts', error)
+    return []
+  }
+})

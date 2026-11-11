@@ -25,8 +25,18 @@ all managed by editors without code changes.
 
 ### 2.1 Pages
 
-- **F-PAGE-1** A published page with slug `s` is served at `/s`; slug `home`
-  is served at `/`.
+- **F-HOME-1** `/` shows the intro box from the `site` global (welcome line,
+  author name, intro, post count, last update, social links), the 8 newest
+  posts, the `site.projects` list and a search box. `/home` redirects there.
+- **F-HOME-2** "Picks from X": up to 6 posts on X listed in the `site`
+  global (`picks`) are shown on `/` as the site's own cards (author,
+  @handle, day, text, optional localized note, link to the post on x.com),
+  one column on phones and two from 768 px. The CMS reads text, author,
+  handle, day and language from X's public oEmbed endpoint when the Site
+  global is saved (no API key); visitors' browsers load nothing from X.
+  Photos and videos are not shown (text only; the card links to the post).
+- **F-PAGE-1** A published page with slug `s` is served at `/s` (e.g. `/about`).
+  The CMS page with slug `home` is no longer routed.
 - **F-PAGE-2** A page shows its hero (none / low / medium / high impact) then
   its layout blocks in order: Call to Action, Content (1–4 columns), Media,
   Archive, Form.
@@ -35,14 +45,16 @@ all managed by editors without code changes.
 
 ### 2.2 Blog
 
-- **F-POST-1** `/posts` lists published posts, newest `publishedAt` first, 12
-  per page, with a "Showing X–Y of Z" range and pagination.
-- **F-POST-2** `/posts/page/n` shows page `n`; `n` below 1, non-numeric or past
-  the last page returns 404.
-- **F-POST-3** `/posts/{slug}` shows the post hero (title, categories,
-  authors, publish date, hero image), the rich-text body (headings, lists,
-  links, banners, code blocks, images, horizontal rules) and up to
-  the editor-selected related posts.
+- **F-POST-1** `/posts` lists published posts as one-line rows (date, title,
+  first category), newest `publishedAt` first, 12 per page, with pagination.
+- **F-POST-2** `/posts/page/n` shows page `n`; `/posts/page/1` redirects to
+  `/posts`; `n` below 1, non-numeric or past the last page returns 404.
+- **F-POST-3** `/posts/{slug}` shows a breadcrumb, the title, date, reading
+  time, authors and categories, the meta description as an "概要" box, the
+  hero image, the rich-text body (headings, lists, links, banners, code
+  blocks, images, horizontal rules), the editor-selected related posts and
+  links to the previous and next post by `publishedAt`.
+- **F-POST-5** `/rss.xml` is an RSS 2.0 feed of the 30 newest posts.
 - **F-POST-4** Author names come from `populatedAuthors`; no other user data
   is public.
 
@@ -55,10 +67,15 @@ all managed by editors without code changes.
 
 ### 2.4 Search
 
-- **F-SRCH-1** `/search?q=term` returns up to 12 published posts whose title,
-  meta title, meta description or slug contains the term.
-- **F-SRCH-2** An empty query lists the first 12 indexed posts; no matches
-  shows "No results found."
+- **F-SRCH-1** `/search?q=term` shows the published posts whose title, slug,
+  meta title, meta description or tags contain every word of the term. It is
+  one cached page per language, filtered in the browser as you type.
+- **F-SRCH-2** An empty query lists every post; no matches shows "Nothing
+  found" (translated).
+- **F-SRCH-3** Popup search: ⌘K / Ctrl+K, `/`, or the search button opens a
+  dialog. Typing searches posts and page titles (keyword match, no AI);
+  ↑/↓ select, Enter opens, Esc closes, Enter with nothing selected opens
+  `/search`. The dialog fits the screen down to 320 px wide.
 
 ### 2.5 Forms
 
@@ -73,12 +90,50 @@ all managed by editors without code changes.
 ### 2.6 Navigation, theme and layout
 
 - **F-NAV-1** Header and footer show up to 6 links each from the Header and
-  Footer globals; the header always has a search link.
+  Footer globals. With no Header links set, the header shows `home` and
+  `posts`. The footer always links to `/rss.xml`.
+- **F-NAV-3** Keyboard shortcuts outside text fields: `/` opens the popup
+  search, `j`/`k` move through post rows, `t` toggles the theme, `v` switches
+  between the CLI and ADE views, `s` opens the `/status` panel.
+- **F-NAV-4** The site version (`docs/VERSIONING.md`) is shown next to the
+  site name and in the footer. Clicking it, pressing `s`, or running
+  `/status` in the popup search opens a `/status` panel: version, commit,
+  environment, build and render time, cache, content counts (Status tab),
+  a searchable settings list (Config tab: View, Theme, Language, Reduce
+  motion, Keyboard shortcuts, Reset to defaults; ↑/↓ select, Enter changes,
+  stored in `localStorage` and applied before paint) and shortcuts (Keys
+  tab).
+- **F-VIEW-1** Two looks for the same content: CLI (terminal-style) and
+  ADE (agent-app style, called `modern` in code and in the CMS: sidebar, question bubbles, ✓ step pills, composer
+  search box, "On this page" panel on posts at ≥1280 px). The site default
+  comes from the `site` global; the visitor's choice is stored in
+  `localStorage['athena-view']` and applied before paint. Switch labels
+  (CLI / ADE, Dark / Light, EN / JP / ZH) are English in every language;
+  the CLI header writes them, and its nav links, in lowercase (`posts`,
+  `[ade]`, `[dark]`, `en`).
+  All other UI text, including the `/status` panel, follows the page
+  language; post and page content falls back to English per field.
+- **F-I18N-1** English at `/…`, Japanese at `/ja/…`, Chinese at `/zh/…`.
+  UI strings are translated; content falls back to English per field. Pages
+  declare `hreflang` alternates, and each language has its own RSS feed.
+- **F-SEO-1** Search metadata follows Google Search Central
+  (`apps/web/src/lib/seo.ts`, `Layout.astro`): every indexable page has its
+  own title (the home page: site name, plus ` — <tagline>` when the Site
+  global sets one) and a description of at most ~155 characters (SEO field, else
+  the post text, else the Site description → intro → welcome line; lists
+  and /work have localized descriptions), a self-referencing canonical,
+  `hreflang` for en / ja / zh-Hans plus `x-default`, and Open Graph with
+  `og:locale`. Posts are `og:type=article` with published/modified times.
+  JSON-LD: `WebSite` on the home page, `BlogPosting` on posts,
+  `SoftwareSourceCode` on /work entries. `/search`, 404 pages and drafts
+  are `noindex, follow` with no canonical or hreflang. The pages sitemap
+  always lists `/`, never `/search`, and gives `<lastmod>` only where the
+  date is real (CMS pages, /work entries from GitHub, posts).
 - **F-NAV-2** If the CMS cannot be reached, header and footer render without
   links instead of failing the page.
 - **F-THEME-1** Light and dark themes. Initial theme comes from
-  `localStorage['payload-theme']`, else the OS preference; the footer theme
-  selector changes and stores it. No flash of the wrong theme (inline script
+  `localStorage['payload-theme']`, else the OS preference; the header
+  `[dark]`/`[light]` toggle changes and stores it. No flash of the wrong theme (inline script
   in `<head>`).
 - **F-A11Y-1** Every page has a single `<main>` landmark.
 
@@ -86,20 +141,23 @@ all managed by editors without code changes.
 
 - **F-REDIR-1** A request whose path exactly matches a redirect's `from` gets
   a `301` to the redirect target (a page, a post or a custom URL).
-- **F-REDIR-2** Redirect changes take effect within about 60 s per function
-  instance, and cached HTML within 300 s.
+- **F-REDIR-2** A redirect change invalidates the `content` cache tag, so
+  cached pages pick it up on their next request; a function instance keeps
+  the redirect list for at most 5 s.
 
 ### 2.8 SEO and crawlers
 
 - **F-SEO-1** Each page and post emits `<title>`, meta description, Open Graph
   (`og:title`, `og:description`, `og:image`, `og:url`, `og:site_name`) and
   `twitter:card=summary_large_image` from its SEO fields. Missing images fall
-  back to `/website-template-OG.webp`; the `og` rendition is preferred.
+  back to the Site global's `ogImage`, then to the built-in `/og.png` (Hoo);
+  the `og` rendition is preferred.
 - **F-SEO-2** `/sitemap.xml` indexes `/pages-sitemap.xml` and
   `/posts-sitemap.xml`, which list every published page and post with
   `lastmod`.
 - **F-SEO-3** `/robots.txt` allows everything except `/api/` and links the
-  sitemap. `/llms.txt` describes the site for LLM crawlers.
+  sitemap. `/llms.txt` describes the site for LLM crawlers (generated from the
+  CMS: Site global, newest posts, `/work`).
 
 ## 3. Editing (CMS Admin)
 
@@ -111,8 +169,8 @@ all managed by editors without code changes.
   Preview** shows it inside the admin at mobile (375), tablet (768) and desktop
   (1440) widths.
 - **F-ED-4** **Publish** makes the document public. The affected public URLs
-  are refreshed within seconds; listings and navigation that cannot be
-  targeted refresh within 5 minutes.
+  are refreshed within seconds; every other cached page refreshes on its next
+  request.
 - **F-ED-5** **Unpublish** or delete removes the document from the public site
   and refreshes its old URL.
 - **F-ED-6** **Schedule publish** queues a publish; it runs on the next hourly
@@ -123,6 +181,9 @@ all managed by editors without code changes.
   and a search-result preview.
 - **F-ED-9** Media uploads accept a focal point; seven renditions are created
   automatically.
+- **F-ED-11** Translate (post/page sidebar): Claude translates the English
+  version into Japanese and Chinese and saves them as drafts. Code, inline
+  code and slugs are left as they are.
 - **F-ED-10** Seeding demo content from the dashboard replaces existing
   content. It is meant for empty development databases only.
 
@@ -130,7 +191,8 @@ all managed by editors without code changes.
 
 | ID | Requirement | How it is met |
 |---|---|---|
-| NF-PERF-1 | Public pages are served from cache in the common case. | Vercel ISR, 300 s expiration plus webhook re-render. |
+| NF-PERF-1 | Public pages are served from cache in the common case. | Vercel ISR plus cache tag `content`, invalidated by the publish webhook; 7-day expiration as a safety net. Popup search filters a cached index in the browser. |
+| NF-PERF-3 | Page-to-page navigation feels instant. | Speculation rules prefetch a page when a link is hovered or pressed (Chrome, Edge); a 120 ms cross-document view transition replaces the blank flash (off with reduced motion). The CLI / ADE and theme switches change attributes in place without a reload. |
 | NF-PERF-2 | Responsive images. | `srcset` from renditions, lazy loading, `decoding=async`. |
 | NF-AVAIL-1 | A CMS outage degrades the site rather than taking it down. | Cached HTML keeps serving; header/footer/redirects fail open; sitemaps return 503; standalone 500 page. |
 | NF-AVAIL-2 | A web outage never blocks publishing. | `invalidateWeb` logs and never throws; 5 s timeout. |
@@ -145,11 +207,13 @@ all managed by editors without code changes.
 | Environment | Branch | Web | CMS | Database |
 |---|---|---|---|---|
 | Local | any | http://localhost:4321 | http://localhost:3000 | local Postgres (dev container) or Neon |
-| Preview | `preview` | preview deployment (SSO-protected) | preview deployment | **production** Neon database |
+| Preview | `preview` | https://preview.whoa.me (Vercel Authentication) | https://preview.cms.whoa.me | its own Neon branch (child of production) |
 | Production | `main` | https://www.findb.uk | athena-cms production domain | production Neon database |
 
-Because Preview shares the production database, content edited on the preview
-CMS is live data, and schema changes affect production immediately.
+Preview has its own database branch: content edited on the preview CMS stays
+there, and schema SQL is run on the branch first, then on production
+([DATABASE.md](./DATABASE.md)). The public domain moves from findb.uk to
+whoa.me with the 1.0.0 release.
 
 ## 6. Known Gaps and Planned Work
 
@@ -161,10 +225,11 @@ From the 2026-10 review; none of these are implemented yet.
 - **Spam protection**: no captcha, honeypot or rate limit on form posts.
 - **Corporate content types**: no Services, Team, Case Studies, Careers,
   Testimonials or Locations.
-- **Template branding**: `SITE_NAME` and SEO titles still read "Payload
-  Website Template"; admin welcome/login components are the template's.
+- **Template branding**: the admin welcome/login components and the seed's
+  sample home page are still the template's.
 - **Schema migrations**: production schema changes are applied by hand (see
   [DATABASE.md](./DATABASE.md)).
-- **Testing**: one unit-test file in `apps/web`; no end-to-end tests; the
-  Checkly checks are still the CLI scaffold examples.
+- **Testing**: unit tests (`bun test`) and a Playwright E2E suite in
+  `apps/web`, run by hand before pushing ([TESTING.md](./TESTING.md)); not in
+  CI yet. No uptime monitoring (the Checkly scaffold was removed).
 - **Compliance**: no privacy policy or cookie consent.

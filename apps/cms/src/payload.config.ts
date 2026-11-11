@@ -20,10 +20,14 @@ import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
+import { Projects } from './collections/Projects'
+import { syncProjects } from './github/sync'
 import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
+import { Site } from './Site/config'
 import { plugins } from './plugins'
+import { DEFAULT_LOCALE } from '@athena/shared/constants'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL, getWebURL } from './utilities/getURL'
 import { getLoggerConfig } from './utilities/workersLogger'
@@ -78,11 +82,22 @@ export default buildConfig({
         'postgresql://dummy:dummy@localhost:5432/dummy',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Users],
+  collections: [Pages, Posts, Projects, Media, Categories, Users],
   // The web frontend lives on its own origin and POSTs form submissions here.
   cors: [getServerSideURL(), getWebURL()].filter(Boolean),
   csrf: [getServerSideURL(), getWebURL()].filter(Boolean),
-  globals: [Header, Footer],
+  globals: [Site, Header, Footer],
+  // English is written first; Japanese and Chinese are translated copies
+  // (see endpoints/translate). Untranslated fields fall back to English.
+  localization: {
+    locales: [
+      { code: 'en', label: 'English' },
+      { code: 'ja', label: '日本語' },
+      { code: 'zh', label: '中文（简体）' },
+    ],
+    defaultLocale: DEFAULT_LOCALE,
+    fallback: true,
+  },
   plugins: [
     ...plugins,
     vercelBlobStorage({
@@ -118,6 +133,18 @@ export default buildConfig({
         return authHeader === `Bearer ${secret}`
       },
     },
-    tasks: [],
+    tasks: [
+      {
+        // Refresh the GitHub data behind /work. The hourly Vercel Schedule
+        // hits /api/payload-jobs/run, which queues this when the cron is due.
+        slug: 'syncGitHub',
+        retries: 1,
+        schedule: [{ cron: '0 */6 * * *', queue: 'default' }],
+        handler: async ({ req }) => {
+          const output = await syncProjects(req.payload)
+          return { output }
+        },
+      },
+    ],
   },
 })

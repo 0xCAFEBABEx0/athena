@@ -1,0 +1,207 @@
+---
+/**
+ * One work thread (a GitHub repository), drawn like a finished agent thread:
+ * the brief as the user's message, the write-up as the reply, then the steps
+ * (release, recent commits) and the details. Both views render from one HTML.
+ */
+import Layout from '@/layouts/Layout.astro'
+import SearchPrompt from '@/components/SearchPrompt.astro'
+import RelativeTimes from '@/components/work/RelativeTimes.astro'
+import { dict, localeOf, localizePath } from '@/lib/i18n'
+import { formatDate } from '@/lib/format'
+import { routeMeta, workJsonLd } from '@/lib/seo'
+import { getSite } from '@/lib/site'
+import { displayHost, getWork } from '@/lib/work'
+
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+const slug = Astro.params.slug ?? ''
+const items = await getWork(Astro.locals, locale)
+const item = items.find((entry) => entry.slug === slug)
+
+if (!item) {
+  return Astro.rewrite('/404')
+}
+
+const site = await getSite(Astro.locals, locale)
+const baseMeta = routeMeta(
+  item.title,
+  lp(`/work/${item.slug}`),
+  site,
+  item.description || t.workItemDescription(item.title, site.authorName || site.siteName),
+)
+const meta = { ...baseMeta, jsonLd: [workJsonLd(item, baseMeta.url, site.authorName)] }
+// The conversation only appears once there is a write-up; the summary is
+// already the lede, so it is not repeated as the reply.
+const reply = item.notes
+const brief = item.brief || t.workAskAbout(item.title)
+const moreCommits = Math.max(0, item.commitCount - item.commits.length)
+const languages = item.languages.filter((lang) => lang.share > 0)
+const details = [
+  { label: t.workSource, value: item.repoUrl ? item.repo : t.workPrivate, href: item.repoUrl },
+  ...(item.liveUrl ? [{ label: t.workLive, value: displayHost(item.liveUrl), href: item.liveUrl }] : []),
+  ...(languages.length
+    ? [{ label: t.workLanguages, value: languages.map((l) => `${l.name} ${l.share}%`).join(' · '), href: null }]
+    : []),
+  ...(item.topics.length ? [{ label: t.workTopics, value: item.topics.map((x) => `#${x}`).join(' '), href: null }] : []),
+  ...(item.createdAt ? [{ label: t.workStarted, value: formatDate(item.createdAt), href: null }] : []),
+  ...(item.commitCount ? [{ label: t.workCommitsLabel, value: String(item.commitCount), href: null }] : []),
+  ...(item.openPRs
+    ? [{ label: t.workPullRequests, value: t.workOpenPRs(item.openPRs), href: `${item.repoUrl}/pulls` }]
+    : []),
+]
+---
+
+<Layout meta={meta}>
+  <div class="post-layout">
+    <div class="min-w-0">
+      <article class="container work-thread pb-4">
+        <p class="cli-only mt-8 font-mono text-sm text-base-content/65">
+          <span class="text-primary" aria-hidden="true">❯</span> cd ~/work/{item.slug}
+        </p>
+
+        <header class="work-head">
+          <h1 class="work-title heading-display">
+            <span class="cli-only text-primary" aria-hidden="true">● </span>{item.title}
+          </h1>
+          <span class:list={['work-badge', `work-badge-${item.status}`]}>
+            <span class:list={['work-icon', `work-icon-${item.status}`]} aria-hidden="true" />
+            {t.workStatus[item.status]}
+          </span>
+          {
+            item.pushedAt && (
+              <span class="work-head-time font-mono text-[13px] text-base-content/65">
+                <span class="cli-only" aria-hidden="true">· </span>
+                <time datetime={item.pushedAt} data-relative>{formatDate(item.pushedAt)}</time>
+              </span>
+            )
+          }
+          <span class="work-actions modern-only">
+            {item.repoUrl && <a class="btn btn-sm" href={item.repoUrl} rel="noopener">{t.workSource} ↗</a>}
+            {item.liveUrl && <a class="btn btn-sm btn-primary" href={item.liveUrl} rel="noopener">{t.workLive} ↗</a>}
+          </span>
+        </header>
+        {item.description && <p class="work-lede">{item.description}</p>}
+
+        {
+          (item.brief || reply) && (
+            <div class="work-turn work-turn-user">
+              <span class="cli-only work-gutter" aria-hidden="true">&gt;</span>
+              <p>{brief}</p>
+            </div>
+          )
+        }
+
+        {
+          reply && (
+            <div class="work-turn work-turn-reply">
+              <span class="cli-only work-gutter text-primary" aria-hidden="true">●</span>
+              <span class="modern-only modern-avatar" aria-hidden="true">
+                {(site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()}
+              </span>
+              <p>{reply}</p>
+            </div>
+          )
+        }
+
+        <ol class="work-steps">
+          {
+            item.release && (
+              <li class="work-step">
+                <span class="cli-only work-gutter text-success" aria-hidden="true">●</span>
+                <span class="modern-only modern-check" aria-hidden="true">✓</span>
+                <a class="link-term" href={item.release.url} rel="noopener">{t.workReleased(item.release.tag)}</a>
+                <span class="text-base-content/65"> · {formatDate(item.release.date)}</span>
+              </li>
+            )
+          }
+          {
+            item.commits.length > 0 && (
+              <li class="work-step">
+                <details class="work-log" open>
+                  <summary>
+                    <span class="cli-only work-gutter text-success" aria-hidden="true">●</span>
+                    <span class="modern-only modern-check" aria-hidden="true">✓</span>
+                    <span class="cli-only">git log --oneline -{item.commits.length}</span>
+                    <span class="modern-only">{t.workRecentCommits} · {item.commits.length}</span>
+                  </summary>
+                  <ul class="work-commits">
+                    {item.commits.map((commit, index) => (
+                      <li>
+                        <span class="cli-only w-4 shrink-0 text-base-content/65" aria-hidden="true">
+                          {index === 0 ? '⎿' : ''}
+                        </span>
+                        <a class="work-sha" href={`${item.repoUrl}/commit/${commit.sha}`} rel="noopener">
+                          {commit.sha.slice(0, 7)}
+                        </a>
+                        <span class="work-commit-msg">{commit.message}</span>
+                        <time class="work-commit-time" datetime={commit.date} data-relative>
+                          {formatDate(commit.date)}
+                        </time>
+                      </li>
+                    ))}
+                    {moreCommits > 0 && (
+                      <li>
+                        <span class="cli-only w-4 shrink-0" aria-hidden="true" />
+                        <a class="link-term text-[13px]" href={`${item.repoUrl}/commits`} rel="noopener">
+                          {t.workMoreCommits(moreCommits)} ↗
+                        </a>
+                      </li>
+                    )}
+                  </ul>
+                </details>
+              </li>
+            )
+          }
+          <li class="work-step work-step-details">
+            <span class="cli-only work-gutter text-success" aria-hidden="true">●</span>
+            <span class="cli-only">{t.details}</span>
+            <dl class="work-details">
+              {details.map((row, index) => (
+                <div>
+                  <dt>
+                    <span class="cli-only w-4 shrink-0 text-base-content/65" aria-hidden="true">
+                      {index === 0 ? '⎿' : ''}
+                    </span>
+                    {row.label}
+                  </dt>
+                  <dd>{row.href ? <a class="link-term" href={row.href} rel="noopener">{row.value}</a> : row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        </ol>
+
+        <p class="work-back mt-10 border-t border-base-300 pt-4 font-mono text-sm">
+          <span class="text-base-content/65">↑ </span><a class="link-term" href={lp('/work')}>{t.workAll}</a>
+        </p>
+      </article>
+      <div class="container">
+        <SearchPrompt class="modern-only mt-6" />
+      </div>
+    </div>
+
+    <aside class="modern-only post-aside" aria-label={t.details}>
+      <div class="post-aside-card">
+        <p class="mb-2 font-semibold">{t.details}</p>
+        <dl class="post-details work-aside-details">
+          {details.map((row) => (
+            <div>
+              <dt>{row.label}</dt>
+              <dd>{row.href ? <a class="link-term" href={row.href} rel="noopener">{row.value}</a> : row.value}</dd>
+            </div>
+          ))}
+        </dl>
+        {
+          languages.length > 0 && (
+            <div class="work-langbar mt-3" aria-hidden="true">
+              {languages.map((lang) => <span style={`flex-grow:${lang.share}`} title={`${lang.name} ${lang.share}%`} />)}
+            </div>
+          )
+        }
+      </div>
+    </aside>
+  </div>
+  <RelativeTimes />
+</Layout>

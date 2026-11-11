@@ -1,0 +1,42 @@
+name: Warm cache
+
+# Vercel reports each deployment back to GitHub. A new athena-web deployment
+# starts with an empty page cache, so request every page once right away
+# instead of making the first visitors wait for renders.
+on: deployment_status
+
+permissions:
+  contents: read
+
+jobs:
+  warm:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      contains(github.event.deployment.environment, 'athena-web')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts
+
+      - name: Request every page
+        env:
+          ENVIRONMENT: ${{ github.event.deployment.environment }}
+          SHA: ${{ github.event.deployment.sha }}
+          # Override with repository variables when the domains move.
+          PRODUCTION_WEB_URL: ${{ vars.PRODUCTION_WEB_URL || 'https://www.findb.uk' }}
+          PREVIEW_WEB_URL: ${{ vars.PREVIEW_WEB_URL || 'https://preview.whoa.me' }}
+          # athena-web → Settings → Deployment Protection → Protection Bypass
+          # for Automation. Without it the protected preview answers 302 and
+          # the run only leaves a warning.
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          # Vercel reports the commit SHA as the ref, not the branch. Only
+          # main (Production) and preview deploy (vercel.json whitelist).
+          case "$ENVIRONMENT" in
+            Production*) url="$PRODUCTION_WEB_URL" ;;
+            *) url="$PREVIEW_WEB_URL" ;;
+          esac
+          bash scripts/warm-cache.sh "$url" "$SHA"

@@ -1,0 +1,43 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import Prompt from '@/components/Prompt.astro'
+import SearchPrompt from '@/components/SearchPrompt.astro'
+import WorkList from '@/components/work/WorkList.astro'
+import { dict, localeOf, localizePath } from '@/lib/i18n'
+import { routeMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
+import { getWork } from '@/lib/work'
+
+const locale = localeOf(Astro)
+const t = dict(locale)
+const site = await getSite(Astro.locals, locale)
+const items = await getWork(Astro.locals, locale)
+const meta = routeMeta(
+  t.workTitle,
+  localizePath(locale, '/work'),
+  site,
+  t.workDescription(site.authorName || site.siteName),
+)
+---
+
+<Layout meta={meta}>
+  <div class="container">
+    <Prompt
+      class="modern-only mt-8"
+      command="ls ~/work --sort=activity"
+      question={t.askWork}
+      heading={t.workTitle}
+      count={items.length}
+      as="h1"
+      id="work"
+    />
+    {
+      items.length > 0 ? (
+        <WorkList class="mt-2 work-page-list" items={items} picker />
+      ) : (
+        <p class="mt-2 pl-5 font-mono text-sm text-base-content/65">⎿ {t.workEmpty}</p>
+      )
+    }
+    <SearchPrompt class="modern-only mt-11" />
+  </div>
+</Layout>

@@ -1,0 +1,50 @@
+---
+/**
+ * Section opener, drawn for both views (CSS shows one):
+ *   CLI     ❯ ls posts --sort=date
+ *           ● Recent posts (8)
+ *   Modern  a question bubble ("What have you written recently?") and a
+ *           finished-step pill: ✓ Recent posts · 8
+ */
+type Props = {
+  command?: string
+  /** Question shown as a chat bubble in the modern view. */
+  question?: string
+  heading?: string
+  count?: number
+  /** Heading level for `heading`. */
+  as?: 'h1' | 'h2'
+  id?: string
+  class?: string
+}
+
+const { command, question, heading, count, as: Tag = 'h2', id, class: className } = Astro.props
+const hasCount = typeof count === 'number'
+---
+
+<div class:list={['prompt font-mono text-sm', className]}>
+  {
+    command && (
+      <p class="cli-only text-base-content/65">
+        <span class="text-primary" aria-hidden="true">❯</span> <span data-prompt-line>{command}</span>
+      </p>
+    )
+  }
+  {
+    question && (
+      <div class="modern-only modern-ask">
+        <p data-prompt-question>{question}</p>
+      </div>
+    )
+  }
+  {
+    heading && (
+      <Tag id={id} class:list={['prompt-heading font-semibold text-base-content', command && 'mt-3']}>
+        <span class="cli-only text-primary" aria-hidden="true">●</span>
+        <span class="modern-only modern-check" aria-hidden="true">✓</span> <span data-prompt-heading>{heading}</span>
+        {hasCount && <span class="cli-only font-normal text-base-content/65"> (<span data-prompt-count>{count}</span>)</span>}
+        {hasCount && <span class="modern-only font-normal"> · <span data-prompt-count>{count}</span></span>}
+      </Tag>
+    )
+  }
+</div>

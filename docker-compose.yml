@@ -15,9 +15,10 @@ services:
     command: sleep infinity
     expose:
       - '3000'
+      - '4321'
     environment:
       - NODE_ENV=development
-      - DATABASE_URI=postgres://postgres:postgres@postgres:5432/payload_db
+      - POSTGRES_URL=postgres://postgres:postgres@postgres:5432/payload_db
     depends_on:
       postgres:
         condition: service_healthy

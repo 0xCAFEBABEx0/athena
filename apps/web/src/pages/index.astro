@@ -1,0 +1,159 @@
+---
+import { dict, localeOf, localizePath } from '@/lib/i18n'
+import Layout from '@/layouts/Layout.astro'
+import PostList from '@/components/PostList.astro'
+import Prompt from '@/components/Prompt.astro'
+import SearchPrompt from '@/components/SearchPrompt.astro'
+import { getPosts } from '@/lib/cms'
+import { formatDate } from '@/lib/format'
+import { homeTitle, routeMeta, websiteJsonLd } from '@/lib/seo'
+import { webURL } from '@/lib/env'
+import { getSite } from '@/lib/site'
+import WorkList from '@/components/work/WorkList.astro'
+import CliBanner from '@/components/CliBanner.astro'
+import XPicks from '@/components/XPicks.astro'
+import { buildActivity } from '@/lib/activity'
+import { getWork } from '@/lib/work'
+import type { Post } from '@athena/shared/payload-types'
+
+const RECENT = 8
+
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+// All three in parallel (site and work were already started by the middleware).
+const [site, recent, work] = await Promise.all([
+  getSite(Astro.locals, locale),
+  getPosts({ page: 1, limit: RECENT }, { locale }).catch((error: unknown) => {
+    console.error('[home] failed to load posts', error)
+    return null
+  }),
+  getWork(Astro.locals, locale),
+])
+const posts: Post[] = recent?.docs ?? []
+const totalPosts = recent?.totalDocs ?? 0
+const pinnedWork = (
+  work.some((item) => item.pinned)
+    ? work.filter((item) => item.pinned).sort((a, b) => a.order - b.order)
+    : work
+).slice(0, 4)
+
+const updated = formatDate(posts[0]?.publishedAt)
+
+// Banner "Recent activity" (newest posts, pushes and releases).
+const activity = buildActivity(posts, work, lp)
+const more = Math.max(0, totalPosts - posts.length)
+const meta = {
+  ...routeMeta(null, lp('/'), site),
+  title: homeTitle(site.siteName, site.tagline),
+  jsonLd: [websiteJsonLd(site, locale, `${webURL()}${lp('/')}`)],
+}
+const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
+---
+
+<Layout meta={meta}>
+  <div class="container">
+    {site.banner.style === 'fetch' && <CliBanner site={site} totalPosts={totalPosts} updated={updated || null} activity={activity} />}
+    <section
+      class:list={['home-intro card card-border mt-7 border-primary', { 'modern-only': site.banner.style === 'fetch' }]}
+      aria-labelledby="intro-name"
+    >
+      <span class="modern-only modern-avatar mt-0.5" aria-hidden="true">{initial}</span>
+      <div class="card-body gap-0 px-6 py-5 md:px-7">
+        {
+          site.welcome && (
+            <p class="home-welcome font-mono text-[13px] text-primary">
+              <span class="cli-only" aria-hidden="true"># </span>
+              {site.welcome}
+            </p>
+          )
+        }
+        <h1 id="intro-name" class="heading-display mt-3.5 text-2xl leading-snug md:text-[26px]">
+          {site.authorName || site.siteName}
+        </h1>
+        {site.intro && <p class="mt-1.5 whitespace-pre-line leading-loose text-base-content/85">{site.intro}</p>}
+        <p class="home-meta mt-4 font-mono text-[13px] leading-loose text-base-content/65">
+          <span class="whitespace-nowrap">~/{site.siteName}</span>
+          {/* The separator wraps with the next item, so no line ends in "·". */}
+          <span class="whitespace-nowrap"><span aria-hidden="true">· </span>{t.postCount(totalPosts)}</span>
+          {
+            updated && (
+              <span class="whitespace-nowrap"><span aria-hidden="true">· </span>{t.updatedOn(updated)}</span>
+            )
+          }
+        </p>
+        {
+          site.socialLinks.length > 0 && (
+            <ul class="home-links flex flex-wrap gap-x-4 font-mono text-[13px]">
+              {site.socialLinks.map((link) => (
+                <li>
+                  <a class="link-term" href={link.url} rel="me noopener">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+    </section>
+
+    <section class="mt-10" aria-labelledby="recent">
+      <Prompt command="ls posts --sort=date" question={t.askRecent} heading={t.recentPosts} count={posts.length} id="recent" />
+      {
+        posts.length > 0 ? (
+          <PostList class="mt-1.5" posts={posts} />
+        ) : (
+          <p class="mt-2 pl-5 font-mono text-sm text-base-content/65">⎿ {t.noPosts}</p>
+        )
+      }
+      <p class="list-more mt-2.5 pl-5 font-mono text-[13px] text-base-content/65">
+        {more > 0 && <span>{t.more(more)} · </span>}
+        <a class="link-term" href={lp('/posts')}>{t.allPosts}</a>
+      </p>
+    </section>
+
+    {
+      pinnedWork.length > 0 ? (
+        <section class="mt-9" aria-labelledby="projects">
+          <Prompt command="ls ~/work --pinned" question={t.askWork} heading={t.projects} count={work.length} id="projects" />
+          <WorkList class="mt-1.5" items={pinnedWork} />
+          <p class="list-more mt-2.5 pl-5 font-mono text-[13px] text-base-content/65">
+            {work.length > pinnedWork.length && <span>{t.more(work.length - pinnedWork.length)} · </span>}
+            <a class="link-term" href={lp('/work')}>{t.workAll}</a>
+          </p>
+        </section>
+      ) : (
+        site.projects.length > 0 && (
+        <section class="mt-9" aria-labelledby="projects">
+          <Prompt command="ls projects" question={t.askProjects} heading={t.projects} count={site.projects.length} id="projects" />
+          <ul class="project-list mt-1.5 list-none pl-5 leading-relaxed">
+            {site.projects.map((project, index) => (
+              <li class="project-item flex gap-2 py-1">
+                <span class="cli-only w-4 shrink-0 font-mono text-base-content/65" aria-hidden="true">
+                  {index === 0 ? '⎿' : ''}
+                </span>
+                <span>
+                  {project.url ? (
+                    <a class="link-term font-mono text-[14.5px]" href={project.url}>{project.name}</a>
+                  ) : (
+                    <span class="font-mono text-[14.5px] text-primary">{project.name}</span>
+                  )}{' '}
+                  {project.description && <span class="text-base-content/85">{project.description}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+
+    <XPicks class="mt-9" picks={site.picks} />
+
+    <SearchPrompt class="mt-11" />
+    <p class="cli-only mt-2 hidden flex-wrap gap-x-4 font-mono text-xs text-base-content/65 sm:flex">
+      <span><kbd class="kbd kbd-xs">j</kbd> <kbd class="kbd kbd-xs">k</kbd> {t.shortcutMove}</span>
+      <span><kbd class="kbd kbd-xs">t</kbd> {t.shortcutTheme}</span>
+    </p>
+  </div>
+</Layout>

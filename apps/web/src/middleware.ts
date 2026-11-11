@@ -2,13 +2,18 @@ import { defineMiddleware } from 'astro:middleware'
 
 import type { Redirect } from '@athena/shared/payload-types'
 
+import { tagAsContent } from '@/lib/cache'
 import { getRedirects } from '@/lib/cms'
+import { DEFAULT_LOCALE, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
+import { getFooterNav, getHeaderNav, getRecentPosts } from '@/lib/nav'
+import { getSite } from '@/lib/site'
+import { getWork } from '@/lib/work'
 
-// Per-instance cache; redirects rarely change and a publish re-renders pages
-// anyway (the CMS pushes a 'redirects' tag through /api/invalidate, bounded
-// by the ISR expiration TTL).
-const TTL_MS = 60_000
+// Per-instance cache, kept short: it only coalesces the burst of renders that
+// follows a publish. Pages are cached at Vercel, so a render is rare, and a
+// long TTL could bake a just-changed redirect list into freshly cached pages.
+const TTL_MS = 5_000
 let cache: { redirects: Redirect[]; expires: number } | null = null
 
 const loadRedirects = async (): Promise<Redirect[]> => {
@@ -18,20 +23,82 @@ const loadRedirects = async (): Promise<Redirect[]> => {
   return redirects
 }
 
+// Routes whose path has a dot. Any other dotted path that reaches the
+// function (static files never do) is a scanner probing for /wp-login.php,
+// /.env and the like: answer 404 at once, without the CMS requests a page
+// render makes, and let the CDN keep the answer for a day.
+const DOTTED_ROUTES = new Set([
+  '/rss.xml',
+  '/sitemap.xml',
+  '/pages-sitemap.xml',
+  '/posts-sitemap.xml',
+  '/robots.txt',
+  '/llms.txt',
+  '/search-index.json',
+])
+
+// /work/<repo> pages keep the repository name, which may contain dots
+// (`owner/my.app` -> /work/my.app; see the CMS Projects collection's slugOf).
+const WORK_DETAIL = /^\/work\/[a-z0-9._-]+\/?$/
+
+const isDotted = (pathname: string): boolean =>
+  pathname.includes('.') && !WORK_DETAIL.test(pathname)
+
+const notFound = () =>
+  new Response('Not found\n', {
+    status: 404,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'public, max-age=0, must-revalidate',
+      'Vercel-CDN-Cache-Control': 'public, max-age=86400',
+    },
+  })
+
 export const onRequest = defineMiddleware(async (context, next) => {
-  const { pathname } = context.url
+  // `/ja/…` and `/zh/…` render the same routes as the English paths: strip
+  // the prefix, remember the locale, and rewrite. ISR still caches by the
+  // original (prefixed) URL.
+  const { locale, path: pathname } = splitLocale(context.url.pathname)
+  // A page that rewrites to /404 runs this again with the unprefixed URL:
+  // keep the locale of the original request (/zh/nope shows the Chinese 404).
+  if (!context.locals.locale || locale !== DEFAULT_LOCALE) context.locals.locale = locale
+  const render = () =>
+    locale === DEFAULT_LOCALE ? next() : next(`${pathname}${context.url.search}`)
+
+  if (pathname.startsWith('/api/')) return render()
+
+  // Everything else (pages, feeds, sitemaps, the search index) is cached at
+  // Vercel until /api/invalidate marks this tag stale.
+  await tagAsContent()
+
+  if (isDotted(pathname) && !pathname.startsWith('/_') && !DOTTED_ROUTES.has(pathname)) {
+    return notFound()
+  }
 
   // Only content routes can be redirected.
-  if (pathname.startsWith('/api/') || pathname.startsWith('/_') || pathname.includes('.')) {
-    return next()
+  if (pathname.startsWith('/_') || isDotted(pathname)) {
+    return render()
   }
+
+  // Every page's layout needs the same CMS data (site settings, header and
+  // footer nav, recent posts and work for the sidebar). Start those requests
+  // now, alongside the redirect lookup, instead of one after another as the
+  // components render; the per-request memos hand the same promises to the
+  // page. None of them throws, so an unused one costs nothing but a fetch.
+  void Promise.all([
+    getSite(context.locals, locale),
+    getHeaderNav(context.locals, locale),
+    getFooterNav(context.locals, locale),
+    getRecentPosts(context.locals, locale),
+    getWork(context.locals, locale),
+  ])
 
   let redirects: Redirect[] = []
   try {
     redirects = await loadRedirects()
   } catch {
     // CMS unreachable: serve the page rather than failing the request.
-    return next()
+    return render()
   }
 
   const match = redirects.find((redirect) => redirect.from === pathname)
@@ -41,8 +108,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
         ? linkHref({ type: 'reference', reference: match.to.reference } as CMSLinkData)
         : match.to.url
 
-    if (dest) return context.redirect(dest, 301)
+    if (dest) return context.redirect(localizePath(locale, dest), 301)
   }
 
-  return next()
+  return render()
 })

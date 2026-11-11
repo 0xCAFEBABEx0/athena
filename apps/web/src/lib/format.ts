@@ -1,21 +1,45 @@
 import type { Post } from '@athena/shared/payload-types'
 
-/** MM/DD/YYYY, matching the cms frontend's formatDateTime. */
-export const formatDateTime = (timestamp: string): string => {
-  const date = timestamp ? new Date(timestamp) : new Date()
-  const MM = String(date.getMonth() + 1).padStart(2, '0')
-  const DD = String(date.getDate()).padStart(2, '0')
-  return `${MM}/${DD}/${date.getFullYear()}`
+/** YYYY-MM-DD in Japan time (the site's audience), e.g. 2026-11-10. */
+export const formatDate = (timestamp: string | null | undefined): string => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
 }
 
-/** 'A', 'A and B', 'A, B and C' — matching the cms frontend's formatAuthors. */
+/** 'A', 'A, B' — author names joined for a metadata line. */
 export const formatAuthors = (
   authors: NonNullable<NonNullable<Post['populatedAuthors']>[number]>[],
-): string => {
-  const names = authors.map((author) => author.name).filter(Boolean) as string[]
+): string =>
+  authors
+    .map((author) => author.name)
+    .filter(Boolean)
+    .join(', ')
 
-  if (names.length === 0) return ''
-  if (names.length === 1) return names[0]!
-  if (names.length === 2) return `${names[0]} and ${names[1]}`
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+/** Category titles of a post or search doc, skipping unpopulated ids. */
+export const categoryTitles = (categories: unknown): string[] =>
+  Array.isArray(categories)
+    ? categories
+        .filter(
+          (category): category is { title?: string | null } =>
+            typeof category === 'object' && category !== null,
+        )
+        .map((category) => category.title || '')
+        .filter(Boolean)
+    : []
+
+/** Rough reading time for Japanese/English text: ~500 chars or ~200 words a minute. */
+export const readingMinutes = (text: string): number => {
+  const cjk = (text.match(/[　-鿿＀-￯]/g) ?? []).length
+  const words = text
+    .replace(/[　-鿿＀-￯]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean).length
+  return Math.max(1, Math.round(cjk / 500 + words / 200))
 }

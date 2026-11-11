@@ -1,14 +1,25 @@
 ---
-import '@fontsource/geist-sans/400.css'
-import '@fontsource/geist-sans/600.css'
-import '@fontsource/geist-sans/700.css'
-import '@fontsource/geist-mono/400.css'
+// Latin subsets only (Geist has no Japanese or Chinese; those fall back to
+// system fonts). Each file is one @font-face with a unicode-range, so a page
+// downloads only the files its text needs.
+import '@fontsource/geist-sans/latin-400.css'
+import '@fontsource/geist-sans/latin-600.css'
+import '@fontsource/geist-sans/latin-700.css'
+import '@fontsource/geist-mono/latin-400.css'
+import '@fontsource/geist-mono/latin-600.css'
+import '@fontsource/geist-mono/latin-ext-400.css'
+import '@fontsource/geist-mono/latin-ext-600.css'
 import '@/styles/global.css'
 
 import Footer from '@/components/Footer.astro'
 import Header from '@/components/Header.astro'
+import SearchDialog from '@/components/SearchDialog.astro'
+import StatusDialog from '@/components/StatusDialog.astro'
+import Sidebar from '@/components/Sidebar.astro'
 import { isDraft } from '@/lib/draft'
-import { SITE_NAME, type PageMeta } from '@/lib/seo'
+import { DEFAULT_OG_IMAGE, DEFAULT_OG_SIZE, OG_LOCALE, jsonLdScript, siteDescription, type PageMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
+import { LANG_TAG, LOCALES, dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 import { webURL } from '@/lib/env'
 import SpeedInsights from '@vercel/speed-insights/astro'
 
@@ -17,13 +28,50 @@ type Props = {
 }
 
 const { meta } = Astro.props
+const locale = localeOf(Astro)
+const t = dict(locale)
+const site = await getSite(Astro.locals, locale)
+// The unprefixed path, shared by every language version of this page.
+const barePath = splitLocale(Astro.originPathname).path
+const alternates = LOCALES.map((code) => ({
+  hreflang: LANG_TAG[code],
+  href: `${webURL()}${localizePath(code, barePath)}`,
+}))
 
-const title = meta?.title ?? SITE_NAME
-const description = meta?.description
-const ogImage = meta?.ogImage ?? `${webURL()}/website-template-OG.webp`
-const url = meta?.url ?? `${webURL()}${Astro.url.pathname}`
+const title = meta?.title ?? site.siteName
+const description = meta ? meta.description : siteDescription(site)
+const ogImage = meta?.ogImage ?? site.ogImage ?? `${webURL()}${DEFAULT_OG_IMAGE}`
+// Only the built-in image has a known size.
+const ogImageSize = ogImage === `${webURL()}${DEFAULT_OG_IMAGE}` ? DEFAULT_OG_SIZE : null
+const url = meta?.url ?? `${webURL()}${Astro.originPathname}`
+const ogType = meta?.type ?? 'website'
+
+// Chrome and Edge prerender a page once a link is hovered (or pressed on
+// touch): the next page is fetched, laid out and its scripts run in the
+// background, so the click swaps it in at once. Unlike <link rel="prefetch">,
+// the copy is used even though pages are sent with `max-age=0,
+// must-revalidate`. Pages come from the Vercel cache, so this costs CDN hits,
+// not renders. The prefetch rule covers links the browser declines to
+// prerender (it keeps only a couple at a time). Other browsers ignore both.
+// Scripts that must not run before the page is shown (analytics, theme)
+// wait for `prerenderingchange`; see below.
+const speculationWhere = {
+  and: [
+    { href_matches: '/*' },
+    { not: { href_matches: ['/api/*', '/admin', '/admin/*', '/*.xml', '/*/*.xml'] } },
+    { not: { selector_matches: '[target=_blank], [download]' } },
+  ],
+}
+const speculationRules = JSON.stringify({
+  prerender: [{ source: 'document', where: speculationWhere, eagerness: 'moderate' }],
+  prefetch: [{ source: 'document', where: speculationWhere, eagerness: 'moderate' }],
+})
+const webAnalytics = import.meta.env.PROD
 
 const draft = isDraft(Astro.cookies)
+// 404, search results and drafts stay out of the index; such pages are not
+// the canonical copy of anything, so they get no canonical or hreflang links.
+const noindex = Boolean(meta?.noindex) || draft
 if (draft) {
   // Keep draft renders out of the shared ISR/edge cache.
   Astro.response.headers.set('Cache-Control', 'private, no-store')
@@ -31,23 +79,77 @@ if (draft) {
 ---
 
 <!doctype html>
-<html lang="en">
+<html
+  lang={LANG_TAG[locale]}
+  data-view={site.defaultView}
+  data-search-path={localizePath(locale, '/search')}
+>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content={SITE_NAME} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={site.siteName} />
+    <meta property="og:locale" content={OG_LOCALE[locale]} />
+    {LOCALES.filter((code) => code !== locale).map((code) => <meta property="og:locale:alternate" content={OG_LOCALE[code]} />)}
     <meta property="og:title" content={title} />
     {description && <meta property="og:description" content={description} />}
     <meta property="og:image" content={ogImage} />
-    <meta property="og:url" content={url} />
+    {ogImageSize && <meta property="og:image:width" content={String(ogImageSize.width)} />}
+    {ogImageSize && <meta property="og:image:height" content={String(ogImageSize.height)} />}
+    <meta property="og:image:alt" content={title} />
+    {!noindex && <meta property="og:url" content={url} />}
+    {meta?.publishedTime && <meta property="article:published_time" content={meta.publishedTime} />}
+    {meta?.modifiedTime && <meta property="article:modified_time" content={meta.modifiedTime} />}
     <meta name="twitter:card" content="summary_large_image" />
     <link href="/favicon.ico" rel="icon" sizes="32x32" />
     <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
+    <link href="/apple-touch-icon.png" rel="apple-touch-icon" />
+    {
+      !noindex && (
+        <>
+          <link rel="canonical" href={url} />
+          {alternates.map((alt) => <link rel="alternate" hreflang={alt.hreflang} href={alt.href} />)}
+          <link rel="alternate" hreflang="x-default" href={`${webURL()}${barePath}`} />
+        </>
+      )
+    }
+    {!noindex && meta?.jsonLd?.map((data) => <script type="application/ld+json" is:inline set:html={jsonLdScript(data)} />)}
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={site.siteName}
+      href={localizePath(locale, '/rss.xml')}
+    />
+    <script type="speculationrules" is:inline set:html={speculationRules} />
     <SpeedInsights />
     <slot name="head" />
+    {
+      webAnalytics && (
+        <script is:inline>
+          // Vercel Web Analytics (replaces the adapter's injected snippet): a
+          // prerendered page loads it only when it is actually shown, so pages
+          // hovered but never opened are not counted as views.
+          ;(function () {
+            window.va =
+              window.va ||
+              function () {
+                ;(window.vaq = window.vaq || []).push(arguments)
+              }
+            function load() {
+              var script = document.createElement('script')
+              script.defer = true
+              script.src = '/_vercel/insights/script.js'
+              document.head.appendChild(script)
+            }
+            if (document.prerendering) document.addEventListener('prerenderingchange', load, { once: true })
+            else load()
+          })()
+        </script>
+      )
+    }
     <script is:inline>
       ;(function () {
         function getImplicitPreference() {
@@ -60,6 +162,7 @@ if (draft) {
           return theme === 'light' || theme === 'dark'
         }
 
+        function apply() {
         var themeToSet = 'light'
         var preference = window.localStorage.getItem('payload-theme')
 
@@ -71,24 +174,100 @@ if (draft) {
         }
 
         document.documentElement.setAttribute('data-theme', themeToSet)
+
+        // CLI or modern look, chosen by the visitor (ViewToggle) or the
+        // site default already on <html data-view>.
+        try {
+          var view = window.localStorage.getItem('athena-view')
+          if (view === 'cli' || view === 'modern') {
+            document.documentElement.setAttribute('data-view', view)
+          }
+          // /status → Config: Reduce motion and Keyboard shortcuts.
+          var motion = window.localStorage.getItem('athena-motion')
+          if (motion === 'reduce' || motion === 'full') {
+            document.documentElement.setAttribute('data-motion', motion)
+          }
+          if (window.localStorage.getItem('athena-keys') === 'off') {
+            document.documentElement.setAttribute('data-keys', 'off')
+          }
+        } catch (_err) {
+          /* storage blocked: keep the default */
+        }
+        }
+
+        apply()
+        // A prerendered page ran this when the link was hovered; the visitor
+        // may have switched theme or view since, so apply the settings again
+        // when it is shown.
+        if (document.prerendering) document.addEventListener('prerenderingchange', apply, { once: true })
       })()
     </script>
   </head>
-  <body>
+  <body class="bg-base-100 text-base-content">
     {
       draft && (
-        <div class="relative z-30 flex items-center justify-center gap-3 bg-warning px-4 py-2 text-sm font-medium text-warning-content">
-          Draft preview
-          <a class="underline" href={`/api/exit-preview?path=${Astro.url.pathname}`}>
-            Exit
+        <div class="relative z-30 flex items-center justify-center gap-3 bg-warning px-4 py-2 font-mono text-sm text-warning-content">
+          {t.draftBanner}
+          <a
+            class="underline"
+            href={`/api/exit-preview?path=${encodeURIComponent(Astro.originPathname)}`}
+          >
+            {t.draftExit}
           </a>
         </div>
       )
     }
-    <Header />
-    <main>
-      <slot />
-    </main>
-    <Footer />
+    <div class="app-shell">
+      <Sidebar site={site} />
+      <div class="app-main">
+        <Header site={site} />
+        <main class="app-content">
+          <slot />
+        </main>
+        <Footer site={site} />
+      </div>
+    </div>
+    <SearchDialog />
+    <StatusDialog site={site} />
+    <script is:inline>
+      // Shortcuts: "/" search, j/k move through post lists, t theme, v view.
+      ;(function () {
+        document.addEventListener('keydown', function (event) {
+          if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return
+          // Turned off in /status → Config (⌘K still opens search).
+          if (document.documentElement.getAttribute('data-keys') === 'off') return
+          var target = event.target
+          var tag = target && target.tagName
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable)) {
+            if (event.key === 'Escape' && target.blur) target.blur()
+            return
+          }
+
+          if (event.key === '/') {
+            event.preventDefault()
+            if (window.__openSearch) window.__openSearch()
+            else window.location.href = document.documentElement.dataset.searchPath || '/search'
+          } else if (event.key === 'j' || event.key === 'k') {
+            var rows = Array.prototype.slice.call(document.querySelectorAll('[data-post-row]')).filter(function (row) {
+              return row.getClientRects().length > 0
+            })
+            if (rows.length === 0) return
+            var index = rows.indexOf(document.activeElement)
+            var next = event.key === 'j' ? index + 1 : index - 1
+            if (index === -1) next = event.key === 'j' ? 0 : rows.length - 1
+            next = Math.max(0, Math.min(rows.length - 1, next))
+            event.preventDefault()
+            rows[next].focus()
+          } else if (event.key === 't' && window.__toggleTheme) {
+            window.__toggleTheme()
+          } else if (event.key === 'v' && window.__toggleView) {
+            window.__toggleView()
+          } else if (event.key === 's' && window.__openStatus) {
+            event.preventDefault()
+            window.__openStatus()
+          }
+        })
+      })()
+    </script>
   </body>
 </html>

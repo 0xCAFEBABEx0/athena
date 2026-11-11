@@ -42,7 +42,7 @@ graph LR
 | **Shared package** (`packages/shared`) | TypeScript only | Generated Payload types and cross-app constants (`CACHE_TAGS`, `DRAFT_COOKIE`, `COLLECTION_SLUGS`, `IMAGE_SIZES`). |
 | **Database** | Neon PostgreSQL 16 via `@payloadcms/db-postgres` | All documents, versions, users, form submissions, search index. |
 | **Media storage** | Vercel Blob via `@payloadcms/storage-vercel-blob` | Original uploads and all generated renditions. Served directly from Blob (`disablePayloadAccessControl: true`). |
-| **Monitoring** | Sentry (CMS), Vercel Analytics + Speed Insights (web), Checkly (scaffold only) | Errors, performance, uptime. |
+| **Monitoring** | Sentry (CMS), Vercel Analytics + Speed Insights (web) | Errors, performance, uptime. |
 
 Production lives at **https://www.findb.uk** (athena-web). The staging
 deployment is built from the `preview` branch.
@@ -88,12 +88,24 @@ athena/
 `apps/web/astro.config.mjs` sets `output: 'server'`: every route is rendered on
 demand by a Vercel Function. Vercel ISR then caches the rendered response:
 
-- `isr.expiration: 300` — a cached page is served for up to five minutes before
-  Vercel re-renders it in the background.
-- `isr.bypassToken: REVALIDATE_SECRET` — a request carrying
-  `x-prerender-revalidate: <token>` forces a fresh render and re-caches it.
-  This is how targeted invalidation works (§3.3).
-- `isr.exclude: [/^\/api\/.+/]` — API endpoints are never cached.
+- Every cached response carries the Vercel cache tag `content` (the middleware
+  calls `addCacheTag`). `/api/invalidate` marks the tag stale on any CMS change,
+  so pages are served from cache until content actually changes (§3.3).
+- `isr.expiration: 604800` (7 days) — only a safety net for a missed webhook.
+  Keeping it long means pages rarely re-render, and so rarely wake the CMS and
+  its Neon database, while nothing changes.
+- `isr.bypassToken: sha256("isr-bypass:" + REVALIDATE_SECRET)` — a request
+  carrying `x-prerender-revalidate: <token>` forces a fresh render and
+  re-caches it (targeted invalidation, §3.3). Draft preview sets it as the
+  `__prerender_bypass` cookie so editors skip the cache.
+- `isr.exclude: [/^\/api\/.+/]` — API endpoints are never cached. ISR drops
+  the query string, so `/search` is one cached page that filters in the
+  browser.
+- Dotted paths that are not routes (`/wp-login.php`, `/.env`) get a plain 404
+  from the middleware without any CMS request; 404 pages are CDN-cached for a
+  day under the `content` tag.
+- The popup search loads `/search-index.json` once and filters in the browser,
+  so typing sends no requests.
 
 Why server output instead of static: draft preview needs a per-request cookie
 check, and publishing must update the site within seconds without a rebuild.
@@ -161,15 +173,20 @@ sequenceDiagram
 - Collection and global hooks call `invalidateWeb()`
   (`apps/cms/src/utilities/invalidateWeb.ts`). It never throws; failures are
   logged. A publish therefore always succeeds even if the web app is down.
-- Pages and posts send concrete paths. Header, footer and redirects send only
-  tags, which cannot be mapped to a finite set of paths; those changes reach
-  the site through the 300 s ISR expiration.
+- Pages and posts send concrete paths, which are re-rendered at once. Every
+  change also invalidates the `content` cache tag, so header, footer, site and
+  redirect changes reach every page on its next request.
 - Hooks skip invalidation when `req.context.disableRevalidate` is set (used by
   seeding).
 
-Known gaps (all bounded by the 300 s TTL): paginated archives
-(`/posts/page/N`), pages containing an Archive block, and pages that link to a
-renamed document are not re-rendered immediately.
+Paginated archives (`/posts/page/N`), pages containing an Archive block and
+pages that link to a renamed document are not re-rendered at once: the cache
+tag marks them stale and they re-render on their next request.
+
+When `WEB_URL` or `REVALIDATE_SECRET` is missing in the CMS deployment, the
+call is skipped with a `Web invalidation skipped` warning; a redirect (the
+Vercel login of a protected Preview) is logged as a failure. Set
+`WEB_PROTECTION_BYPASS` on the CMS to pass Vercel Authentication.
 
 ### 3.4 Draft preview
 
@@ -180,7 +197,7 @@ sequenceDiagram
     participant C as athena-cms
     Ed->>W: GET /api/preview?slug&collection&path&previewSecret
     W->>W: check previewSecret == PREVIEW_SECRET
-    W-->>Ed: Set-Cookie athena-draft=1 (HttpOnly), 307 → path
+    W-->>Ed: Set-Cookie athena-draft=1 + __prerender_bypass=<token> (HttpOnly), 307 → path
     Ed->>W: GET path (with cookie)
     W->>C: GET /api/posts?...&draft=true (API key)
     C-->>W: newest draft
@@ -219,9 +236,9 @@ file extension skip the lookup.
 ### 3.7 Search
 
 The Search plugin keeps a `search` collection in sync with published posts
-(`beforeSync` copies slug, meta and categories). `/search?q=` queries it with a
-`like` match over title, meta title, meta description and slug, returning up to
-12 results.
+(`beforeSync` copies slug, meta and categories). The web app no longer queries
+it per request: `/search` and the popup both filter every post in the browser
+(`/search-index.json` for the popup, server-rendered rows for the page).
 
 ### 3.8 Media
 
@@ -244,6 +261,12 @@ minutes), not at the exact minute chosen. Each run processes at most 10 jobs
 (Payload's default `limit`), so if more are due at once the rest wait for later
 runs.
 
+The same runner queues **scheduled tasks**: `syncGitHub` (cron `0 */6 * * *`)
+refreshes the GitHub snapshot of every `projects` entry for `/work` and saves
+only the entries that changed, so a quiet run costs one GitHub request and no
+web re-render. With the preview schedule disabled, the preview CMS fetches
+GitHub only when an entry is saved.
+
 Keep the interval at hourly or longer: every run wakes the Neon compute, which
 then stays active for 5 minutes (scale to zero is fixed on the Neon Free plan),
 and all branches share the project's 100 CU-hours a month. Hourly costs at most
@@ -261,8 +284,10 @@ a second hourly wake-up to the shared CU-hour budget.
 | Admin access | Payload auth on the `users` collection. Every authenticated user has full rights; there are no roles yet. |
 | Public reads | `authenticatedOrPublished` on Pages/Posts returns only `_status = published` to anonymous callers. Media, Categories, Header, Footer are public. Users are private. |
 | Draft reads from web | `web-frontend` service account API key, server-side only (`PAYLOAD_API_KEY`). |
-| Preview entry | `PREVIEW_SECRET` query param, HttpOnly `SameSite=Lax` cookie, `Secure` in production. |
-| Cache invalidation | `REVALIDATE_SECRET` bearer token; same value is the ISR bypass token. |
+| Preview entry | `PREVIEW_SECRET` query param, HttpOnly `SameSite=Lax` cookies, `Secure` in production. Draft mode needs both `athena-draft` and a `__prerender_bypass` cookie equal to the ISR bypass token (`lib/draft.ts`), so setting `athena-draft` by hand shows nothing. `/api/preview` and `/api/exit-preview` redirect only to a path on the site (`lib/safe-url.ts`). |
+| Cache invalidation | `REVALIDATE_SECRET` bearer token. The ISR bypass token is a SHA-256 derived from it (`lib/isr-bypass.mjs`), never the secret itself. |
+| Links from content | CMS and GitHub URLs become an `href` only as http(s), mailto, tel or an on-site path (`safeHref` / `httpUrl` in `lib/safe-url.ts`); X picks link only to `https://x.com/<handle>/status/<id>`. Text from the CMS, GitHub and X is escaped by Astro; rich text goes through Payload's HTML converter. |
+| Outbound requests (CMS) | Fixed hosts only: `api.github.com` (GraphQL, repository names checked against `owner/name`), `publish.twitter.com/oembed`, the Claude API, and `${WEB_URL}/api/invalidate`. |
 | Scheduled jobs | `CRON_SECRET` bearer token. |
 | Cross-origin form posts | Payload `cors`/`csrf` allow-lists limited to `CMS_URL` and `WEB_URL`. |
 | Author privacy | `populateAuthors` copies only `id` and `name` into `populatedAuthors`; the `users` collection itself is never exposed. |
@@ -278,8 +303,9 @@ Never enable Vercel Deployment Protection on athena-cms Production: it turns
 | | athena-cms | athena-web |
 |---|---|---|
 | Root Directory | `apps/cms` | `apps/web` |
-| Build | `next build` (Turbopack) | `astro build` |
-| Node | 24.x (`engines.node`; `vercel.json` `NODE_VERSION` 24.22.1) | 24.x (`engines.node`; functions run `nodejs24.x`) |
+| Build | `bun --bun next build` (Turbopack) | `bun --bun astro build` |
+| Functions | Bun 1.4 (`bunVersion: "1.4.x"`) | Bun 1.4 (`bunVersion: "1.4.x"`; adapter writes `bun1.x`) |
+| Node | 24.x for tooling (`vercel.json` `NODE_VERSION` 24.22.1) | 24.x for tooling |
 | Deploys on | `main` (Production), `preview` (Preview) | same |
 
 Both `vercel.json` files whitelist only `main` and `preview` and skip the

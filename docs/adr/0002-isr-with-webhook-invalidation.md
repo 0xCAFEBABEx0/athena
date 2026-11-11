@@ -31,3 +31,15 @@ the CMS on the hot path for every visitor.
   projects. A mismatch fails silently (logged `401`s).
 - Draft responses must opt out of the shared cache (`Cache-Control: private,
   no-store`).
+
+## Update (2026-11)
+
+- Every cached response carries the Vercel cache tag `content`;
+  `/api/invalidate` marks it stale on any change, so header, footer, site
+  settings and redirects no longer wait for the expiration, which is now 7
+  days and only a safety net.
+- The ISR bypass token is a SHA-256 derived from `REVALIDATE_SECRET`
+  (`apps/web/src/lib/isr-bypass.mjs`), not the secret itself, because draft
+  preview puts it in a cookie.
+- A missing secret or a redirect is logged by `invalidateWeb`
+  (`Web invalidation skipped` / `failed`), no longer silent.

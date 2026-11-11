@@ -4,7 +4,8 @@
   "service": "app",
   "workspaceFolder": "/workspace",
   "forwardPorts": [
-    3000
+    3000,
+    4321
   ],
   "customizations": {
     "vscode": {
@@ -64,8 +65,5 @@
     }
   },
   "remoteUser": "vscode",
-  "remoteEnv": {
-    "PATH": "${containerEnv:PATH}:/home/vscode/.bun/bin"
-  },
   "postCreateCommand": "bash .devcontainer/antigravity-workaround.sh"
 }

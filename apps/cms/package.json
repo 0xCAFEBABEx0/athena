@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "cross-env NODE_ENV=production NODE_OPTIONS=--no-deprecation next build",
+    "build": "cross-env NODE_ENV=production NODE_OPTIONS=--no-deprecation bun --bun next build",
     "ci": "bun run build",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev --turbopack -H 0.0.0.0",
     "dev:prod": "cross-env NODE_OPTIONS=--no-deprecation rm -rf .next && bun run build && bun run start",
@@ -15,13 +15,15 @@
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "typecheck": "tsc --noEmit",
+    "test": "bun test src",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
-    "start": "cross-env NODE_ENV=production NODE_OPTIONS=--no-deprecation next start",
+    "start": "cross-env NODE_ENV=production NODE_OPTIONS=--no-deprecation bun --bun next start",
     "seed:standalone": "tsx src/scripts/seed-standalone.ts",
     "check:media": "tsx src/scripts/check-media.ts",
     "env:check": "node -e \"console.log('Environment:', process.env.NODE_ENV || 'development'); console.log('Vercel Env:', process.env.VERCEL_ENV || 'local');\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.7.0",
     "@athena/shared": "workspace:*",
     "@payloadcms/db-postgres": "3.93.0",
     "@payloadcms/next": "3.93.0",
@@ -47,12 +49,8 @@
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "checkly": "^10.1.0",
     "prettier": "^3.9.10",
     "typescript": "^7.0.2"
   },
-  "browserslist": "> 0.5%, not dead",
-  "engines": {
-    "node": "24.x"
-  }
+  "browserslist": "> 0.5%, not dead"
 }

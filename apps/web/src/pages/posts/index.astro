@@ -1,46 +1,21 @@
 ---
+import { dict, localeOf, localizePath } from '@/lib/i18n'
 import Layout from '@/layouts/Layout.astro'
-import CollectionArchive from '@/components/CollectionArchive.astro'
-import PageRange from '@/components/PageRange.astro'
-import Pagination from '@/components/Pagination.astro'
-import { getPosts, POSTS_PER_PAGE } from '@/lib/cms'
-import { SITE_NAME } from '@/lib/seo'
-import { webURL } from '@/lib/env'
+import PostsArchive from '@/components/PostsArchive.astro'
+import { getPosts } from '@/lib/cms'
+import { routeMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
 
-const posts = await getPosts({ page: 1 })
-
-const meta = {
-  title: `Posts | ${SITE_NAME}`,
-  description: undefined,
-  ogImage: `${webURL()}/website-template-OG.webp`,
-  url: `${webURL()}/posts`,
-}
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+const [site, posts] = await Promise.all([
+  getSite(Astro.locals, locale),
+  getPosts({ page: 1 }, { locale }),
+])
+const meta = routeMeta(t.allPosts, lp('/posts'), site, t.postsDescription(site.siteName))
 ---
 
 <Layout meta={meta}>
-  <div class="pt-16 pb-24">
-    <div class="container mb-12">
-      <h1 class="heading-display text-4xl md:text-5xl">Posts</h1>
-      <p class="mt-3 max-w-[36rem] text-base-content/60">
-        News, updates, and stories from the team.
-      </p>
-    </div>
-
-    <div class="container mb-8">
-      <PageRange
-        collection="posts"
-        currentPage={posts.page}
-        limit={POSTS_PER_PAGE}
-        totalDocs={posts.totalDocs}
-      />
-    </div>
-
-    <CollectionArchive posts={posts.docs} />
-
-    <div class="container">
-      {posts.totalPages > 1 && posts.page && (
-        <Pagination page={posts.page} totalPages={posts.totalPages} />
-      )}
-    </div>
-  </div>
+  <PostsArchive posts={posts} />
 </Layout>

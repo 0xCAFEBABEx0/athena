@@ -1,6 +1,15 @@
 import { stringify } from 'qs-esm'
 
-import type { Footer, Header, Page, Post, Redirect, Search } from '@athena/shared/payload-types'
+import { DEFAULT_LOCALE, type Locale } from '@athena/shared/constants'
+
+import type {
+  Footer,
+  Header,
+  Page,
+  Post,
+  Redirect,
+  Site,
+} from '@athena/shared/payload-types'
 
 import { cmsProtectionBypass, cmsURL, env } from './env'
 
@@ -24,6 +33,11 @@ type FetchOptions = {
    * Payload only serves drafts to authenticated users. Server-side only.
    */
   draft?: boolean
+  /**
+   * Content locale. Untranslated fields fall back to English, so a Japanese
+   * page is never empty.
+   */
+  locale?: Locale
 }
 
 export class CmsRequestError extends Error {
@@ -44,7 +58,11 @@ export const isVercelSsoLocation = (location: string | null | undefined): boolea
   try {
     const url = new URL(location, 'https://vercel.com')
     if (url.hostname !== 'vercel.com') return false
-    return url.pathname === '/sso-api' || url.pathname.startsWith('/sso-api/') || url.pathname === '/login'
+    return (
+      url.pathname === '/sso-api' ||
+      url.pathname.startsWith('/sso-api/') ||
+      url.pathname === '/login'
+    )
   } catch {
     return false
   }
@@ -119,10 +137,17 @@ const cmsHeaders = (draft: boolean): Headers => {
 const cmsFetch = async <T>(
   path: string,
   query: Record<string, unknown> = {},
-  { draft = false }: FetchOptions = {},
+  { draft = false, locale }: FetchOptions = {},
 ): Promise<T> => {
   // Payload REST expects qs-encoded nested params for where/select objects.
-  const qs = stringify({ ...query, ...(draft ? { draft: 'true' } : {}) }, { addQueryPrefix: true })
+  const qs = stringify(
+    {
+      ...query,
+      ...(draft ? { draft: 'true' } : {}),
+      ...(locale ? { locale, 'fallback-locale': DEFAULT_LOCALE } : {}),
+    },
+    { addQueryPrefix: true },
+  )
   const origin = cmsURL()
   const url = `${origin}/api${path}${qs}`
 
@@ -186,51 +211,108 @@ export const getPosts = async (
         slug: true,
         categories: true,
         meta: true,
+        publishedAt: true,
       },
     },
     opts,
   )
 
+/** The posts published just before and after `publishedAt` (for prev/next links). */
+export const getAdjacentPosts = async (
+  publishedAt: string,
+  opts: FetchOptions = {},
+): Promise<{ prev: Post | null; next: Post | null }> => {
+  const select = { title: true, slug: true, publishedAt: true }
+  const [older, newer] = await Promise.all([
+    cmsFetch<PaginatedDocs<Post>>(
+      '/posts',
+      {
+        depth: 0,
+        limit: 1,
+        sort: '-publishedAt',
+        select,
+        where: { publishedAt: { less_than: publishedAt } },
+      },
+      opts,
+    ),
+    cmsFetch<PaginatedDocs<Post>>(
+      '/posts',
+      {
+        depth: 0,
+        limit: 1,
+        sort: 'publishedAt',
+        select,
+        where: { publishedAt: { greater_than: publishedAt } },
+      },
+      opts,
+    ),
+  ])
+  return { prev: older.docs[0] ?? null, next: newer.docs[0] ?? null }
+}
+
 /** Posts for the Archive block (populateBy=collection), optionally category-filtered. */
-export const getArchivePosts = async ({
-  categoryIds = [],
-  limit = 3,
-}: {
-  categoryIds?: (number | string)[]
-  limit?: number
-}): Promise<Post[]> => {
-  const result = await cmsFetch<PaginatedDocs<Post>>('/posts', {
-    depth: 1,
-    limit,
-    ...(categoryIds.length > 0 ? { where: { categories: { in: categoryIds } } } : {}),
-  })
+export const getArchivePosts = async (
+  {
+    categoryIds = [],
+    limit = 3,
+  }: {
+    categoryIds?: (number | string)[]
+    limit?: number
+  },
+  opts: FetchOptions = {},
+): Promise<Post[]> => {
+  const result = await cmsFetch<PaginatedDocs<Post>>(
+    '/posts',
+    {
+      depth: 1,
+      limit,
+      ...(categoryIds.length > 0 ? { where: { categories: { in: categoryIds } } } : {}),
+    },
+    opts,
+  )
   return result.docs
 }
 
-export const getGlobal = async <T extends Header | Footer>(
-  slug: 'header' | 'footer',
+export const getGlobal = async <T extends Header | Footer | Site>(
+  slug: 'header' | 'footer' | 'site',
   opts: FetchOptions = {},
 ): Promise<T> => cmsFetch<T>(`/globals/${slug}`, { depth: 1 }, opts)
 
-export const searchPosts = async (q: string): Promise<PaginatedDocs<Search>> => {
-  const like = q.trim()
-  return cmsFetch<PaginatedDocs<Search>>('/search', {
-    depth: 1,
-    limit: 12,
-    select: { title: true, slug: true, categories: true, meta: true },
-    ...(like
-      ? {
-          where: {
-            or: [
-              { title: { like } },
-              { 'meta.description': { like } },
-              { 'meta.title': { like } },
-              { slug: { like } },
-            ],
-          },
-        }
-      : {}),
-  })
+/**
+ * Everything the popup search filters in the browser: every published post
+ * (newest first) and page, with untranslated fields falling back to English.
+ */
+export const getSearchIndexDocs = async (
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<{
+  posts: Pick<Post, 'slug' | 'title' | 'categories' | 'meta' | 'publishedAt'>[]
+  pages: Pick<Page, 'slug' | 'title'>[]
+}> => {
+  const [posts, pages] = await Promise.all([
+    cmsFetch<PaginatedDocs<Post>>(
+      '/posts',
+      {
+        depth: 1,
+        limit: 0,
+        pagination: false,
+        sort: '-publishedAt',
+        select: { title: true, slug: true, categories: true, meta: true, publishedAt: true },
+      },
+      { locale },
+    ),
+    cmsFetch<PaginatedDocs<Page>>(
+      '/pages',
+      {
+        depth: 0,
+        limit: 0,
+        pagination: false,
+        select: { title: true, slug: true },
+        where: { slug: { not_equals: 'home' } },
+      },
+      { locale },
+    ),
+  ])
+  return { posts: posts.docs, pages: pages.docs }
 }
 
 export const getRedirects = async (): Promise<Redirect[]> => {
@@ -255,6 +337,20 @@ export const getAllSlugs = async (
       select: { slug: true, updatedAt: true },
       where: { _status: { equals: 'published' } },
     },
+  )
+  return result.docs
+}
+
+/**
+ * Portfolio entries (`projects` collection): editorial fields from the admin
+ * plus a `github` snapshot written by the CMS sync job. The web app never
+ * calls GitHub itself.
+ */
+export const getProjectDocs = async <T>(opts: FetchOptions = {}): Promise<T[]> => {
+  const result = await cmsFetch<PaginatedDocs<T>>(
+    '/projects',
+    { depth: 0, limit: 100, sort: 'order', where: { hidden: { not_equals: true } } },
+    opts,
   )
   return result.docs
 }

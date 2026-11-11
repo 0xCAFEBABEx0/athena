@@ -1,4 +1,5 @@
 ---
+import { dict, localeOf, localizePath } from '@/lib/i18n'
 import type { Post } from '@athena/shared/payload-types'
 import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
 
@@ -6,42 +7,164 @@ import Layout from '@/layouts/Layout.astro'
 import PostHero from '@/components/heros/PostHero.astro'
 import RelatedPosts from '@/components/blocks/RelatedPosts.astro'
 import RichText from '@/components/RichText.astro'
-import { getPost } from '@/lib/cms'
+import SearchPrompt from '@/components/SearchPrompt.astro'
+import { getAdjacentPosts, getPost } from '@/lib/cms'
 import { isDraft } from '@/lib/draft'
-import { buildMeta } from '@/lib/seo'
+import { readingMinutes } from '@/lib/format'
+import { renderRichText } from '@/lib/richtext'
+import { LOCALES, LOCALE_LABEL } from '@/lib/i18n'
+import { formatAuthors, formatDate } from '@/lib/format'
+import { htmlToText, postJsonLd, postMeta } from '@/lib/seo'
+import { webURL } from '@/lib/env'
+import { getSite } from '@/lib/site'
 
 const draft = isDraft(Astro.cookies)
 const slug = Astro.params.slug ?? ''
-const post = await getPost(slug, { draft })
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+const post = await getPost(slug, { draft, locale })
 
 if (!post) {
   return Astro.rewrite('/404')
 }
 
+const site = await getSite(Astro.locals, locale)
+
 const relatedPosts = (post.relatedPosts ?? []).filter(
   (related): related is Post => typeof related === 'object' && related !== null,
 )
 
-const meta = buildMeta(post, `/posts/${slug}`)
+let adjacent: { prev: Post | null; next: Post | null } = { prev: null, next: null }
+if (post.publishedAt) {
+  try {
+    adjacent = await getAdjacentPosts(post.publishedAt, { locale })
+  } catch (error) {
+    console.error('[post] failed to load adjacent posts', error)
+  }
+}
+
+const content = post.content as unknown as SerializedEditorState
+const { html, toc } = content ? renderRichText(content, locale) : { html: '', toc: [] }
+const plainText = htmlToText(html)
+const authors = (post.populatedAuthors ?? []).filter(
+  (author): author is NonNullable<typeof author> => author !== null,
+)
+const authorText = formatAuthors(authors)
+const authorNames = authors.map((author) => author.name?.trim()).filter((name): name is string => Boolean(name))
+const baseMeta = postMeta(post, lp(`/posts/${slug}`), site, plainText)
+const meta = {
+  ...baseMeta,
+  jsonLd: [
+    postJsonLd(
+      baseMeta,
+      post.title,
+      authorNames.length ? authorNames : site.authorName ? [site.authorName] : [],
+      locale,
+      `${webURL()}${lp('/')}`,
+    ),
+  ],
+}
+const otherLanguages = LOCALES.filter((code) => code !== locale).map((code) => ({
+  code,
+  label: LOCALE_LABEL[code],
+  href: localizePath(code, `/posts/${slug}`),
+}))
 ---
 
 <Layout meta={meta}>
-  <article class="pb-16 pt-16">
-    <PostHero post={post} />
+  <div class="post-layout">
+  <div class="min-w-0">
+  <div class="modern-only container">
+    <div class="modern-ask mt-6"><p>{t.askRead(slug)}</p></div>
+  </div>
+  <article class="container pb-4">
+    <PostHero post={post} readingMinutes={readingMinutes(plainText)} />
+    <RichText class="mt-9" data={content} enableGutter={false} />
+  </article>
 
-    <div class="flex flex-col items-center gap-4 pt-8">
-      <div class="container">
-        <RichText
-          class="max-w-[48rem] mx-auto"
-          data={post.content as unknown as SerializedEditorState}
-          enableGutter={false}
-        />
+  <div class="container">
+    {relatedPosts.length > 0 && <RelatedPosts class="mt-12" docs={relatedPosts} />}
+
+    <nav class="post-adjacent mt-12 border-t border-base-300 pt-4 font-mono text-sm leading-loose" aria-label={t.adjacent}>
+      {
+        adjacent.prev && (
+          <p class="flex gap-3">
+            <span class="w-[4.5rem] shrink-0 whitespace-nowrap text-base-content/65">{t.prevPost}</span>
+            <a class="link-term font-sans text-[15px]" href={lp(`/posts/${adjacent.prev.slug}`)}>
+              {adjacent.prev.title}
+            </a>
+          </p>
+        )
+      }
+      {
+        adjacent.next && (
+          <p class="flex gap-3">
+            <span class="w-[4.5rem] shrink-0 whitespace-nowrap text-base-content/65">{t.nextPost}</span>
+            <a class="link-term font-sans text-[15px]" href={lp(`/posts/${adjacent.next.slug}`)}>
+              {adjacent.next.title}
+            </a>
+          </p>
+        )
+      }
+      <p class="flex gap-3">
+        <span class="w-[4.5rem] shrink-0 text-base-content/65">↑</span>
+        <a class="link-term" href={lp('/posts')}>{t.allPosts}</a>
+      </p>
+    </nav>
+    <SearchPrompt class="modern-only mt-6" />
+  </div>
+  </div>
+
+  <aside class="modern-only post-aside" aria-label={t.details}>
+    <div class="post-aside-card">
+      {
+        toc.length > 0 && (
+          <nav aria-label={t.onThisPage}>
+            <p class="mb-2 font-semibold">{t.onThisPage}</p>
+            <ul>
+              {toc.map((entry) => (
+                <li class:list={['post-toc-item', { 'ps-4': entry.level === 3 }]}>
+                  <a href={`#${entry.id}`} set:html={entry.text} />
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+      <p class:list={['mb-2 font-semibold', { 'mt-5': toc.length > 0 }]}>{t.details}</p>
+      <dl class="post-details">
         {
-          relatedPosts.length > 0 && (
-            <RelatedPosts class="mx-auto mt-16 max-w-[52rem]" docs={relatedPosts} />
+          post.publishedAt && (
+            <div>
+              <dt>{t.published}</dt>
+              <dd class="font-mono">{formatDate(post.publishedAt)}</dd>
+            </div>
           )
         }
-      </div>
+        {
+          authorText && (
+            <div>
+              <dt>{t.writtenBy}</dt>
+              <dd>{authorText}</dd>
+            </div>
+          )
+        }
+        <div>
+          <dt>{t.alsoIn}</dt>
+          <dd>
+            {otherLanguages.map((lang, index) => (
+              <>
+                {index > 0 && ' · '}
+                <a class="link-term" href={lang.href} hreflang={lang.code} lang={lang.code}>
+                  {lang.label}
+                </a>
+              </>
+            ))}
+          </dd>
+        </div>
+      </dl>
     </div>
-  </article>
+  </aside>
+  </div>
 </Layout>

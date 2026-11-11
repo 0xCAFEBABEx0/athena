@@ -23,13 +23,13 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 ## Tech Stack
 
 - **CMS**: Payload CMS 3 + Next.js 16 (App Router); admin styling is Payload's own SCSS (no Tailwind)
-- **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (Linear-inspired light/dark themes in `src/styles/global.css`)
+- **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (terminal-inspired light/dark themes in `src/styles/global.css`: warm paper, one orange accent, mono for dates/nav/labels)
 - **Language**: TypeScript (strict mode). `apps/cms` is on TypeScript 7 (native `tsc`); `apps/web` stays on 6 until `astro check` supports 7
-- **Runtime**: Node.js 24 LTS (pinned to 24.22.1 via `.nvmrc`; Vercel runs the latest 24.x via `engines.node: "24.x"` in each app)
+- **Runtime**: Vercel Functions of both apps run on **Bun 1.4** (`"bunVersion": "1.4.x"` in each `vercel.json`, Vercel's Bun runtime, beta), and both production builds run under Bun (`bun --bun next build` / `bun --bun astro build`; the Astro adapter derives `bun1.x` from the build process, which Vercel maps to Bun 1.3, so `apps/web/scripts/pin-bun-runtime.mjs` rewrites it to `bunVersion` after the build). Do not add `engines.node` to the app `package.json` files: it overrides `bunVersion` and puts functions back on Node. Node.js 24 LTS (pinned to 24.22.1 via `.nvmrc`, Vercel project setting 24.x) still runs tooling (`astro check`, Payload CLI, CI) and the CMS dev server (`next dev` under Bun fails to resolve Turbopack's hashed externals)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
 - **Database**: PostgreSQL 16 (`@payloadcms/db-postgres`, Neon)
 - **Rich Text**: Lexical (`@payloadcms/richtext-lexical`; the web app renders it via `convertLexicalToHTML` in `apps/web/src/lib/richtext.ts`)
-- **Monitoring**: Sentry, Checkly
+- **Monitoring**: Sentry (CMS), Vercel Web Analytics + Speed Insights (web)
 
 ## Key Commands (run from the repo root)
 
@@ -41,6 +41,9 @@ bun run build:cms             # CMS production build (next build, Turbopack)
 bun run build:web             # Astro production build
 bun run lint                  # Biome (cms) + astro check (web)
 bun run typecheck             # tsc --noEmit (cms)
+bun run --filter @athena/web test      # Web unit tests (bun test)
+bun run --filter @athena/cms test      # CMS unit tests (bun test)
+bun run --filter @athena/web test:e2e  # Web E2E (Playwright, E2E_BASE_URL; cases in docs/TESTING.md)
 bun run generate:types        # Regenerate Payload types -> packages/shared
 bun run generate:importmap    # Regenerate admin import map
 bun run deploy:preview        # Merge development -> preview and push
@@ -53,6 +56,9 @@ bun run deploy:production     # Open a preview -> main PR and enable auto-merge
 apps/cms/src/
 ├── app/(payload)/            # Payload admin panel + API routes
 ├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only; rendering lives in apps/web
+├── Site/ Header/ Footer/     # globals (Site = name, intro, links, projects shown by the web app)
+├── github/                   # sync.ts: GitHub snapshot for the projects (/work) collection
+├── x/                        # oembed.ts: reads posts on X for the Site global picks
 ├── utilities/                # invalidateWeb.ts, generatePreviewPath.ts, env.ts, getURL.ts
 └── payload.config.ts         # Main Payload CMS configuration
 
@@ -61,7 +67,7 @@ apps/cms/config/next.config.mjs   # Real Next.js config (root next.config.mjs re
 apps/web/src/
 ├── pages/                    # [...slug], posts/*, search, sitemaps, 404, api/* endpoints
 ├── components/               # Block/hero renderers (blocks/, heros/, ...)
-├── lib/                      # cms.ts (REST client), richtext.ts, draft.ts, seo.ts, media.ts
+├── lib/                      # cms.ts (REST client), site.ts (site global), work.ts (/work entries), richtext.ts, draft.ts, seo.ts, media.ts
 ├── layouts/Layout.astro      # Theme init, meta tags, Header/Footer
 └── middleware.ts             # Redirects-collection handling
 
@@ -74,11 +80,11 @@ packages/shared/src/
 
 The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_URL`.
 
-- **Cache invalidation**: on publish/unpublish, `apps/cms/src/utilities/invalidateWeb.ts` POSTs `{ paths, tags }` to `${WEB_URL}/api/invalidate` with `Authorization: Bearer ${REVALIDATE_SECRET}`. The Astro endpoint re-renders the affected ISR-cached paths.
-- **Draft preview**: the admin Preview button targets `${WEB_URL}/api/preview?slug&collection&path&previewSecret` (`generatePreviewPath.ts`). The endpoint validates `PREVIEW_SECRET`, sets the HttpOnly `athena-draft` cookie, and redirects; draft-aware pages then fetch with `draft=true` using the `web-frontend` service account's API key (`PAYLOAD_API_KEY`). Create/rotate that account with `apps/cms/src/scripts/create-web-service-account.ts`.
+- **Cache invalidation**: on publish/unpublish, `apps/cms/src/utilities/invalidateWeb.ts` POSTs `{ paths, tags }` to `${WEB_URL}/api/invalidate` with `Authorization: Bearer ${REVALIDATE_SECRET}`. The Astro endpoint marks the Vercel cache tag `content` stale (every cached page, feed, sitemap and `/search-index.json` carries it, added in `middleware.ts`) and re-renders the affected paths right away. ISR expiration is 7 days, only a safety net. A new deployment starts with an empty cache, so `.github/workflows/warm-cache.yml` (on Vercel's `deployment_status`) runs `scripts/warm-cache.sh` to request every sitemap URL once on the preview or production domain (repository variables `PREVIEW_WEB_URL` / `PRODUCTION_WEB_URL`; update the defaults there when the domain moves). The preview domain is behind Vercel Authentication, so warming it needs the athena-web Protection Bypass for Automation secret as the repository secret `VERCEL_AUTOMATION_BYPASS_SECRET`; without it the run ends early with a warning. On a miss, `middleware.ts` starts the layout's CMS requests together (memos keyed by `Astro.locals`), so pass `Astro.locals`, not `Astro.request`, to `getSite`/`getWork`/nav helpers. Hovered links are prerendered (speculation rules in `Layout.astro`): scripts that must only run when a page is shown wait for `prerenderingchange`. The ISR bypass token is derived from `REVALIDATE_SECRET` (`apps/web/src/lib/isr-bypass.mjs`); draft preview sets it as the `__prerender_bypass` cookie.
+- **Draft preview**: the admin Preview button targets `${WEB_URL}/api/preview?slug&collection&path&previewSecret` (`generatePreviewPath.ts`). The endpoint validates `PREVIEW_SECRET`, sets the HttpOnly `athena-draft` and `__prerender_bypass` cookies, and redirects (only to a path on the site, `isLocalPath`); `isDraft` needs both cookies, the second equal to the ISR bypass token, so `athena-draft` alone shows no drafts; draft-aware pages then fetch with `draft=true` using the `web-frontend` service account's API key (`PAYLOAD_API_KEY`). Create/rotate that account with `apps/cms/src/scripts/create-web-service-account.ts`.
 - **Forms**: the web `FormBlock` posts JSON to `${CMS_URL}/api/form-submissions`; CMS CORS already allows the web origin.
 
-`PREVIEW_SECRET` and `REVALIDATE_SECRET` must be identical in both deployments — drift shows up as silent 401s (`invalidateWeb` logs errors but never throws).
+`PREVIEW_SECRET` and `REVALIDATE_SECRET` must be identical in both deployments — drift shows up as silent 401s (`invalidateWeb` logs errors but never throws; a missing secret logs `Web invalidation skipped`, a redirect to the Vercel login `Web invalidation failed: 302`).
 
 ## Code Conventions
 
@@ -88,6 +94,10 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 - **CMS**: Server Components by default; add `'use client'` only when needed
 - **Dark mode**: Controlled by `data-theme="dark"` attribute, not OS media query (theme stored under the `payload-theme` localStorage key in both apps)
 - **Prefix unused vars** with `_` to suppress lint warnings
+- **daisyUI** ships only the components in the `include:` list in `apps/web/src/styles/global.css`; add a component there before using it
+- **Links from data**: a URL from the CMS, GitHub or a query string becomes an `href` or redirect only through `safeHref` / `httpUrl` / `isLocalPath` (`apps/web/src/lib/safe-url.ts`)
+- **Search** (`/search`) is one ISR page per language filtered in the browser; never read `?q=` on the server
+- **Tests**: add or update a case in `docs/TESTING.md` with each behavior change, and run both web suites before pushing
 - **Lint (cms)**: Biome (`apps/cms/biome.json`, `react` + `next` domains), not ESLint: typescript-eslint has no TypeScript 7 support. Suppress with `// biome-ignore lint/<group>/<rule>: reason`. Prettier still formats
 
 ## Payload CMS Patterns
@@ -120,7 +130,8 @@ Three things there are load-bearing and easy to break:
 
 Sentry (`withSentryConfig`) wraps the result only when `SENTRY_DSN` +
 `SENTRY_ORG`/`SENTRY_PROJECT` are set. With Turbopack, source maps are uploaded
-by Sentry's after-production-compile hook (needs `SENTRY_AUTH_TOKEN`); the
+by Sentry's after-production-compile hook (needs `SENTRY_AUTH_TOKEN`), and only
+when `VERCEL_ENV=production` (it adds ~10 s to every build); the
 options under `webpack` (`treeshake`, `automaticVercelMonitors`) are no-ops.
 
 ## Git Workflow
@@ -138,6 +149,16 @@ PR from `preview` to `main`; `bun run deploy:production` opens it with `gh` and
 enables auto-merge. `preview` still accepts direct pushes (`bun run deploy:preview`).
 
 CI (GitHub Actions) runs lint + type check on push to `main`/`preview` and PRs to `main`.
+
+**Versioning** ([`docs/VERSIONING.md`](./docs/VERSIONING.md)): one SemVer for
+the whole site in the root `package.json` `version`. Bump it and add a
+`CHANGELOG.md` section on `development` before promoting a code change
+(content edits never bump it). On push to `main`,
+`.github/workflows/release.yml` tags `vX.Y.Z` and publishes a GitHub Release
+from that section when the tag does not exist yet. The web app shows the
+version beside the site name and in its `/status` panel, with a
+`-preview.<sha>` / `-dev.<sha>` suffix outside Production
+(`apps/web/src/lib/build-info.mjs`).
 CodeRabbit (`.coderabbit.yaml`) reviews PRs to `main`, `development`, and
 `preview` in English; when a rule in this file changes, update the matching
 `path_instructions` entry there too.
@@ -149,11 +170,21 @@ project's Root Directory) to avoid duplicate builds:
   `true`. Unspecified branches default to enabled, so listing only `development:
   false` still deploys every `cursor/*` PR branch and burns Hobby (1 concurrent
   build, 100 deploys/day). GitHub Actions still runs on PRs to `main`.
-- `ignoreCommand` skips Preview builds on the `preview` branch when HEAD is a
+- `ignoreCommand` runs `scripts/vercel-ignore-build.sh` (shared by both apps).
+  It skips Preview builds on the `preview` branch when HEAD is a
   `preview -> main` release merge commit (`Merge pull request #N from .../preview`):
   that exact tree was just built for Production, so rebuilding it after the
   post-release branch sync is redundant. Caveat: if `main` ever gets hotfix
   commits of its own, the staging URL lags until the next real `preview` push.
+  It also skips an app when nothing it depends on (its own folder,
+  `packages/`, `scripts/`, root `package.json`, `bun.lock`, `.nvmrc`) changed
+  since `$VERCEL_GIT_PREVIOUS_SHA`, so a web-only change does not queue a CMS
+  build on Hobby's single build slot. If the comparison fails, it builds. A
+  Redeploy of the same commit (e.g. after changing env vars) always builds;
+  before this, it was silently canceled.
+- `apps/web` uses Astro's passthrough image service (no `astro:assets`), which
+  keeps sharp out of the server functions (26 MB -> 7 MB each). Switch it back
+  before using `<Image>`.
 
 ## Environment Variables
 
@@ -165,8 +196,11 @@ PAYLOAD_SECRET=            # 32+ char JWT secret
 CMS_URL=                   # CMS origin (NEXT_PUBLIC_SERVER_URL is a legacy alias)
 WEB_URL=                   # Astro frontend origin; unset = no invalidation webhook, preview targets localhost:4321
 PREVIEW_SECRET=            # Shared with web: gates the draft cookie
-REVALIDATE_SECRET=         # Shared with web: bearer token for /api/invalidate
+REVALIDATE_SECRET=         # Shared with web: bearer token for /api/invalidate (Preview and Production)
+WEB_PROTECTION_BYPASS=     # optional; athena-web Protection Bypass for Automation (invalidation past Vercel Authentication)
 BLOB_READ_WRITE_TOKEN=     # Vercel Blob storage token
+ANTHROPIC_API_KEY=         # Translate button (Claude); TRANSLATION_MODEL optional
+GITHUB_TOKEN=              # /work GitHub sync (fine-grained, public repos read-only)
 ```
 
 Web (`apps/web/.env` — see `apps/web/README.md`):
@@ -187,11 +221,12 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
 ## Common Pitfalls
 
 1. `POSTGRES_URL` is required at startup - the cms throws without it
-2. Bun is the only supported package manager. A stray `package-lock.json` will be
-   picked up by the Dockerfile's package-manager detection **before** `bun.lock`
-   (`npm ci` wins), so keep it deleted.
+2. Bun is the only supported package manager; `bun.lock` is the only lockfile
+   (the dev-container Dockerfile runs `bun install --frozen-lockfile`, so keep
+   it in sync and delete any stray `package-lock.json`).
 3. Sentry wraps Next.js config only when `SENTRY_DSN` + `SENTRY_ORG`/`SENTRY_PROJECT` are set
-4. Dockerfile uses Docker Hardened Images (`dhi.io/`), not standard Docker Hub
+4. The Dockerfile is the dev container only (Docker Hardened Images, `dhi.io/`):
+   Node 24 plus Bun pinned by `BUN_VERSION` — bump it with `packageManager`
 5. Use type-only imports for Payload generated types
 6. Keep `withPayload` and the browser `payload/internal` alias (in both
    `turbopack.resolveAlias` and `webpack()`) in apps/cms (see [Build Configuration](#build-configuration-appscmsconfignextconfigmjs))
@@ -206,8 +241,21 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
     (`astro check` via `@volar/kit`) resolves TypeScript from the repo root and
     crashes on TS 7. `apps/cms` gets TS 7 nested in its own `node_modules`.
     Don't remove the root pin until `astro check` supports TS 7.
-12. **Never enable Vercel Deployment Protection on athena-cms Production.** It
+12. **New tables or columns need manual SQL in production and on the preview
+    Neon branch** (schema push is off there). Write idempotent SQL and record it
+    in `docs/UPGRADE_NOTES.md` (procedure: `docs/DATABASE.md`). The web app
+    falls back to defaults while the `site` table is missing.
+13. **Content is localized** (`en` default, `ja`, `zh`). Localized fields live
+    in `*_locales` tables, so adding `localized: true` to an existing field is
+    a schema change (see pitfall 12). The web app passes `locale` +
+    `fallback-locale=en` on every CMS fetch and must keep `/ja`/`/zh` links
+    via `localizePath` (`apps/web/src/lib/i18n.ts`).
+14. **Never enable Vercel Deployment Protection on athena-cms Production.** It
     302s `/api/*` to Vercel SSO, and athena-web HTML routes 500. Protect
     Preview only; Payload already gates `/admin`. If Production must stay
     protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches
     only — browser form posts to the CMS still fail).
+15. **Bun runtime caveats**: Vercel's automatic source maps and bytecode
+    caching are Node-only; `engines.node` in an app `package.json` silently
+    switches its functions back to Node. To roll back, remove `bunVersion`
+    and the `--bun` flags and restore `engines.node: "24.x"`.

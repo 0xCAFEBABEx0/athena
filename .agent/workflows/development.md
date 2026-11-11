@@ -22,7 +22,7 @@ bun run dev          # both at once
 ## 🛠️ Common Commands (repo root)
 
 ```bash
-bun run lint                  # ESLint (cms) + astro check (web)
+bun run lint                  # Biome (cms) + astro check (web)
 bun run generate:types        # regenerate Payload types -> packages/shared
 bun run generate:importmap    # regenerate the admin import map
 bun run build                 # build all workspaces

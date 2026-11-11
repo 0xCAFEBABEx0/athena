@@ -3,7 +3,16 @@ import type React from 'react'
 import { useCallback, useEffect } from 'react'
 import type { TextFieldClientProps } from 'payload'
 
-import { useField, Button, TextInput, FieldLabel, useFormFields, useForm } from '@payloadcms/ui'
+import {
+  useField,
+  Button,
+  TextInput,
+  FieldLabel,
+  useFormFields,
+  useForm,
+  useLocale,
+} from '@payloadcms/ui'
+import { DEFAULT_LOCALE } from '@athena/shared/constants'
 
 import { formatSlug } from './formatSlug'
 import './index.scss'
@@ -30,6 +39,10 @@ export const SlugComponent: React.FC<SlugComponentProps> = ({
 
   const { dispatchFields } = useForm()
 
+  // The slug is shared by every locale and follows the English title only.
+  const locale = useLocale()
+  const isDefaultLocale = !locale?.code || locale.code === DEFAULT_LOCALE
+
   // The value of the checkbox
   // We're using separate useFormFields to minimise re-renders
   const checkboxValue = useFormFields(([fields]) => {
@@ -42,7 +55,7 @@ export const SlugComponent: React.FC<SlugComponentProps> = ({
   })
 
   useEffect(() => {
-    if (checkboxValue) {
+    if (checkboxValue && isDefaultLocale) {
       if (targetFieldValue) {
         const formattedSlug = formatSlug(targetFieldValue)
 
@@ -51,7 +64,7 @@ export const SlugComponent: React.FC<SlugComponentProps> = ({
         if (value !== '') setValue('')
       }
     }
-  }, [targetFieldValue, checkboxValue, setValue, value])
+  }, [targetFieldValue, checkboxValue, isDefaultLocale, setValue, value])
 
   const handleLock = useCallback(
     (e: React.MouseEvent<Element>) => {
@@ -66,7 +79,7 @@ export const SlugComponent: React.FC<SlugComponentProps> = ({
     [checkboxValue, checkboxFieldPath, dispatchFields],
   )
 
-  const readOnly = readOnlyFromProps || checkboxValue
+  const readOnly = readOnlyFromProps || checkboxValue || !isDefaultLocale
 
   return (
     <div className="field-type slug-field-component">

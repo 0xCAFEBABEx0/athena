@@ -17,12 +17,15 @@ so the config can load.
 |---|---|
 | Local (dev container) | `postgres://postgres:postgres@postgres:5432/payload_db` (`docker-compose.yml`) |
 | Local (direct) | Any Postgres 16, or a Neon branch |
-| Preview deployment | **Production Neon database** |
+| Preview deployment | Its own Neon branch (a child of production) |
 | Production | Production Neon database |
 
-Preview and Production share one database. Treat the preview CMS as
-production data, and remember that anything that changes the schema on a
-preview deploy changes it for production too.
+Preview reads its own Neon branch, created from production. Content edited
+on the preview CMS does not reach production, and the branch needs every
+schema change applied separately (run the SQL there first, then on
+production). When the branch's schema or content has drifted too far, reset
+it in the Neon console: Branches → the preview branch → **Reset from
+parent** (this discards the branch's own content).
 
 ## 2. Schema Ownership
 
@@ -72,9 +75,8 @@ ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "reset_password_requested_at" times
 A draft exists (not merged) for moving to tracked migrations: a baseline
 migration that captures the current production schema, and a deploy-time
 runner that clears the dev-push marker, records the 2025 migrations as applied
-and then runs `payload migrate` with the unpooled Neon URL. Because Preview
-shares the production database, enabling it means preview deploys migrate
-production. It should be tested on a Neon branch and against the real contents
+and then runs `payload migrate` with the unpooled Neon URL. Preview has
+its own Neon branch, so a preview deploy would migrate only that branch. It should be tested on a Neon branch and against the real contents
 of `payload_migrations` first.
 
 ## 4. Seeding

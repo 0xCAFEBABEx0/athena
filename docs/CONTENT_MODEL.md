@@ -60,8 +60,9 @@ Defined in `apps/cms/src/access/`:
 |---|---|---|---|---|
 | pages, posts | authenticated | authenticatedOrPublished | authenticated | authenticated |
 | media, categories | authenticated | anyone | authenticated | authenticated |
+| projects | authenticated | logged-in users: all; visitors: entries without `hidden` | authenticated | authenticated |
 | users | authenticated | authenticated | authenticated | authenticated (also `admin`) |
-| header, footer | n/a | anyone | (Payload default: authenticated) | n/a |
+| site, header, footer | n/a | anyone | (Payload default: authenticated) | n/a |
 
 There is no role field. Any user who can log in can edit everything, including
 other users. The `web-frontend` service account is a normal user whose API key
@@ -141,6 +142,31 @@ Auth collection with `useAPIKey: true` and a single custom field `name`.
 Timestamps on. Create or rotate the web service account with
 `apps/cms/src/scripts/create-web-service-account.ts`.
 
+### 3.5a Work (`projects`)
+
+Repositories shown on the public site at `/work` (and pinned ones on the home
+page), one entry per public GitHub repository. Nothing is imported
+automatically: only repositories added here appear, and **Hidden** takes one
+off the site without deleting it (visitors' reads filter it out).
+
+| Field | Notes |
+|---|---|
+| `repo` | Required, unique, `owner/name` (a pasted `https://github.com/` prefix is stripped). |
+| `title`, `liveUrl` | Optional; default to the repository name and homepage. |
+| `description`, `brief`, `notes` | Localized. One-line summary (filled from GitHub on first save), what the author set out to build (shown as the user's message of the thread), and the write-up (shown as the reply). The Translate button fills `ja`/`zh`. |
+| `status` | `auto` (default), `waiting`, `working`, `idle`, `done`. Shown as Waiting on you / Working / Idle / Resolved, in that order. Auto: pushed in the last 30 days = working, archived = done, else idle; `waiting` ("try it / feedback wanted") is only set by hand. |
+| `privateRepo` | "Private on GitHub": GitHub is never asked; the entry is shown only with a `liveUrl`, from the CMS text (no source link, commits or languages), and visitors' reads omit `repo` and `github`. Auto status = Resolved. |
+| `order`, `pinned`, `hidden` | Home page selection and order; `hidden` keeps the entry off the site. |
+| `slug` | Read-only, from the repository name: `/work/<slug>`. |
+| `github`, `syncedAt`, `syncError` | Read-only snapshot from GitHub (languages, topics, stars, latest release, last 5 commits, commit count, open pull requests, custom social preview image, activity) and sync state. |
+
+The snapshot is fetched on save when the entry is new or its repository
+changed, and refreshed by the `syncGitHub` job every 6 hours
+(`apps/cms/src/github/sync.ts`, one GraphQL request for all entries; needs
+`GITHUB_TOKEN`). A document is only written, and the web cache only
+invalidated, when its snapshot changed. Private or missing repositories get a
+`syncError` and stay off the site. The web app never calls GitHub.
+
 ### 3.6 Plugin collections
 
 | Plugin | Collection | Configuration in Athena |
@@ -151,7 +177,40 @@ Timestamps on. Create or rotate the web service account with
 | SEO | (fields only) | `generateTitle` → `"{title} \| Payload Website Template"`; `generateURL` → `${CMS_URL}/{slug}`. |
 | Nested Docs | (fields only) | `categories`. |
 
+## 3.7 Localization
+
+`payload.config.ts` enables `localization` with `en` (default), `ja` and `zh`
+and English fallback. Localized fields: post/page `title`, post `content`,
+page `layout` and hero, SEO meta title/description, category `title`, nav
+link labels, form-builder labels, search entries and the `site` texts above.
+Slugs are shared by all languages and follow the English title.
+
+Editors write in English, then press **Translate** (post/page sidebar, English
+only). Claude translates the English draft and saves `ja`/`zh` as drafts;
+review each language and publish. See `src/translation/`.
+
 ## 4. Globals
+
+`site` holds what the public site shows about you (`Site/config.ts`):
+
+| Field | Type | Used for |
+|---|---|---|
+| `siteName` | text, required, default `whoa.me` | Header brand, page titles, RSS title |
+| `authorName` | text | Home heading, copyright line |
+| `defaultView` | select `cli` / `modern` (shown as ADE), default `cli` | Look shown until the visitor picks one |
+| `welcome` | text, localized, default `Welcome to whoa.me` | First line of the home intro box |
+| `intro` | textarea, localized | Sentence(s) under the name on the home page |
+| `tagline` | text, localized | Home page title after the site name (`whoa.me — <tagline>`); empty = site name only |
+| `description` | textarea, localized | Home meta description, default for pages without their own, RSS description (empty = intro, then welcome) |
+| `ogImage` | upload → `media` | Default share image for pages without their own; empty = built-in `/og.png` |
+| `socialLinks` | array (max 8) of `label`, `url` | Links in the home intro box |
+| `projects` | array (max 12) of `name`, `url`, `description` (localized) | "Things I built" list on the home page |
+| `picks` | array (max 6) of `url` (required, stored as `https://x.com/<handle>/status/<id>`), `note` (localized), `text`, `authorName`, `authorHandle`, `postedAt` (day), `lang` | "Picks from X" cards on the home page. On save, a new pick, a changed link or an empty text is filled from X's oEmbed endpoint; edited text is kept |
+| `banner.style` | select `fetch` / `off`, default `fetch` | CLI view: Hoo the owl + details, or the plain intro box |
+| `banner.mascot` | checkbox, default on | Show Hoo in the CLI banner |
+| `banner.tips` | array (max 12) of `text` (localized) | Lines Hoo says when woken, in order; empty = built-in |
+
+Hooks: `beforeChange` fills the X picks (`Site/hooks/fillXPicks.ts`, `x/oembed.ts`; a pick X cannot read and that has no text rejects the save with a message); `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
 
 `header` and `footer` share the same shape:
 
@@ -236,6 +295,9 @@ both apps, plus `bun run generate:types`.
 | `populateAuthors` | Posts `afterRead` | Fills `populatedAuthors` with `{ id, name }`. |
 | `revalidatePage` / `revalidateDelete` | Pages | Invalidates `/` or `/{slug}` (old path too on unpublish) with tags `pages`, `sitemap`. |
 | `revalidatePost` / `revalidateDelete` | Posts | Invalidates `/posts/{slug}` and `/posts` with tags `posts`, `sitemap`. |
+| `fillFromGitHub` | Projects `beforeChange` | Normalizes `repo`, sets `slug`, fetches the GitHub snapshot for new or re-pointed entries. |
+| `revalidateProject` / delete | Projects | Invalidates `/`, `/work`, `/work/{slug}` (old slug too) with tag `projects`. |
+| `revalidateSite` | Global | Paths `/`, `/posts`; tag `global_site`. |
 | `revalidateHeader` / `revalidateFooter` | Globals | Tag `global_header` / `global_footer`. |
 | `revalidateRedirects` | Redirects | Tag `redirects`. |
 | `formatSlugHook` | slug field | Formats slug before validation. |

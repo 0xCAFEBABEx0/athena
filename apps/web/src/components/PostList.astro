@@ -1,0 +1,47 @@
+---
+import { localeOf, localizePath } from '@/lib/i18n'
+import { categoryTitles, formatDate } from '@/lib/format'
+
+export type PostListItem = {
+  slug?: string | null
+  title?: string | null
+  publishedAt?: string | null
+  categories?: unknown
+}
+
+type Props = {
+  posts: PostListItem[]
+  class?: string
+  /** Per post, text a client-side filter matches against (search page). */
+  search?: string[]
+}
+
+const locale = localeOf(Astro)
+const { posts, class: className, search } = Astro.props
+const items = posts
+  .map((post, index) => ({ post, text: search?.[index] }))
+  .filter(({ post }) => post && post.slug)
+---
+
+<ul class:list={['list-none pl-5', className]} data-post-list>
+  {
+    items.map(({ post, text }) => {
+      const date = formatDate(post.publishedAt)
+      const tag = categoryTitles(post.categories)[0]
+      return (
+        <li data-search-text={text}>
+          <a class="post-row" href={localizePath(locale, `/posts/${post.slug}`)} data-post-row>
+            <span class="post-row-marker hidden sm:inline" aria-hidden="true">❯</span>
+            {date && (
+              <time class="w-full shrink-0 font-mono sm:w-24 text-[13.5px] text-base-content/65" datetime={post.publishedAt ?? undefined}>
+                {date}
+              </time>
+            )}
+            <span class="post-row-title min-w-0 flex-1 basis-full text-base leading-relaxed sm:basis-0">{post.title}</span>
+            {tag && <span class="post-row-tag hidden shrink-0 font-mono text-xs text-base-content/65 sm:inline">#{tag}</span>}
+          </a>
+        </li>
+      )
+    })
+  }
+</ul>

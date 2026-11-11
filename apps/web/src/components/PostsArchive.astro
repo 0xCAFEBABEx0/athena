@@ -1,0 +1,32 @@
+---
+import { dict, localeOf } from '@/lib/i18n'
+import type { Post } from '@athena/shared/payload-types'
+
+import Pagination from '@/components/Pagination.astro'
+import PostList from '@/components/PostList.astro'
+import Prompt from '@/components/Prompt.astro'
+import SearchPrompt from '@/components/SearchPrompt.astro'
+import type { PaginatedDocs } from '@/lib/cms'
+
+type Props = {
+  posts: PaginatedDocs<Post>
+}
+
+const locale = localeOf(Astro)
+const t = dict(locale)
+const { posts } = Astro.props
+const command = posts.page > 1 ? `ls posts --page=${posts.page}` : 'ls posts'
+---
+
+<div class="container pt-10">
+  <Prompt command={command} question={t.askAll} heading={t.allPosts} count={posts.totalDocs} as="h1" />
+  {
+    posts.docs.length > 0 ? (
+      <PostList class="mt-1.5" posts={posts.docs} />
+    ) : (
+      <p class="mt-2 pl-5 font-mono text-sm text-base-content/65">⎿ {t.noPosts}</p>
+    )
+  }
+  {posts.totalPages > 1 && <Pagination class="pl-5" page={posts.page} totalPages={posts.totalPages} />}
+  <SearchPrompt class="mt-10" />
+</div>

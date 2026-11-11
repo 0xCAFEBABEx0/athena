@@ -14,6 +14,8 @@ uses Sentry separately only if configured there.
 `apps/cms/config/next.config.mjs`, and **only when** `SENTRY_DSN` plus
 `SENTRY_ORG`/`SENTRY_PROJECT` are set — otherwise it is skipped (see
 [AGENTS.md → Build Configuration](../AGENTS.md#build-configuration-appscmsconfignextconfigmjs)).
+Source maps are uploaded only for Production builds (`VERCEL_ENV=production`);
+Preview builds skip the ~10 s upload, so their stack traces stay minified.
 
 ## DSN & Environment Variables
 
