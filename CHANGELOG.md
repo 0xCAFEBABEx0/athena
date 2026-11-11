@@ -14,6 +14,14 @@ section of each new version as a GitHub Release.
   the status panel in the footer. On phones the top bar tabs are a little
   narrower so the bar stays on one row.
 
+### Changed
+
+- The CLI header and the ADE top bar now put their switches in the same
+  order as the status panel: view, theme, language. The CLI header reads
+  `[ade] [dark] [en]` (the language menu moved to the end); on narrow
+  phones, where it wraps to the start of a row, its menu opens to the right
+  so it stays on screen.
+
 ## [1.0.5] - 2026-11-11
 
 ### Fixed
