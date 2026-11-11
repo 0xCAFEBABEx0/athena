@@ -21,9 +21,9 @@ if (pageNumber === 1) {
 
 // Page 1 (cached, shared with /posts) says how many pages exist, so a page
 // number past the end is a 404 without a CMS call per made-up number.
-const first = await getPosts({ page: 1 }, { locale })
+const first = await getPosts({ page: 1 }, { locale }).catch(() => null)
 
-if (first.totalPages > 0 && pageNumber > first.totalPages) {
+if (first && first.totalPages > 0 && pageNumber > first.totalPages) {
   return Astro.rewrite('/404')
 }
 
