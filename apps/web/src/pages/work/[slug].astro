@@ -7,6 +7,7 @@
 import Layout from '@/layouts/Layout.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
 import RelativeTimes from '@/components/work/RelativeTimes.astro'
+import SiteMark from '@/components/SiteMark.astro'
 import { dict, localeOf, localizePath } from '@/lib/i18n'
 import { formatDate } from '@/lib/format'
 import { routeMeta, workJsonLd } from '@/lib/seo'
@@ -97,9 +98,7 @@ const details = [
           reply && (
             <div class="work-turn work-turn-reply">
               <span class="cli-only work-gutter text-primary" aria-hidden="true">●</span>
-              <span class="modern-only modern-avatar" aria-hidden="true">
-                {(site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()}
-              </span>
+              <SiteMark class="modern-only" />
               <p>{reply}</p>
             </div>
           )

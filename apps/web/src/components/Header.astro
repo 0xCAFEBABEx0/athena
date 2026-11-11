@@ -1,6 +1,7 @@
 ---
 import CMSLink from '@/components/CMSLink.astro'
 import ThemeToggle from '@/components/ThemeToggle.astro'
+import SiteMark from '@/components/SiteMark.astro'
 import ViewToggle from '@/components/ViewToggle.astro'
 import { LOCALES, LOCALE_LABEL, LOCALE_NAME, dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
@@ -45,7 +46,6 @@ const languages = LOCALES.map((code) => ({
   href: localizePath(code, current),
 }))
 const crumbs = current.split('/').filter(Boolean)
-const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
 ---
 
 <header class="cli-header container flex flex-wrap items-center justify-between gap-x-4 pt-5">
@@ -102,7 +102,7 @@ const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
 
 <header class="modern-topbar">
   <a class="modern-brand-compact" href={localizePath(locale, '/')}>
-    <span class="modern-avatar" aria-hidden="true">{initial}</span>
+    <SiteMark />
     <span class="sr-only">{site.siteName}</span>
   </a>
   <nav class="modern-crumbs breadcrumbs min-w-0 py-0 text-[13.5px] text-base-content/65" aria-label="Breadcrumb">

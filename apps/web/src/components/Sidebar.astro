@@ -4,6 +4,7 @@
  * recent posts and the author row. Hidden in the CLI view and below `lg`.
  */
 import ThemeToggle from '@/components/ThemeToggle.astro'
+import SiteMark from '@/components/SiteMark.astro'
 import { dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
 import { SHORT_VERSION } from '@/lib/build'
@@ -45,14 +46,17 @@ const isCurrent = (href: string | null): boolean => {
   if (path === '/') return current === '/'
   return current === path || current.startsWith(`${path}/`)
 }
-const initial = (site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ?? 'w').toLowerCase()
-const authorInitial = (site.authorName.match(/[\p{L}\p{N}]/u)?.[0] ?? initial).toUpperCase()
+const authorInitial = (
+  site.authorName.match(/[\p{L}\p{N}]/u)?.[0] ??
+  site.siteName.match(/[\p{L}\p{N}]/u)?.[0] ??
+  'w'
+).toUpperCase()
 ---
 
 <aside class="modern-sidebar" aria-label={t.sidebar}>
   <div class="flex items-center gap-1.5">
     <a class="flex min-w-0 items-center gap-2.5 rounded-field px-2 py-1.5 font-semibold no-underline" href={lp('/')}>
-      <span class="modern-avatar" aria-hidden="true">{initial}</span>
+      <SiteMark />
       <span class="truncate">{site.siteName}</span>
     </a>
     <button

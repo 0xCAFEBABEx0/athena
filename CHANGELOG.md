@@ -4,6 +4,13 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.0.2] - 2026-11-11
+
+### Changed
+
+- ADE view: the site avatar (sidebar, top bar, home intro, project replies)
+  is now the favicon's ❯_ mark instead of the site name's first letter.
+
 ## [1.0.1] - 2026-11-11
 
 ### Changed
