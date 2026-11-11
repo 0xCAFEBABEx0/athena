@@ -4,6 +4,14 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.0.1] - 2026-11-11
+
+### Changed
+
+- The production site moved to https://whoa.me (CMS: https://cms.whoa.me);
+  `www.whoa.me` and the old findb.uk domains redirect there. Docs and the
+  cache warm-up workflow's default production URL follow.
+
 ## [1.0.0] - 2026-11-11
 
 First versioned release: the portfolio and blog redesign for whoa.me.

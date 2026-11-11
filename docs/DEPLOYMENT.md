@@ -107,7 +107,7 @@ DEPLOY_ENV=                # development | preview | production (VERCEL_ENV is a
 
 ```bash
 CMS_URL=                   # CMS admin + REST API origin (required; no localhost fallback on Vercel)
-WEB_URL=                   # this app's own public origin (custom domain, e.g. https://www.findb.uk)
+WEB_URL=                   # this app's own public origin (custom domain, e.g. https://whoa.me)
 PREVIEW_SECRET=            # shared with CMS
 REVALIDATE_SECRET=         # shared with CMS (also the ISR bypass token)
 PAYLOAD_API_KEY=           # web-frontend service-account key (draft fetches)
@@ -167,9 +167,9 @@ Typical causes:
    reads only; browser form POSTs to the CMS still need a public API).
 2. **Missing `CMS_URL` on athena-web.** Without it the app used to call
    `http://localhost:3000` inside the serverless function (`ECONNREFUSED`).
-   Set `CMS_URL` to the public CMS origin (e.g. `https://cms.findb.uk`).
+   Set `CMS_URL` to the public CMS origin (e.g. `https://cms.whoa.me`).
 3. **Wrong `WEB_URL`.** Must be the public site origin
-   (`https://www.findb.uk`), not the `*.vercel.app` deployment URL. Robots
+   (`https://whoa.me`), not the `*.vercel.app` deployment URL. Robots
    and sitemaps now prefer the incoming request origin so a stale `WEB_URL`
    no longer advertises the Vercel hostname.
 

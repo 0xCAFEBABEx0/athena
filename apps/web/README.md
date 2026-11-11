@@ -19,7 +19,7 @@ bun run --filter @athena/web check   # astro check (types)
 | Variable | Purpose |
 |---|---|
 | `CMS_URL` | Origin of the Payload CMS admin + REST API (e.g. `http://localhost:3000`). Required on Vercel — there is no localhost fallback. |
-| `WEB_URL` | This app's own public origin (e.g. `https://www.findb.uk`). Use the custom domain, not the `*.vercel.app` URL. |
+| `WEB_URL` | This app's own public origin (e.g. `https://whoa.me`). Use the custom domain, not the `*.vercel.app` URL. |
 | `PREVIEW_SECRET` | Shared with the CMS; validates `/api/preview` requests before the draft cookie is set. |
 | `REVALIDATE_SECRET` | Shared with the CMS; bearer token for `POST /api/invalidate`, also used as the ISR bypass token. |
 | `PAYLOAD_API_KEY` | API key of the CMS `web-frontend` service-account user (Users collection, "Enable API Key"). Lets draft preview fetch unpublished content over REST. Server-side only. |

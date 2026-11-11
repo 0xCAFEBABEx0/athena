@@ -26,7 +26,7 @@ jobs:
           ENVIRONMENT: ${{ github.event.deployment.environment }}
           SHA: ${{ github.event.deployment.sha }}
           # Override with repository variables when the domains move.
-          PRODUCTION_WEB_URL: ${{ vars.PRODUCTION_WEB_URL || 'https://www.findb.uk' }}
+          PRODUCTION_WEB_URL: ${{ vars.PRODUCTION_WEB_URL || 'https://whoa.me' }}
           PREVIEW_WEB_URL: ${{ vars.PREVIEW_WEB_URL || 'https://preview.whoa.me' }}
           # athena-web → Settings → Deployment Protection → Protection Bypass
           # for Automation. Without it the protected preview answers 302 and
