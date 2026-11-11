@@ -17,15 +17,27 @@ import { getCache, waitUntil } from '@vercel/functions'
  * Freshness: /api/invalidate expires CMS_DATA_TAG on every CMS change before
  * it re-renders the changed paths, and those re-renders (requests carrying
  * the ISR bypass token, see middleware.ts) skip the reads, so they always see
- * the new content. TTL_SECONDS is only a safety net for a missed webhook; it
- * stays below the ISR expiration so an ISR re-render after a missed webhook
- * still picks up changes within a day.
+ * the new content. A read that started before the change can finish after
+ * that and write old data back, so every entry records when its CMS read
+ * started and /api/invalidate records when it expired the cache
+ * (EXPIRED_AT_KEY): an entry read before the last expiry is a miss.
+ * TTL_SECONDS is only a safety net for a missed webhook; it stays below the
+ * ISR expiration so an ISR re-render after a missed webhook still picks up
+ * changes within a day.
  *
  * Only on Vercel: in local dev (no webhook) every request reads the CMS.
  */
 export const CMS_DATA_TAG = 'cms-data'
 
 const TTL_SECONDS = 60 * 60 * 24
+
+/** Untagged, so expiring CMS_DATA_TAG keeps it. */
+const EXPIRED_AT_KEY = 'cms-data:expired-at'
+
+type Entry = { value: unknown; readAt: number }
+
+const isEntry = (hit: unknown): hit is Entry =>
+  typeof hit === 'object' && hit !== null && 'readAt' in hit && typeof hit.readAt === 'number'
 
 /** The subset of Vercel's RuntimeCache used here (a fake in tests). */
 export type CmsCacheStore = {
@@ -92,18 +104,21 @@ export const cachedCms = async <T>(
 ): Promise<T> => {
   if (!store) return load()
 
+  const readAt = Date.now()
   if (!freshReads.getStore()) {
     try {
-      const hit = await store.get(key)
-      if (hit !== null && hit !== undefined) return hit as T
+      const [hit, expiredAt] = await Promise.all([store.get(key), store.get(EXPIRED_AT_KEY)])
+      const fresh = typeof expiredAt !== 'number' || (isEntry(hit) && hit.readAt > expiredAt)
+      if (isEntry(hit) && fresh) return hit.value as T
     } catch (error) {
       console.error('[cms-cache] read failed', error)
     }
   }
 
   const value = await load()
+  const entry: Entry = { value, readAt }
   later(
-    store.set(key, value, { tags: [CMS_DATA_TAG], ttl: TTL_SECONDS }).catch((error: unknown) => {
+    store.set(key, entry, { tags: [CMS_DATA_TAG], ttl: TTL_SECONDS }).catch((error: unknown) => {
       console.error('[cms-cache] write failed', error)
     }),
   )
@@ -116,6 +131,8 @@ export const expireCmsData = async (
 ): Promise<boolean> => {
   if (!store) return true
   try {
+    // First, so entries read before now stop counting even before the tag expiry lands.
+    await store.set(EXPIRED_AT_KEY, Date.now(), { ttl: TTL_SECONDS })
     await store.expireTag(CMS_DATA_TAG)
     return true
   } catch (error) {

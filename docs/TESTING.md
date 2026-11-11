@@ -49,7 +49,7 @@ production build in `apps/web/.vercel/output`.
 | TC-U-33 | Links | `safeHref` keeps http(s), mailto, tel and on-site paths and drops `javascript:`, `data:`, `//host` and control characters; `httpUrl` only absolute http(s); `isLocalPath` refuses `//host`, `/\host` and absolute URLs |
 | TC-U-34 | Draft mode | `athena-draft` alone, or with a wrong `__prerender_bypass`, is not draft mode; the two cookies `/api/preview` sets are |
 | TC-U-30 | Site global | X picks: only `https://x.com/<handle>/status/<id>` links with text reach the page; fields trimmed, `@` dropped from the handle, day in Japan time, odd `lang` values dropped |
-| TC-U-35 | CMS cache | A published CMS response is loaded once and then served from the Runtime Cache (tag `cms-data`, with a TTL); a failed load is not cached; a cache that errors falls back to the CMS; fresh reads (re-renders after a CMS change) skip the cache and refresh it; `expireCmsData` drops everything; with no cache (local dev) every call reads the CMS |
+| TC-U-35 | CMS cache | A published CMS response is loaded once and then served from the Runtime Cache (tag `cms-data`, with a TTL); a failed load is not cached; a cache that errors falls back to the CMS; fresh reads (re-renders after a CMS change) skip the cache and refresh it; `expireCmsData` drops everything; a CMS read that started before an expiry and finishes after the re-render does not bring the old data back (the next read reloads); with no cache (local dev) every call reads the CMS |
 | (14 more) | i18n, cms | Existing `i18n.test.ts` and `cms.test.ts` |
 
 CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
