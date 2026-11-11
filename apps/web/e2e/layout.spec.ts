@@ -126,3 +126,45 @@ test.describe('TC-E-47 ADE below 1024px: light | dark tabs in the top bar', () =
     await expect(page.locator('.modern-sidebar [data-theme-toggle]')).toBeVisible()
   })
 })
+
+test.describe('TC-E-48 switches in one order in both views: view, language, theme', () => {
+  test('CLI header and ADE top bar', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 800 })
+    const order = (selectors: string[]) =>
+      page.evaluate(
+        (list) => list.map((s) => document.querySelector(s)?.getBoundingClientRect().left ?? -1),
+        selectors,
+      )
+    await open(page, '/', { view: 'cli' })
+    const cli = await order([
+      '.cli-header [data-view-set]',
+      '.cli-header [data-language-menu]',
+      '.cli-header [data-theme-toggle]',
+    ])
+    expect(cli).toEqual([...cli].sort((a, b) => a - b))
+    await open(page, '/', { view: 'modern' })
+    const ade = await order([
+      '.modern-topbar .view-tab-cli',
+      '.modern-topbar [hreflang="en"]',
+      '.modern-topbar .topbar-theme',
+    ])
+    expect(ade).toEqual([...ade].sort((a, b) => a - b))
+    // The status panel's config rows follow the same order.
+    const rows = await page.locator('[data-config]').evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.config))
+    expect(rows.slice(0, 3)).toEqual(['view', 'language', 'theme'])
+  })
+
+  for (const width of [320, 340, 390, 768]) {
+    test(`CLI language menu stays on screen at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 })
+      for (const path of ['/', '/ja', '/zh']) {
+        await open(page, path, { view: 'cli' })
+        await page.locator('.cli-header [data-language-menu] summary').click()
+        const box = await page.locator('.cli-header [data-language-menu] ul').boundingBox()
+        expect(box?.x ?? -1, path).toBeGreaterThanOrEqual(0)
+        expect((box?.x ?? 0) + (box?.width ?? 0), path).toBeLessThanOrEqual(width)
+        expect(await overflowX(page), path).toBeLessThanOrEqual(0)
+      }
+    })
+  }
+})

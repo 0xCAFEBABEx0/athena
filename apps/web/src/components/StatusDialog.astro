@@ -27,7 +27,7 @@ const tabs = (['status', 'config', 'keys'] as const).map((id) => ({ id, label: s
 // Config rows: each one is a setting stored in this browser only.
 const langIndex = LOCALES.indexOf(locale)
 const nextLocale = LOCALES[(langIndex + 1) % LOCALES.length] ?? locale
-const settings = (['view', 'theme', 'language', 'motion', 'keys', 'reset'] as const).map((id) => {
+const settings = (['view', 'language', 'theme', 'motion', 'keys', 'reset'] as const).map((id) => {
   const [label, hint] = s.settings[id]
   // Search matches the English words too ("theme" finds テーマ).
   const search = [label, hint, ...en.settings[id]].join(' ').toLowerCase()
