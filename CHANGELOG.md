@@ -4,7 +4,7 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-11-11
 
 First versioned release: the portfolio and blog redesign for whoa.me.
 
