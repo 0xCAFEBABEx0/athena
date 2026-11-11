@@ -59,7 +59,7 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
 | TC-U-27 | oEmbed | Text (line breaks kept, entities decoded, `pic.twitter.com` links dropped), author, handle, day and language read from the oEmbed HTML; `zxx` / unparsable dates give null; no text gives null |
 | TC-U-28 | oEmbed | Asks `publish.twitter.com/oembed` for the canonical link with `omit_script=1&dnt=true`; a bad link, an error status or a network failure gives null |
 | TC-U-29 | Site hook | A new pick is filled and its link normalized; edited text is kept without asking X; a changed link replaces the old post; no answer and no text rejects the save with a message; no answer with typed text keeps it |
-| TC-U-31 | Invalidation | A missing `REVALIDATE_SECRET` / `WEB_URL` logs a warning; the request carries the bearer secret and `x-vercel-protection-bypass`, does not follow redirects, and a 302 is logged as a failure with its target; outside a request (no Next `after()` scope) the call runs right away |
+| TC-U-31 | Invalidation | A missing `REVALIDATE_SECRET` / `WEB_URL` logs a warning; the request carries the bearer secret and `x-vercel-protection-bypass`, does not follow redirects, and a 302 is logged as a failure with its target; paths the web app reports in `failed` are logged as a warning, not as `Web invalidated`; outside a request (no Next `after()` scope) the call runs right away |
 
 ## End-to-end tests (`apps/web/e2e`)
 

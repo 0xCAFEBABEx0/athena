@@ -68,7 +68,15 @@ const sendInvalidation = async ({ paths = [], tags = [], payload }: InvalidateAr
         `Web invalidation failed: ${res.status} ${where ? `redirect to ${where}` : (await res.text()).slice(0, 300)}`,
       )
     } else {
-      payload.logger.info(`Web invalidated: paths=[${paths.join(', ')}] tags=[${tags.join(', ')}]`)
+      // The web app answers 200 even when a re-render failed; those pages
+      // stay stale until their next visit, so say so instead of "invalidated".
+      const result = (await res.json().catch(() => ({}))) as { failed?: unknown }
+      const failed = Array.isArray(result.failed) ? result.failed.map(String) : []
+      if (failed.length) {
+        payload.logger.warn(`Web invalidated, but re-render failed: ${failed.join(', ')}`)
+      } else {
+        payload.logger.info(`Web invalidated: paths=[${paths.join(', ')}] tags=[${tags.join(', ')}]`)
+      }
     }
   } catch (err) {
     payload.logger.error(`Web invalidation unreachable: ${String(err)}`)
