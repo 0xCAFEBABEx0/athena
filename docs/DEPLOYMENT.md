@@ -85,7 +85,10 @@ both Vercel projects:
 
 ## Environment Variables
 
-Maintain env vars **per Vercel project** and per environment (Preview /
+The env vars the apps own (URLs and shared secrets), the project settings and
+the domains are managed with Terraform in
+[`infra/terraform/`](../infra/terraform/README.md); integration-written vars
+(Neon, Blob, Sentry, Checkly) are not. Maintain env vars **per Vercel project** and per environment (Preview /
 Production). Local templates: `apps/cms/.env.example` and `apps/web/.env.example`.
 
 ### CMS project (`apps/cms`)

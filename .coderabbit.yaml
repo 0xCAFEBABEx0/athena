@@ -108,6 +108,17 @@ reviews:
         together; the memos in site.ts, work.ts and nav.ts are keyed by
         `Astro.locals`, so callers must pass `Astro.locals` (not
         `Astro.request`) or the page fetches everything a second time.
+    - path: 'infra/terraform/**'
+      instructions: |
+        Vercel infrastructure as code. Flag any credential or secret value in
+        a committed file (API tokens, env var secrets, bypass secrets): secrets
+        must come from `var.secrets` through write-only `value_wo`, and
+        `*.auto.tfvars`, state and override files stay git-ignored. Settings
+        that `apps/*/vercel.json` owns (bunVersion, regions, schedules,
+        functions, git.deploymentEnabled, buildCommand, ignoreCommand) must not
+        be repeated here. Never add Vercel Authentication or other deployment
+        protection to athena-cms Production. Keep `prevent_destroy` on the
+        projects.
         Layout.astro prerenders hovered links: any script that must run only
         when the page is shown (analytics, settings from localStorage) waits
         for `prerenderingchange` when `document.prerendering` is true.

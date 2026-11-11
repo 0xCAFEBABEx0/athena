@@ -1,0 +1,5 @@
+# Template for a fresh Vercel account (e.g. a Pro team you migrate to).
+# Copy to accounts/<name>.tfvars, set team_id, and keep `existing` empty so
+# every resource is created. See README.md "Moving to another account".
+team_id  = "team_xxxxxxxxxxxxxxxxxxxxxxxx"
+existing = {}
