@@ -89,8 +89,8 @@ reviews:
         effect, that comparisons do not leak secrets, and that the
         `athena-draft` and `__prerender_bypass` cookies stay HttpOnly (the
         latter holds the derived ISR bypass token, never REVALIDATE_SECRET
-        itself). `/api/invalidate` must keep calling `invalidateContent()`
-        before it re-renders paths. Redirect targets taken from the query
+        itself). `/api/invalidate` must keep calling `expireCmsData()` and
+        then `invalidateContent()` before it re-renders paths. Redirect targets taken from the query
         string must pass `isLocalPath` (`lib/safe-url.ts`), and draft mode
         must keep requiring the matching `__prerender_bypass` cookie
         (`isDraft`), not `athena-draft` alone. Astro skips
@@ -101,7 +101,11 @@ reviews:
         Payload REST defaults to `limit=10` and drafts require auth. Every
         request must set `depth` and `limit` explicitly, and draft fetches
         must authenticate with the `PAYLOAD_API_KEY` service account. The
-        API key must never reach client-side code.
+        API key must never reach client-side code. Published (non-draft)
+        responses go through the Runtime Cache in `lib/cms-cache.ts`; draft
+        fetches must never be cached. Page routes check a slug against
+        `getPublishedSlugs()` before fetching it (skipped in draft mode), so
+        an unknown URL is a 404 without a CMS request.
     - path: 'apps/web/src/{middleware.ts,layouts/Layout.astro,lib/{site,work,nav}.ts}'
       instructions: |
         On a cache miss the middleware starts the layout's CMS requests
@@ -113,7 +117,9 @@ reviews:
         for `prerenderingchange` when `document.prerendering` is true.
         The middleware answers dotted paths that are not in DOTTED_ROUTES
         with a plain 404 and no CMS request; a new dotted route must be added
-        there.
+        there. Requests carrying the ISR bypass token
+        (`x-prerender-revalidate`) run with `withFreshCmsReads`, so the
+        re-renders after a CMS change never read the Runtime Cache.
     - path: 'apps/web/src/{pages/search.astro,styles/global.css}'
       instructions: |
         /search is one ISR page per language (ISR ignores ?q=) and filters

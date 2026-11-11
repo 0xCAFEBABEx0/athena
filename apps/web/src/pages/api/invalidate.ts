@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro'
 import { CACHE_TAGS, type CacheTag } from '@athena/shared/constants'
 
 import { invalidateContent } from '@/lib/cache'
+import { expireCmsData } from '@/lib/cms-cache'
 import { env, webURL } from '@/lib/env'
 import { LOCALES, localizePath } from '@/lib/i18n'
 import { isrBypassToken } from '@/lib/isr-bypass.mjs'
@@ -69,14 +70,17 @@ export const POST: APIRoute = async ({ request }) => {
     for (const locale of LOCALES) paths.add(localizePath(locale, path))
   }
 
-  // Before the re-renders below, so they are not marked stale again.
+  // Before the re-renders below, so they are not marked stale again. The
+  // cached CMS responses go first: every page re-rendered from now on (these
+  // paths, and every other page on its next visit) must read the new content.
+  const cmsData = await expireCmsData()
   const invalidated = await invalidateContent()
 
   const failed = await rerender([...paths], bypassToken)
   const revalidated = [...paths].filter((path) => !failed.includes(path))
   if (failed.length) console.warn(`[invalidate] re-render failed: ${failed.join(', ')}`)
 
-  return Response.json({ invalidated, revalidated, failed, tags: body.tags ?? [] })
+  return Response.json({ invalidated, cmsData, revalidated, failed, tags: body.tags ?? [] })
 }
 
 /** Re-render and re-cache `paths` now; returns the paths that failed. */

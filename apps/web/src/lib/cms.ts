@@ -2,15 +2,9 @@ import { stringify } from 'qs-esm'
 
 import { DEFAULT_LOCALE, type Locale } from '@athena/shared/constants'
 
-import type {
-  Footer,
-  Header,
-  Page,
-  Post,
-  Redirect,
-  Site,
-} from '@athena/shared/payload-types'
+import type { Footer, Header, Page, Post, Redirect, Site } from '@athena/shared/payload-types'
 
+import { cachedCms } from './cms-cache'
 import { cmsProtectionBypass, cmsURL, env } from './env'
 
 /** Shape of Payload's paginated REST responses. */
@@ -151,6 +145,18 @@ const cmsFetch = async <T>(
   const origin = cmsURL()
   const url = `${origin}/api${path}${qs}`
 
+  // Drafts are per editor and must be live; published responses are shared
+  // and kept in the Runtime Cache until the next CMS change (lib/cms-cache.ts).
+  if (draft) return requestCms<T>(url, path, origin, draft)
+  return cachedCms(url, () => requestCms<T>(url, path, origin, draft))
+}
+
+const requestCms = async <T>(
+  url: string,
+  path: string,
+  origin: string,
+  draft: boolean,
+): Promise<T> => {
   let res: Response
   try {
     res = await fetch(url, {
@@ -339,6 +345,24 @@ export const getAllSlugs = async (
     },
   )
   return result.docs
+}
+
+/**
+ * Slugs of the published documents, or null when the CMS cannot say. Lets a
+ * page route answer 404 for an unknown slug from the cached listing instead
+ * of asking the CMS (and waking its database) once per URL a crawler makes
+ * up. Draft preview must not use it: drafts are not in the listing.
+ */
+export const getPublishedSlugs = async (
+  collection: 'pages' | 'posts',
+): Promise<Set<string> | null> => {
+  try {
+    const docs = await getAllSlugs(collection)
+    return new Set(docs.map((doc) => doc.slug).filter((slug): slug is string => Boolean(slug)))
+  } catch (error) {
+    console.error(`[cms] failed to list ${collection} slugs`, error)
+    return null
+  }
 }
 
 /**

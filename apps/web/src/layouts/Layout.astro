@@ -124,7 +124,9 @@ if (draft) {
       href={localizePath(locale, '/rss.xml')}
     />
     <script type="speculationrules" is:inline set:html={speculationRules} />
-    <SpeedInsights />
+    {/* A quarter of page views is plenty for the score, and keeps Hobby's
+        10,000 events per 30 days from running out at ~330 views a day. */}
+    <SpeedInsights sampleRate={0.25} />
     <slot name="head" />
     {
       webAnalytics && (
