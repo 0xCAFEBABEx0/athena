@@ -9,7 +9,8 @@ section of each new version as a GitHub Release.
 ### Changed
 
 - The production site moved to https://whoa.me (CMS: https://cms.whoa.me);
-  `www.whoa.me` and the old findb.uk domains redirect there. Docs and the
+  `www.whoa.me` redirects there, and canonical URLs, feeds and sitemaps
+  name whoa.me. Docs and the
   cache warm-up workflow's default production URL follow.
 
 ## [1.0.0] - 2026-11-11

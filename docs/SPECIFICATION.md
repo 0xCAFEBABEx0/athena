@@ -213,7 +213,8 @@ all managed by editors without code changes.
 Preview has its own database branch: content edited on the preview CMS stays
 there, and schema SQL is run on the branch first, then on production
 ([DATABASE.md](./DATABASE.md)). The public domain moved from findb.uk to
-whoa.me with the 1.0.0 release; the findb.uk domains redirect to whoa.me.
+whoa.me with the 1.0.0 release; the findb.uk domains are still attached
+(canonical URLs point to whoa.me) and may be reused later.
 
 ## 6. Known Gaps and Planned Work
 

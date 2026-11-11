@@ -44,8 +44,8 @@ graph LR
 | **Media storage** | Vercel Blob via `@payloadcms/storage-vercel-blob` | Original uploads and all generated renditions. Served directly from Blob (`disablePayloadAccessControl: true`). |
 | **Monitoring** | Sentry (CMS), Vercel Analytics + Speed Insights (web) | Errors, performance, uptime. |
 
-Production lives at **https://whoa.me** (athena-web; `www.whoa.me` and the old
-findb.uk domains redirect there) with the CMS at https://cms.whoa.me. The staging
+Production lives at **https://whoa.me** (athena-web; `www.whoa.me` redirects there; the old
+findb.uk domains still serve the site, with canonical URLs on whoa.me) with the CMS at https://cms.whoa.me. The staging
 deployment is built from the `preview` branch.
 
 ## 2. Repository Layout
