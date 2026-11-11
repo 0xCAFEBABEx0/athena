@@ -4,6 +4,25 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.0.6] - 2026-11-11
+
+### Added
+
+- ADE view on phones and tablets (below 1024px wide, where the sidebar is
+  hidden): sun | moon tabs in the top bar, next to CLI | ADE and the
+  language tabs, switch between light and dark. Before, the only way was
+  the status panel in the footer. On phones the top bar tabs are a little
+  narrower so the bar stays on one row.
+
+### Changed
+
+- The CLI header, the ADE top bar and the status panel now list their
+  switches in one order: view, language, theme. The CLI header reads
+  `[ade] [en] [dark]`; the ADE top bar has the sun | moon tabs last; the
+  status panel lists Language before Theme. Where the CLI language menu
+  sits at the start of a row on narrow phones, it opens to the right so it
+  stays on screen.
+
 ## [1.0.5] - 2026-11-11
 
 ### Fixed
