@@ -44,7 +44,8 @@ graph LR
 | **Media storage** | Vercel Blob via `@payloadcms/storage-vercel-blob` | Original uploads and all generated renditions. Served directly from Blob (`disablePayloadAccessControl: true`). |
 | **Monitoring** | Sentry (CMS), Vercel Analytics + Speed Insights (web) | Errors, performance, uptime. |
 
-Production lives at **https://www.findb.uk** (athena-web). The staging
+Production lives at **https://whoa.me** (athena-web; `www.whoa.me` redirects there; the old
+findb.uk domains still serve the site, with canonical URLs on whoa.me) with the CMS at https://cms.whoa.me. The staging
 deployment is built from the `preview` branch.
 
 ## 2. Repository Layout
@@ -333,7 +334,7 @@ What remains of it in the CMS:
 - `config/next.config.mjs` `redirects()`: `/` → `/admin` (307), and when
   `WEB_URL` is set, every other path outside `/admin`, `/api`, `/_next`,
   `/monitoring` and the root static files → the same path on `WEB_URL` (308),
-  so old `cms.findb.uk/posts/...` links land on the public site.
+  so old `cms.whoa.me/posts/...` links land on the public site.
 - `public/robots.txt` disallows crawling the CMS origin.
 
 ## 7. Cross-Cutting Conventions

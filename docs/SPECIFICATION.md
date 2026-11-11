@@ -9,7 +9,7 @@ is listed separately in [§6](#6-known-gaps-and-planned-work).
 
 ## 1. Purpose and Scope
 
-Athena is a CMS-driven website (production: https://www.findb.uk). It
+Athena is a CMS-driven website (production: https://whoa.me). It
 publishes block-based pages and a blog, with search, forms and SEO metadata,
 all managed by editors without code changes.
 
@@ -208,12 +208,13 @@ all managed by editors without code changes.
 |---|---|---|---|---|
 | Local | any | http://localhost:4321 | http://localhost:3000 | local Postgres (dev container) or Neon |
 | Preview | `preview` | https://preview.whoa.me (Vercel Authentication) | https://preview.cms.whoa.me | its own Neon branch (child of production) |
-| Production | `main` | https://www.findb.uk | athena-cms production domain | production Neon database |
+| Production | `main` | https://whoa.me | https://cms.whoa.me | production Neon database |
 
 Preview has its own database branch: content edited on the preview CMS stays
 there, and schema SQL is run on the branch first, then on production
-([DATABASE.md](./DATABASE.md)). The public domain moves from findb.uk to
-whoa.me with the 1.0.0 release.
+([DATABASE.md](./DATABASE.md)). The public domain moved from findb.uk to
+whoa.me with the 1.0.0 release; the findb.uk domains are still attached
+(canonical URLs point to whoa.me) and may be reused later.
 
 ## 6. Known Gaps and Planned Work
 

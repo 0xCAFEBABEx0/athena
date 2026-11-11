@@ -2,7 +2,7 @@
 
 A content-driven website: editors manage pages, posts, media, navigation and
 forms in **Payload CMS**, and an **Astro** frontend renders the public site.
-Production: https://www.findb.uk
+Production: https://whoa.me
 
 | Workspace | What it is |
 |---|---|
