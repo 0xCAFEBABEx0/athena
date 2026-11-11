@@ -104,3 +104,20 @@ test.describe('CLI banner on phones', () => {
     expect(owl && name && name.x >= owl.x + owl.width).toBe(true)
   })
 })
+
+test.describe('ADE site mark', () => {
+  test('TC-E-45 brand avatars show the ❯_ mark, not a letter', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await open(page, '/', { view: 'modern' })
+    for (const scope of ['.modern-sidebar', '.home-intro']) {
+      const mark = page.locator(`${scope} .modern-avatar-mark`).first()
+      await expect(mark).toBeVisible()
+      await expect(mark.locator('svg')).toHaveCount(1)
+      await expect(mark).toHaveText('')
+    }
+    await page.setViewportSize({ width: 390, height: 800 })
+    const top = page.locator('.modern-topbar .modern-avatar-mark')
+    await expect(top).toBeVisible()
+    await expect(top.locator('svg')).toHaveCount(1)
+  })
+})

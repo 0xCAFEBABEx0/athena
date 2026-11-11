@@ -1,0 +1,23 @@
+---
+/**
+ * The site's ❯_ mark (same drawing as public/favicon.svg) on the ADE avatar
+ * tile: brand spots in the sidebar and top bar, and the site's own "replies".
+ */
+interface Props {
+  class?: string
+}
+const { class: className } = Astro.props
+---
+
+<span class:list={['modern-avatar modern-avatar-mark', className]} aria-hidden="true">
+  <svg viewBox="0 0 64 64" focusable="false">
+    <path
+      d="M18 19.5 31.5 32 18 44.5"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="7.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"></path>
+    <rect x="35" y="39" width="16" height="7" rx="2" fill="currentColor"></rect>
+  </svg>
+</span>
