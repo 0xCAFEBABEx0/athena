@@ -2,6 +2,39 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## Security review of the 1.0.0 changes — 2026-11-11
+
+Review of everything between `main` and `development` before the release.
+
+**Web**
+
+- `isDraft` (`lib/draft.ts`) requires `__prerender_bypass` to equal the ISR
+  bypass token as well as the `athena-draft` cookie. Before, the presence of
+  `athena-draft` was enough, so a request that reached a function with a
+  hand-made cookie was rendered from drafts. Editors already in preview keep
+  working (both cookies are set together); in production without
+  `REVALIDATE_SECRET` draft mode is off.
+- `/api/exit-preview` (no secret) and `/api/preview` accepted any `path`
+  starting with `/`, including `//host`: an open redirect. Both now use
+  `isLocalPath`.
+- New `lib/safe-url.ts`: Site social links and project links, CMS custom
+  link URLs, a /work entry's live URL (the CMS field or GitHub's homepage)
+  and release link are dropped unless http(s), mailto, tel or an on-site
+  path.
+- `htmlToText` no longer throws on an out-of-range character reference.
+
+**Scripts and docs**
+
+- `warm-cache.sh` sends the protection-bypass secret only to the given host.
+- `apps/cms/.env.example` and `apps/web/.env.example` added (the docs
+  referred to them; `.gitignore` now lets them through).
+- Docs corrected: Preview has its own Neon branch (DATABASE, SPECIFICATION
+  said it shares production); cache timings (ARCHITECTURE, F-REDIR-2); ADR
+  0002 / 0003 updates; warm-cache workflow in CI_CD; Testing and Versioning
+  in the docs index.
+
+No schema change.
+
 ## X picks on the home page — 2026-11-10
 
 **CMS**

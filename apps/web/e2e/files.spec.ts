@@ -28,7 +28,9 @@ test('TC-E-19 /llms.txt is generated from the site', async ({ request }) => {
 
 test('TC-E-20 the footer has no Payload template links', async ({ page }) => {
   await open(page, '/')
-  const hrefs = await page.locator('footer a').evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
+  const hrefs = await page
+    .locator('footer a')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
   expect(hrefs.filter((href) => /payloadcms\.com|github\.com\/payloadcms/.test(href))).toEqual([])
 })
 
@@ -38,7 +40,12 @@ test('TC-E-39 no link to the CMS admin in the header, sidebar or footer', async 
     const hrefs = await page
       .locator('header a, footer a, nav a, aside a')
       .evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).href))
-    expect(hrefs.filter((href) => /\/admin(\/|$|\?)/.test(new URL(href).pathname + new URL(href).search)), path).toEqual([])
+    expect(
+      hrefs.filter((href) =>
+        /\/admin(\/|$|\?)/.test(new URL(href).pathname + new URL(href).search),
+      ),
+      path,
+    ).toEqual([])
   }
 })
 
@@ -68,7 +75,30 @@ test('TC-E-30 scanner paths get a plain 404 without a page render', async ({ req
     expect(res.headers()['content-type'], path).toContain('text/plain')
   }
   // Real dotted routes still work.
-  for (const path of ['/rss.xml', '/zh/rss.xml', '/llms.txt', '/search-index.json', '/ja/search-index.json']) {
+  for (const path of [
+    '/rss.xml',
+    '/zh/rss.xml',
+    '/llms.txt',
+    '/search-index.json',
+    '/ja/search-index.json',
+  ]) {
     expect((await request.get(path)).status(), path).toBe(200)
   }
+})
+
+test('TC-E-44 leaving preview only redirects to a path on this site', async ({ request }) => {
+  const target = async (path: string) => {
+    const res = await request.get(`/api/exit-preview?path=${path}`, { maxRedirects: 0 })
+    expect(res.status(), path).toBe(307)
+    return res.headers().location ?? ''
+  }
+  expect(await target('/posts')).toBe('/posts')
+  for (const path of ['//example.com', '/%5Cexample.com', 'https://example.com', '']) {
+    expect(await target(path), path).toBe('/')
+  }
+  // The preview entry point needs the secret before it looks at the path.
+  const preview = await request.get('/api/preview?path=//example.com&previewSecret=wrong', {
+    maxRedirects: 0,
+  })
+  expect(preview.status()).toBe(401)
 })

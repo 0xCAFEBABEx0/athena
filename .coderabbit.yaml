@@ -90,8 +90,12 @@ reviews:
         `athena-draft` and `__prerender_bypass` cookies stay HttpOnly (the
         latter holds the derived ISR bypass token, never REVALIDATE_SECRET
         itself). `/api/invalidate` must keep calling `invalidateContent()`
-        before it re-renders paths. Astro skips underscore-prefixed
-        files, so endpoint file names must not start with `_`.
+        before it re-renders paths. Redirect targets taken from the query
+        string must pass `isLocalPath` (`lib/safe-url.ts`), and draft mode
+        must keep requiring the matching `__prerender_bypass` cookie
+        (`isDraft`), not `athena-draft` alone. Astro skips
+        underscore-prefixed files, so endpoint file names must not start
+        with `_`.
     - path: 'apps/web/src/lib/cms.ts'
       instructions: |
         Payload REST defaults to `limit=10` and drafts require auth. Every

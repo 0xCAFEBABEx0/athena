@@ -179,9 +179,14 @@ sequenceDiagram
 - Hooks skip invalidation when `req.context.disableRevalidate` is set (used by
   seeding).
 
-Known gaps (all bounded by the 300 s TTL): paginated archives
-(`/posts/page/N`), pages containing an Archive block, and pages that link to a
-renamed document are not re-rendered immediately.
+Paginated archives (`/posts/page/N`), pages containing an Archive block and
+pages that link to a renamed document are not re-rendered at once: the cache
+tag marks them stale and they re-render on their next request.
+
+When `WEB_URL` or `REVALIDATE_SECRET` is missing in the CMS deployment, the
+call is skipped with a `Web invalidation skipped` warning; a redirect (the
+Vercel login of a protected Preview) is logged as a failure. Set
+`WEB_PROTECTION_BYPASS` on the CMS to pass Vercel Authentication.
 
 ### 3.4 Draft preview
 
@@ -192,7 +197,7 @@ sequenceDiagram
     participant C as athena-cms
     Ed->>W: GET /api/preview?slug&collection&path&previewSecret
     W->>W: check previewSecret == PREVIEW_SECRET
-    W-->>Ed: Set-Cookie athena-draft=1 (HttpOnly), 307 → path
+    W-->>Ed: Set-Cookie athena-draft=1 + __prerender_bypass=<token> (HttpOnly), 307 → path
     Ed->>W: GET path (with cookie)
     W->>C: GET /api/posts?...&draft=true (API key)
     C-->>W: newest draft
@@ -279,8 +284,10 @@ a second hourly wake-up to the shared CU-hour budget.
 | Admin access | Payload auth on the `users` collection. Every authenticated user has full rights; there are no roles yet. |
 | Public reads | `authenticatedOrPublished` on Pages/Posts returns only `_status = published` to anonymous callers. Media, Categories, Header, Footer are public. Users are private. |
 | Draft reads from web | `web-frontend` service account API key, server-side only (`PAYLOAD_API_KEY`). |
-| Preview entry | `PREVIEW_SECRET` query param, HttpOnly `SameSite=Lax` cookie, `Secure` in production. |
-| Cache invalidation | `REVALIDATE_SECRET` bearer token; same value is the ISR bypass token. |
+| Preview entry | `PREVIEW_SECRET` query param, HttpOnly `SameSite=Lax` cookies, `Secure` in production. Draft mode needs both `athena-draft` and a `__prerender_bypass` cookie equal to the ISR bypass token (`lib/draft.ts`), so setting `athena-draft` by hand shows nothing. `/api/preview` and `/api/exit-preview` redirect only to a path on the site (`lib/safe-url.ts`). |
+| Cache invalidation | `REVALIDATE_SECRET` bearer token. The ISR bypass token is a SHA-256 derived from it (`lib/isr-bypass.mjs`), never the secret itself. |
+| Links from content | CMS and GitHub URLs become an `href` only as http(s), mailto, tel or an on-site path (`safeHref` / `httpUrl` in `lib/safe-url.ts`); X picks link only to `https://x.com/<handle>/status/<id>`. Text from the CMS, GitHub and X is escaped by Astro; rich text goes through Payload's HTML converter. |
+| Outbound requests (CMS) | Fixed hosts only: `api.github.com` (GraphQL, repository names checked against `owner/name`), `publish.twitter.com/oembed`, the Claude API, and `${WEB_URL}/api/invalidate`. |
 | Scheduled jobs | `CRON_SECRET` bearer token. |
 | Cross-origin form posts | Payload `cors`/`csrf` allow-lists limited to `CMS_URL` and `WEB_URL`. |
 | Author privacy | `populateAuthors` copies only `id` and `name` into `populatedAuthors`; the `users` collection itself is never exposed. |

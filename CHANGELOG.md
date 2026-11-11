@@ -85,6 +85,15 @@ First versioned release: the portfolio and blog redesign for whoa.me.
 - The dev container installs the same Bun as the repo (1.4) next to Node.js 24,
   installs every workspace from `bun.lock`, and exposes the web dev server.
 
+### Security
+
+- Draft preview needs the unguessable cookie set by the Preview button; a
+  hand-made `athena-draft` cookie no longer asks the CMS for drafts.
+- Leaving preview can only return to a page on this site (it accepted
+  `//other-site` as a path).
+- Links from the CMS and from GitHub are shown only as web, mail or phone
+  links or pages on this site, never `javascript:` and the like.
+
 ### Fixed
 
 - Saving in the CMS now reports when it could not refresh the cached site

@@ -36,19 +36,19 @@ Live Preview.
 | Query param | Required | Meaning |
 |---|---|---|
 | `previewSecret` | yes | Must equal `PREVIEW_SECRET`. |
-| `path` | yes | Path to open, must start with `/` (e.g. `/posts/hello`). |
+| `path` | yes | Path on this site to open (e.g. `/posts/hello`): one leading `/`, no `//host` or backslash. |
 | `slug`, `collection` | no | Sent by the CMS; currently informational. |
 
 | Result | Response |
 |---|---|
-| Valid | `307` → `path`, sets `athena-draft=1` (HttpOnly, `SameSite=Lax`, `Secure` in production, `Path=/`). |
+| Valid | `307` → `path`, sets `athena-draft=1` and `__prerender_bypass=<ISR bypass token>` (HttpOnly, `SameSite=Lax`, `Secure` in production, `Path=/`). Pages serve drafts only when both are present and the token matches. |
 | Bad or missing secret, or `PREVIEW_SECRET` unset | `401 Invalid preview secret` |
 | Bad path | `400 Invalid path` |
 
 ### `GET /api/exit-preview`
 
-Deletes the `athena-draft` cookie and redirects (`307`) to `?path=` when it
-starts with `/`, otherwise to `/`.
+Deletes the draft cookies and redirects (`307`) to `?path=` when it is a path
+on this site (same rule as above), otherwise to `/`.
 
 ### `POST /api/invalidate`
 
@@ -192,7 +192,8 @@ both apps together.
 | `CMS_URL` | yes | required on Vercel | CMS origin. `NEXT_PUBLIC_SERVER_URL` is a legacy alias in the CMS. |
 | `WEB_URL` | yes | yes | Web origin (custom domain). Unset in the CMS = no invalidation webhook, no public-URL redirects, preview targets `localhost:4321`. |
 | `PREVIEW_SECRET` | yes | yes | Must match. |
-| `REVALIDATE_SECRET` | yes | yes | Must match. The ISR bypass token is derived from it. |
+| `REVALIDATE_SECRET` | yes | yes | Must match, in Preview and in Production. The ISR bypass token is derived from it. Unset in the CMS = saves do not refresh the web cache (logged as `Web invalidation skipped`). |
+| `WEB_PROTECTION_BYPASS` | optional | | athena-web Protection Bypass for Automation secret, so the invalidation call passes Vercel Authentication on a protected Preview. |
 | `PAYLOAD_API_KEY` | | yes | `web-frontend` API key for draft reads. |
 | `CMS_PROTECTION_BYPASS` | | optional | Vercel protection bypass for server-side fetches. |
 | `BLOB_READ_WRITE_TOKEN` | yes | | Vercel Blob. |

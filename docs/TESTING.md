@@ -46,6 +46,8 @@ production build in `apps/web/.vercel/output`.
 | TC-U-24 | SEO | JSON-LD text cannot close its `<script>` |
 | TC-U-25 | SEO | Home title is `site — tagline`, or the site name when the tagline is empty; the Site global trims it |
 | TC-U-32 | SEO | An out-of-range character reference in post HTML stays as text instead of throwing (a post page would answer 500) |
+| TC-U-33 | Links | `safeHref` keeps http(s), mailto, tel and on-site paths and drops `javascript:`, `data:`, `//host` and control characters; `httpUrl` only absolute http(s); `isLocalPath` refuses `//host`, `/\host` and absolute URLs |
+| TC-U-34 | Draft mode | `athena-draft` alone, or with a wrong `__prerender_bypass`, is not draft mode; the two cookies `/api/preview` sets are |
 | TC-U-30 | Site global | X picks: only `https://x.com/<handle>/status/<id>` links with text reach the page; fields trimmed, `@` dropped from the handle, day in Japan time, odd `lang` values dropped |
 | (14 more) | i18n, cms | Existing `i18n.test.ts` and `cms.test.ts` |
 
@@ -103,6 +105,7 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
 | TC-E-38 | seo | Every URL in the pages and posts sitemaps answers 200, is indexable and canonical to itself; `/` listed, `/search` not; fixed routes have no `<lastmod>` |
 | TC-E-39 | files | No link to `/admin` in the header, sidebar or footer (`/`, `/ja/posts`); content check: keep such links out of Globals → Header / Footer |
 | TC-E-40 | seo | Home title (en/ja/zh) is the site name or `site name — tagline`, never a dangling ` — `; `og:title` matches |
+| TC-E-44 | files | `/api/exit-preview?path=`: `/posts` redirects there; `//example.com`, `/%5Cexample.com`, an absolute URL and an empty path redirect to `/`; `/api/preview` with a wrong secret is 401 |
 | TC-E-41 | picks | Home "Picks from X": ≤ 6 cards, count in the heading, each with text, `@handle`, a `YYYY-MM-DD` date when known and a link to `https://x.com/<handle>/status/<id>`; no request to x.com / twitter.com / twimg.com / t.co, no widget script or iframe (section absent without picks) |
 | TC-E-42 | picks | 320px (CLI light, ADE dark): no horizontal scroll, cards inside the viewport, one column; two columns at 1024px |
 | TC-E-43 | picks | `/ja`: heading and link text in Japanese; each text keeps the post's own `lang` |
@@ -128,6 +131,7 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-11 | local dev (security review of `main`…`development`) | web 47/47, cms 15/15 | 55/55 | Found and fixed: `athena-draft` alone turned on draft fetches; `/api/exit-preview?path=//host` redirected off-site; CMS / GitHub URLs were used as `href` unchecked; warm-cache sent the bypass secret to the sitemap's host; an out-of-range character reference threw in `htmlToText`. |
 | 2026-11-10 | Preview ecb2321 (via Vercel share link) | — | not run (proxy) | TC-P-10 ✓ oEmbed from Vercel: a pick saved with only its link got text, author, handle, day and language. ✗ The home page stayed cached: athena-cms Preview has no `REVALIDATE_SECRET` (Production only), so `invalidateWeb` returned without a word. Fixed the silence in code (TC-U-31). After Master set `REVALIDATE_SECRET` on athena-cms Preview and redeployed (90506df), the card showed on preview.whoa.me (checked by Master). |
 | 2026-11-10 | local dev (3 sample picks: long Japanese name and URL, one without a date or language; ja note), local build | web 40/40, cms 12/12 | 54/54 | X picks. Saving a pick without text while X is unreachable is refused with the message (checked over REST); a 26-character handle is refused by the link check. oEmbed itself is not reachable from the test container, so the live fetch is checked on Preview (TC-P-10). |
 | 2026-11-10 | Preview 083e6da (via Vercel share link) | — | not run (proxy blocks direct access) | TC-P-01 HIT + br ✓; P-02 immutable + br ✓; P-03 `?q=b` HIT on the page cached for `?q=a` ✓; P-04 second hit HIT ✓; P-05 first hit MISS (second not checked); P-06 ✓; P-07 ✗: every request got 302 (preview behind Vercel Authentication), fixed in b965bdf, needs the bypass secret; SEO head (canonical, hreflang, noindex on /search and 404, BlogPosting, WebSite) ✓. |

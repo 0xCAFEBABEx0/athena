@@ -141,8 +141,9 @@ all managed by editors without code changes.
 
 - **F-REDIR-1** A request whose path exactly matches a redirect's `from` gets
   a `301` to the redirect target (a page, a post or a custom URL).
-- **F-REDIR-2** Redirect changes take effect within about 60 s per function
-  instance, and cached HTML within 300 s.
+- **F-REDIR-2** A redirect change invalidates the `content` cache tag, so
+  cached pages pick it up on their next request; a function instance keeps
+  the redirect list for at most 5 s.
 
 ### 2.8 SEO and crawlers
 
@@ -206,11 +207,13 @@ all managed by editors without code changes.
 | Environment | Branch | Web | CMS | Database |
 |---|---|---|---|---|
 | Local | any | http://localhost:4321 | http://localhost:3000 | local Postgres (dev container) or Neon |
-| Preview | `preview` | preview deployment (SSO-protected) | preview deployment | **production** Neon database |
+| Preview | `preview` | https://preview.whoa.me (Vercel Authentication) | https://preview.cms.whoa.me | its own Neon branch (child of production) |
 | Production | `main` | https://www.findb.uk | athena-cms production domain | production Neon database |
 
-Because Preview shares the production database, content edited on the preview
-CMS is live data, and schema changes affect production immediately.
+Preview has its own database branch: content edited on the preview CMS stays
+there, and schema SQL is run on the branch first, then on production
+([DATABASE.md](./DATABASE.md)). The public domain moves from findb.uk to
+whoa.me with the 1.0.0 release.
 
 ## 6. Known Gaps and Planned Work
 

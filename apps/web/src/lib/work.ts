@@ -2,6 +2,7 @@ import type { Project } from '@athena/shared/payload-types'
 
 import { getProjectDocs } from './cms'
 import type { Locale } from './i18n'
+import { httpUrl } from './safe-url'
 
 /**
  * "Work threads": each GitHub repository is shown like a thread in an agent
@@ -97,7 +98,8 @@ const normalize = (doc: Project, gh: GitHubSnapshot, now: number): WorkItem => {
     status: deriveStatus(doc, gh, now),
     pinned: Boolean(doc.pinned),
     order: doc.order ?? 0,
-    liveUrl: doc.liveUrl?.trim() || gh.homepage || null,
+    // The homepage comes from GitHub as the repository owner typed it.
+    liveUrl: httpUrl(doc.liveUrl) ?? httpUrl(gh.homepage),
     language: gh.language ?? null,
     languages: gh.languages ?? [],
     topics: gh.topics ?? [],
@@ -105,7 +107,7 @@ const normalize = (doc: Project, gh: GitHubSnapshot, now: number): WorkItem => {
     commitCount: gh.commitCount ?? 0,
     createdAt: gh.createdAt ?? '',
     pushedAt: gh.pushedAt ?? '',
-    release: gh.release ?? null,
+    release: gh.release && httpUrl(gh.release.url) ? gh.release : null,
     commits: gh.commits ?? [],
     openPRs: gh.openPRs ?? 0,
     image: gh.image?.startsWith('https://') ? gh.image : null,

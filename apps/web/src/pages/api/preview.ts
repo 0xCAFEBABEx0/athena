@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro'
 
 import { enableDraft } from '@/lib/draft'
 import { env } from '@/lib/env'
+import { isLocalPath } from '@/lib/safe-url'
 
 /**
  * Draft-preview entry point. The CMS admin's Preview button links here via
@@ -17,7 +18,7 @@ export const GET: APIRoute = ({ url, cookies, redirect }) => {
   if (!secret || previewSecret !== secret) {
     return new Response('Invalid preview secret', { status: 401 })
   }
-  if (!path || !path.startsWith('/')) {
+  if (!isLocalPath(path)) {
     return new Response('Invalid path', { status: 400 })
   }
 

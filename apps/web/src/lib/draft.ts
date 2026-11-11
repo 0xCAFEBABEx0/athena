@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto'
+
 import type { AstroCookies } from 'astro'
 
 import { DRAFT_COOKIE } from '@athena/shared/constants'
@@ -12,8 +14,22 @@ import { isrBypassToken } from '@/lib/isr-bypass.mjs'
  */
 const PRERENDER_BYPASS_COOKIE = '__prerender_bypass'
 
-/** Whether the request carries the draft-mode cookie set by /api/preview. */
-export const isDraft = (cookies: AstroCookies): boolean => cookies.has(DRAFT_COOKIE)
+/**
+ * Whether the request is in draft mode. The draft cookie alone is not proof
+ * (anyone can set `athena-draft=1` in their browser): the request must also
+ * carry the bypass cookie /api/preview set after checking PREVIEW_SECRET,
+ * whose value cannot be guessed. Without REVALIDATE_SECRET (local dev) the
+ * draft cookie is enough.
+ */
+export const isDraft = (cookies: AstroCookies): boolean => {
+  if (!cookies.has(DRAFT_COOKIE)) return false
+  const expected = isrBypassToken(env('REVALIDATE_SECRET'))
+  if (!expected) return !import.meta.env.PROD
+  const given = cookies.get(PRERENDER_BYPASS_COOKIE)?.value ?? ''
+  const a = Buffer.from(given)
+  const b = Buffer.from(expected)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
 
 export const enableDraft = (cookies: AstroCookies): void => {
   const options = {

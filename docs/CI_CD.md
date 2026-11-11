@@ -113,6 +113,18 @@ creates the tag on the merge commit and a GitHub Release whose notes are that
 version's `CHANGELOG.md` section (the job fails if the section is missing).
 When the version was not bumped it does nothing. Rules: `docs/VERSIONING.md`.
 
+## Warm-cache Workflow
+
+`.github/workflows/warm-cache.yml` runs when Vercel reports a successful
+athena-web deployment (`deployment_status`). `scripts/warm-cache.sh` requests
+every sitemap URL, the feeds, the search index and `/search` once on the
+production or preview domain (repository variables `PRODUCTION_WEB_URL` /
+`PREVIEW_WEB_URL`), so the first visitor gets a cached page. The preview
+domain is behind Vercel Authentication: add the athena-web Protection Bypass
+for Automation secret as the repository secret
+`VERCEL_AUTOMATION_BYPASS_SECRET`, or the run ends with a "Cache not warmed"
+warning. The secret is only ever sent to the given domain.
+
 ## Build Configuration (Vercel)
 
 Each app has a `vercel.json` (Vercel reads it from the project's Root Directory).

@@ -5,6 +5,7 @@ import type { Locale } from '@athena/shared/constants'
 import { getGlobal } from './cms'
 import { formatDate } from './format'
 import { mediaUrl } from './media'
+import { safeHref } from './safe-url'
 
 /** Used when the CMS `site` global is empty or unreachable. */
 export const DEFAULT_SITE_NAME = 'whoa.me'
@@ -89,13 +90,16 @@ export const normalizeSite = (site: Partial<Site> | null | undefined): SiteData 
   description: site?.description?.trim() || undefined,
   ogImage: ogImageOf(site?.ogImage),
   socialLinks: (site?.socialLinks ?? [])
-    .filter((link) => link.label && link.url)
-    .map(({ label, url }) => ({ label, url })),
+    .flatMap(({ label, url }) => {
+      // Only http(s), mailto, tel or a path on this site becomes a link.
+      const href = safeHref(url)
+      return label && href ? [{ label, url: href }] : []
+    }),
   projects: (site?.projects ?? [])
     .filter((project) => project.name)
     .map(({ name, url, description }) => ({
       name,
-      url: url || null,
+      url: safeHref(url),
       description: description ?? '',
     })),
   picks: picksOf(site?.picks),

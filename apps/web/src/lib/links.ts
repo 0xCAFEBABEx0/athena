@@ -1,6 +1,7 @@
 import type { Page, Post } from '@athena/shared/payload-types'
 
 import { DEFAULT_LOCALE, type Locale, localizePath } from './i18n'
+import { safeHref } from './safe-url'
 
 export type CMSLinkData = {
   type?: 'custom' | 'reference' | null
@@ -28,5 +29,7 @@ export const linkHref = (
     const path = `${reference.relationTo !== 'pages' ? `/${reference.relationTo}` : ''}/${reference.value.slug}`
     return localizePath(locale, path)
   }
-  return url ? localizePath(locale, url) : null
+  // Custom URLs are typed by editors: never emit javascript: and the like.
+  const href = safeHref(url)
+  return href ? localizePath(locale, href) : null
 }
