@@ -81,6 +81,12 @@ Processing:
    `x-prerender-revalidate: <bypass token>` (10 s timeout), which makes Vercel
    re-render and re-cache it right away. The bypass token is
    `sha256("isr-bypass:" + REVALIDATE_SECRET)` (`src/lib/isr-bypass.mjs`).
+   On a deployment behind Vercel Authentication, the request also carries
+   `x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET` (set by
+   Vercel when the project has a Protection Bypass for Automation).
+
+The response is sent after the re-renders, so the changed pages are fresh by
+the time the CMS logs `Web invalidated`.
 
 Response `200`:
 

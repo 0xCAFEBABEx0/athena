@@ -57,7 +57,10 @@ const sendInvalidation = async ({ paths = [], tags = [], payload }: InvalidateAr
       },
       redirect: 'manual',
       body: JSON.stringify({ paths, tags }),
-      signal: AbortSignal.timeout(5_000),
+      // The web app answers once the changed pages are re-rendered (up to
+      // ~15 localized paths); this runs after the admin's response, so a
+      // generous limit costs the editor nothing.
+      signal: AbortSignal.timeout(30_000),
     })
     if (!res.ok) {
       const where = res.headers.get('location')

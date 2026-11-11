@@ -13,9 +13,11 @@ section of each new version as a GitHub Release.
   re-render read the old data. The CMS now notifies the site after the save
   has finished.
 - Publishing or unpublishing several posts at once no longer logs
-  "Web invalidation unreachable" in the CMS: `/api/invalidate` answers as
-  soon as the cache is marked stale and re-renders the changed pages in the
-  background.
+  "Web invalidation unreachable" in the CMS: the CMS sends the notice after
+  the save has finished and waits up to 30 s (was 5 s) for the site to
+  re-render the changed pages.
+- On a deployment behind Vercel Authentication, those re-renders now pass the
+  project's Protection Bypass for Automation.
 
 ## [1.0.2] - 2026-11-11
 
