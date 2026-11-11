@@ -8,6 +8,10 @@ section of each new version as a GitHub Release.
 
 ### Fixed
 
+- Unpublished posts could stay listed on `/posts` and the home page: the
+  CMS asked the site to re-render before its own save was committed, so the
+  re-render read the old data. The CMS now notifies the site after the save
+  has finished.
 - Publishing or unpublishing several posts at once no longer logs
   "Web invalidation unreachable" in the CMS: `/api/invalidate` answers as
   soon as the cache is marked stale and re-renders the changed pages in the

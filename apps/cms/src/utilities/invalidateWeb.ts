@@ -1,3 +1,4 @@
+import { after } from 'next/server'
 import type { Payload } from 'payload'
 
 import type { CacheTag } from '@athena/shared/constants'
@@ -19,8 +20,24 @@ type InvalidateArgs = {
  * Vercel login) is reported as a failure instead of being followed.
  *
  * Never throws — cache invalidation must not break a publish.
+ *
+ * Inside a request (admin saves, REST) the call is deferred with Next's
+ * `after()` until the response has been sent. Hooks run before Payload
+ * commits the transaction, so a web re-render started from the hook could
+ * read the old data and cache it again: a bulk unpublish on 2026-11-11 left
+ * the posts listed on /posts that way. Outside a request (scripts, jobs,
+ * tests) `after()` throws and the call runs right away.
  */
-export const invalidateWeb = async ({ paths = [], tags = [], payload }: InvalidateArgs) => {
+export const invalidateWeb = async (args: InvalidateArgs): Promise<void> => {
+  try {
+    after(() => sendInvalidation(args))
+    return
+  } catch {
+    await sendInvalidation(args)
+  }
+}
+
+const sendInvalidation = async ({ paths = [], tags = [], payload }: InvalidateArgs) => {
   const webURL = process.env.WEB_URL
   if (!webURL || !process.env.REVALIDATE_SECRET) {
     payload.logger.warn(

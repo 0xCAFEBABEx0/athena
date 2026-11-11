@@ -59,7 +59,7 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
 | TC-U-27 | oEmbed | Text (line breaks kept, entities decoded, `pic.twitter.com` links dropped), author, handle, day and language read from the oEmbed HTML; `zxx` / unparsable dates give null; no text gives null |
 | TC-U-28 | oEmbed | Asks `publish.twitter.com/oembed` for the canonical link with `omit_script=1&dnt=true`; a bad link, an error status or a network failure gives null |
 | TC-U-29 | Site hook | A new pick is filled and its link normalized; edited text is kept without asking X; a changed link replaces the old post; no answer and no text rejects the save with a message; no answer with typed text keeps it |
-| TC-U-31 | Invalidation | A missing `REVALIDATE_SECRET` / `WEB_URL` logs a warning; the request carries the bearer secret and `x-vercel-protection-bypass`, does not follow redirects, and a 302 is logged as a failure with its target |
+| TC-U-31 | Invalidation | A missing `REVALIDATE_SECRET` / `WEB_URL` logs a warning; the request carries the bearer secret and `x-vercel-protection-bypass`, does not follow redirects, and a 302 is logged as a failure with its target; outside a request (no Next `after()` scope) the call runs right away |
 
 ## End-to-end tests (`apps/web/e2e`)
 
@@ -127,7 +127,7 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 | TC-P-08 | E2E suite with `E2E_BASE_URL` set to the deployment | All pass (TC-E-20 needs the footer rows deleted) |
 | TC-P-10 | CMS on the deployment: add a public X post under Site → Picks from X with only the link, save | Text, author, handle, date and language are filled; the card shows on `/` after the save (cache invalidated) |
 | TC-P-09 | Schema Markup Validator (validator.schema.org) on `/`, a post, a /work entry; Google Rich Results Test on the post | WebSite / BlogPosting / SoftwareSourceCode parsed without errors; the post is eligible as an Article |
-| TC-P-11 | CMS on the deployment: select three posts in the list and publish or unpublish them at once | athena-cms logs `Web invalidated` once per post and no `Web invalidation unreachable`; `/` and `/posts` show the change on the first request |
+| TC-P-11 | CMS on the deployment: select three posts in the list and publish or unpublish them at once | athena-cms logs `Web invalidated` once per post and no `Web invalidation unreachable`; `/`, `/posts` and the sidebar no longer list unpublished posts (or list newly published ones) on the first request |
 
 ## Results
 
