@@ -11,7 +11,7 @@ import type { SiteData } from '@/lib/site'
 
 /**
  * Both headers render on every page and CSS shows one: the CLI header
- * (`❯_ site  home posts  en [ade] [dark]`, all lowercase) or the modern top bar
+ * (`❯_ site  home posts  [en] [ade] [dark]`, all lowercase) or the modern top bar
  * (breadcrumb + CLI|Modern and EN|日本語|中文 controls).
  */
 type Props = {
@@ -69,10 +69,10 @@ const crumbs = current.split('/').filter(Boolean)
     {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
     <details class="dropdown dropdown-end" data-language-menu>
       <summary
-        class="inline-flex min-h-11 cursor-pointer list-none items-center px-2 font-mono text-sm text-base-content/65 hover:text-base-content"
+        class="btn btn-ghost btn-sm min-h-11 px-2 font-mono font-normal text-base-content/65 hover:text-base-content"
         aria-label={t.language}
       >
-        {LOCALE_LABEL[locale].toLowerCase()}
+        [{LOCALE_LABEL[locale].toLowerCase()}]
       </summary>
       <ul
         class="menu dropdown-content z-20 mt-1 w-20 rounded-box border border-base-300 bg-base-100 p-1 font-mono text-sm"

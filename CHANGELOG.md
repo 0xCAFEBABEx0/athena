@@ -4,6 +4,14 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.0.5] - 2026-11-11
+
+### Fixed
+
+- In the CLI view, the header's language menu now reads `[en]` / `[jp]` /
+  `[zh]` in the same bracketed style, size and colour as the `[ade]` and
+  `[dark]` switches next to it (it was a bare `en` in the nav links' style).
+
 ## [1.0.4] - 2026-11-11
 
 ### Changed

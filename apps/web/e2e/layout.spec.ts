@@ -61,3 +61,29 @@ test.describe('TC-E-29 tap targets on phones', () => {
     expect(Number.parseFloat(size)).toBeGreaterThanOrEqual(16)
   })
 })
+
+test('TC-E-46 CLI header: the language menu is a [xx] switch like [ade] and [dark]', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 })
+  const header = page.locator('header.cli-header')
+  const style = (selector: string) =>
+    header.locator(selector).first().evaluate((el) => {
+      const s = getComputedStyle(el)
+      return `${s.fontFamily} ${s.fontSize} ${s.fontWeight} ${s.color}`
+    })
+  for (const [path, label] of [
+    ['/', '[en]'],
+    ['/ja', '[jp]'],
+    ['/zh', '[zh]'],
+  ] as const) {
+    await open(page, path, { view: 'cli' })
+    const summary = header.locator('[data-language-menu] summary')
+    await expect(summary, path).toHaveText(label)
+    await expect(header.locator('[data-view-set]')).toHaveText('[ade]')
+    expect(await style('[data-language-menu] summary'), path).toBe(await style('[data-view-set]'))
+    expect(await style('[data-language-menu] summary'), path).toBe(await style('[data-theme-toggle]'))
+    expect((await summary.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+    // The menu items stay plain codes.
+    await summary.click()
+    await expect(header.locator('[data-language-menu] a')).toHaveText(['en', 'jp', 'zh'])
+  }
+})
