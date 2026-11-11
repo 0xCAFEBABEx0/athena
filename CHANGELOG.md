@@ -4,6 +4,15 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.0.3] - 2026-11-11
+
+### Fixed
+
+- Publishing or unpublishing several posts at once no longer logs
+  "Web invalidation unreachable" in the CMS: `/api/invalidate` answers as
+  soon as the cache is marked stale and re-renders the changed pages in the
+  background.
+
 ## [1.0.2] - 2026-11-11
 
 ### Changed
