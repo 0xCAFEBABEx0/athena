@@ -11,9 +11,9 @@ import type { SiteData } from '@/lib/site'
 
 /**
  * Both headers render on every page and CSS shows one: the CLI header
- * (`❯_ site  home posts  [ade] [dark] [en]`, all lowercase) or the modern top bar
- * (breadcrumb + search, CLI|ADE, sun|moon and EN|JP|ZH). Both put the switches
- * in the same order as the status panel's config rows: view, theme, language.
+ * (`❯_ site  home posts  [ade] [en] [dark]`, all lowercase) or the modern top bar
+ * (breadcrumb + search, CLI|ADE, EN|JP|ZH and sun|moon). Both put the switches
+ * in the same order as the status panel's config rows: view, language, theme.
  */
 type Props = {
   site: SiteData
@@ -69,7 +69,6 @@ const crumbs = current.split('/').filter(Boolean)
   <nav class="flex flex-wrap items-center" aria-label={t.nav}>
     {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
     <ViewToggle />
-    <ThemeToggle />
     <details class="dropdown dropdown-end" data-language-menu>
       <summary
         class="btn btn-ghost btn-sm min-h-11 px-2 font-mono font-normal text-base-content/65 hover:text-base-content"
@@ -98,6 +97,7 @@ const crumbs = current.split('/').filter(Boolean)
         }
       </ul>
     </details>
+    <ThemeToggle />
   </nav>
 </header>
 
@@ -139,8 +139,6 @@ const crumbs = current.split('/').filter(Boolean)
       </svg>
     </button>
     <ViewToggle variant="segmented" />
-    {/* Below lg the sidebar (and its theme switch) is hidden. */}
-    <ThemeToggle variant="segmented" class="topbar-theme lg:hidden" />
     <div class="tabs tabs-box tabs-xs" role="group" aria-label={t.language}>
       {
         languages.map((lang) => (
@@ -157,6 +155,8 @@ const crumbs = current.split('/').filter(Boolean)
         ))
       }
     </div>
+    {/* Below lg the sidebar (and its theme switch) is hidden. */}
+    <ThemeToggle variant="segmented" class="topbar-theme lg:hidden" />
   </div>
 </header>
 

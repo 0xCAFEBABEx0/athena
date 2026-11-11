@@ -16,11 +16,12 @@ section of each new version as a GitHub Release.
 
 ### Changed
 
-- The CLI header and the ADE top bar now put their switches in the same
-  order as the status panel: view, theme, language. The CLI header reads
-  `[ade] [dark] [en]` (the language menu moved to the end); on narrow
-  phones, where it wraps to the start of a row, its menu opens to the right
-  so it stays on screen.
+- The CLI header, the ADE top bar and the status panel now list their
+  switches in one order: view, language, theme. The CLI header reads
+  `[ade] [en] [dark]`; the ADE top bar has the sun | moon tabs last; the
+  status panel lists Language before Theme. Where the CLI language menu
+  sits at the start of a row on narrow phones, it opens to the right so it
+  stays on screen.
 
 ## [1.0.5] - 2026-11-11
 
