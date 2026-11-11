@@ -18,7 +18,7 @@
 - **`apps/web`** — Astro 7 public frontend consuming the CMS over its REST API.
 - **`packages/shared`** — generated Payload types + cross-app constants (cache tags, the draft cookie name, collection slugs).
 
-Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and Vercel Blob for media storage.
+Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and Vercel Blob for media storage. The Neon database is in Singapore, so both `vercel.json` files pin functions to `"regions": ["sin1"]` (Hobby allows one region; Vercel's default `iad1` puts ~220 ms on every query).
 
 ## Tech Stack
 

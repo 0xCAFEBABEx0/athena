@@ -4,6 +4,15 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.0.4] - 2026-11-11
+
+### Changed
+
+- The CMS and the site's server functions now run in Singapore (`sin1`),
+  next to the database, instead of Washington, D.C. (`iad1`). Each database
+  query used to travel between the US and Asia, which made the admin panel
+  slow.
+
 ## [1.0.3] - 2026-11-11
 
 ### Fixed

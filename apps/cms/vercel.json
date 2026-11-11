@@ -1,5 +1,6 @@
 {
   "bunVersion": "1.4.x",
+  "regions": ["sin1"],
   "schedules": {
     "payload-jobs": {
       "schedule": "0 * * * *",
