@@ -37,6 +37,13 @@ const DOTTED_ROUTES = new Set([
   '/search-index.json',
 ])
 
+// /work/<repo> pages keep the repository name, which may contain dots
+// (`owner/my.app` -> /work/my.app; see the CMS Projects collection's slugOf).
+const WORK_DETAIL = /^\/work\/[a-z0-9._-]+\/?$/
+
+const isDotted = (pathname: string): boolean =>
+  pathname.includes('.') && !WORK_DETAIL.test(pathname)
+
 const notFound = () =>
   new Response('Not found\n', {
     status: 404,
@@ -64,12 +71,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Vercel until /api/invalidate marks this tag stale.
   await tagAsContent()
 
-  if (pathname.includes('.') && !pathname.startsWith('/_') && !DOTTED_ROUTES.has(pathname)) {
+  if (isDotted(pathname) && !pathname.startsWith('/_') && !DOTTED_ROUTES.has(pathname)) {
     return notFound()
   }
 
   // Only content routes can be redirected.
-  if (pathname.startsWith('/_') || pathname.includes('.')) {
+  if (pathname.startsWith('/_') || isDotted(pathname)) {
     return render()
   }
 

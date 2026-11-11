@@ -1,5 +1,7 @@
 import type { PayloadRequest, CollectionSlug } from 'payload'
 
+import { DEFAULT_LOCALE, LOCALES } from '@athena/shared/constants'
+
 const collectionPrefixMap: Partial<Record<CollectionSlug, string>> = {
   posts: '/posts',
   pages: '',
@@ -8,14 +10,24 @@ const collectionPrefixMap: Partial<Record<CollectionSlug, string>> = {
 type Props = {
   collection: keyof typeof collectionPrefixMap
   slug: string
-  req: PayloadRequest
+  req: Pick<PayloadRequest, 'locale'>
 }
 
-export const generatePreviewPath = ({ collection, slug }: Props) => {
+export const generatePreviewPath = ({ collection, slug, req }: Props) => {
+  // Preview the locale being edited: the web app reads it from the path
+  // (/ja/…, /zh/…); English stays unprefixed.
+  const locale = req.locale
+  const localePrefix =
+    typeof locale === 'string' &&
+    locale !== DEFAULT_LOCALE &&
+    (LOCALES as readonly string[]).includes(locale)
+      ? `/${locale}`
+      : ''
+
   const encodedParams = new URLSearchParams({
     slug,
     collection,
-    path: `${collectionPrefixMap[collection]}/${slug}`,
+    path: `${localePrefix}${collectionPrefixMap[collection]}/${slug}`,
     previewSecret: process.env.PREVIEW_SECRET || '',
   })
 
