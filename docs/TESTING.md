@@ -45,6 +45,7 @@ production build in `apps/web/.vercel/output`.
 | TC-U-23 | SEO | JSON-LD: WebSite (author `sameAs` only http links), BlogPosting (`zh-Hans`), SoftwareSourceCode |
 | TC-U-24 | SEO | JSON-LD text cannot close its `<script>` |
 | TC-U-25 | SEO | Home title is `site — tagline`, or the site name when the tagline is empty; the Site global trims it |
+| TC-U-32 | SEO | An out-of-range character reference in post HTML stays as text instead of throwing (a post page would answer 500) |
 | TC-U-30 | Site global | X picks: only `https://x.com/<handle>/status/<id>` links with text reach the page; fields trimmed, `@` dropped from the handle, day in Japan time, odd `lang` values dropped |
 | (14 more) | i18n, cms | Existing `i18n.test.ts` and `cms.test.ts` |
 

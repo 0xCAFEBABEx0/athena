@@ -47,7 +47,9 @@ fi
 urls=$(mktemp)
 trap 'rm -f "$urls"' EXIT
 
-for sitemap in $(get -fsS "$base/sitemap.xml" | grep -o '<loc>[^<]*</loc>' | sed -e 's/<loc>//' -e 's/<\/loc>//'); do
+# Sitemaps list the canonical host; request the host we were given, so the
+# bypass secret is never sent anywhere else.
+for sitemap in $(get -fsS "$base/sitemap.xml" | grep -o '<loc>[^<]*</loc>' | sed -e 's/<loc>//' -e 's/<\/loc>//' | sed -E "s#^https?://[^/]+#$base#"); do
   { get -fsS "$sitemap" | grep -o '<loc>[^<]*</loc>' | sed -e 's/<loc>//' -e 's/<\/loc>//' >> "$urls"; } || true
 done
 for prefix in "" /ja /zh; do
@@ -58,7 +60,6 @@ for prefix in "" /ja /zh; do
 done
 echo "$base/404-not-a-page" >> "$urls"
 
-# Sitemaps list the canonical host; request the host we were given.
 sort -u "$urls" | sed -E "s#^https?://[^/]+#$base#" |
   xargs -P 4 -n 1 curl -sS -A "$ua" "${headers[@]}" -o /dev/null --max-time 30 \
     -w '%{http_code} %header{x-vercel-cache} %{time_total}s %{url}\n' || true

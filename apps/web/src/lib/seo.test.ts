@@ -63,6 +63,10 @@ describe('search metadata', () => {
     expect(summarize('  short  text ')).toBe('short text')
   })
 
+  test('TC-U-32 htmlToText leaves an out-of-range character reference as text', () => {
+    expect(htmlToText('<p>a &#99999999; &#x110000; &#65;</p>')).toBe('a &#99999999; &#x110000; A')
+  })
+
   test('TC-U-22 a post without an SEO description uses its text; og:type article with dates', () => {
     const meta = postMeta(
       { title: 'T', publishedAt: '2026-11-01T00:00:00.000Z', updatedAt: '2026-11-02T00:00:00.000Z' },

@@ -226,7 +226,8 @@ export const htmlToText = (html: string): string =>
       if (ENTITIES[code]) return ENTITIES[code]
       if (code[0] === '#') {
         const n = code[1] === 'x' || code[1] === 'X' ? Number.parseInt(code.slice(2), 16) : Number(code.slice(1))
-        return Number.isFinite(n) ? String.fromCodePoint(n) : match
+        // Out-of-range references (&#99999999;) would throw and 500 the page.
+        return Number.isInteger(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : match
       }
       return match
     })
