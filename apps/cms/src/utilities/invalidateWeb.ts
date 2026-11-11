@@ -59,8 +59,9 @@ const sendInvalidation = async ({ paths = [], tags = [], payload }: InvalidateAr
       body: JSON.stringify({ paths, tags }),
       // The web app answers once the changed pages are re-rendered (up to
       // ~15 localized paths); this runs after the admin's response, so a
-      // generous limit costs the editor nothing.
-      signal: AbortSignal.timeout(30_000),
+      // generous limit costs the editor nothing. It must stay below the API
+      // route's maxDuration (apps/cms/vercel.json), which also covers the save.
+      signal: AbortSignal.timeout(25_000),
     })
     if (!res.ok) {
       const where = res.headers.get('location')

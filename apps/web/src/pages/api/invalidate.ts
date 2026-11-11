@@ -26,7 +26,7 @@ import { isrBypassToken } from '@/lib/isr-bypass.mjs'
  * The response waits for those re-renders, so when the CMS logs
  * "Web invalidated" the changed pages are already fresh: answering earlier
  * would let a visitor get the stale copy in between. The CMS sends this call
- * after its response (Next `after()`) and allows it 30 s, so a bulk publish
+ * after its response (Next `after()`) and allows it 25 s, so a bulk publish
  * (one call per document, up to ~15 localized paths each) does not slow down
  * the admin. On a deployment behind Vercel Authentication (Preview), the
  * re-render requests carry Vercel's own `VERCEL_AUTOMATION_BYPASS_SECRET`.
@@ -93,7 +93,8 @@ const rerender = async (paths: string[], bypassToken: string): Promise<string[]>
           redirect: 'manual',
           signal: AbortSignal.timeout(10_000),
         })
-        if (!res.ok) failed.push(path)
+        // 404: the page is gone (an unpublished post), which is its new state.
+        if (!res.ok && res.status !== 404) failed.push(path)
       } catch {
         failed.push(path)
       }
