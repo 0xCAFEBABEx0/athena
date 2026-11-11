@@ -2,7 +2,7 @@
 import Layout from '@/layouts/Layout.astro'
 import RenderBlocks from '@/components/blocks/RenderBlocks.astro'
 import RenderHero from '@/components/heros/RenderHero.astro'
-import { getPage } from '@/lib/cms'
+import { getPage, getPublishedSlugs } from '@/lib/cms'
 import { isDraft } from '@/lib/draft'
 import { buildMeta } from '@/lib/seo'
 import { getSite } from '@/lib/site'
@@ -25,6 +25,13 @@ if (!slugParam || slugParam === 'home') {
 }
 
 const slug = slugParam
+
+// Unknown slugs (mostly crawlers and scanners) end here, without a CMS call.
+if (!draft) {
+  const published = await getPublishedSlugs('pages')
+  if (published && !published.has(slug)) return Astro.rewrite('/404')
+}
+
 const page = await getPage(slug, { draft, locale })
 
 if (!page) {

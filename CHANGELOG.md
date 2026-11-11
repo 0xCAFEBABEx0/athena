@@ -4,6 +4,24 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.0.7] - 2026-11-11
+
+### Changed
+
+- The site keeps the content it reads from the CMS (site settings, menus,
+  recent posts, work, redirects, the lists of published pages and posts) in
+  Vercel's Runtime Cache until the next CMS change. A page that is not cached
+  yet no longer asks the CMS up to seven times, and an address that does not
+  exist answers 404 from the cached list of pages and posts, so crawlers
+  trying made-up addresses no longer keep the database awake (the free plan's
+  100 compute hours a month). The CMS is still read once after each CMS
+  change or deploy, after a day, or when the cache is unavailable.
+- Speed Insights now measures a quarter of page views, so Vercel's free
+  10,000 events per 30 days last four times longer.
+- Posts and pages in the CMS autosave 2 seconds after you stop typing
+  (Payload's default) instead of 0.1 seconds, so a draft is no longer saved
+  on almost every keystroke. Live preview refreshes at the same time.
+
 ## [1.0.6] - 2026-11-11
 
 ### Added

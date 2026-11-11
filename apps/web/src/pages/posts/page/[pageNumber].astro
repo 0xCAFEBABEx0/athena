@@ -19,11 +19,15 @@ if (pageNumber === 1) {
   return Astro.redirect(lp('/posts'), 301)
 }
 
-const posts = await getPosts({ page: pageNumber }, { locale })
+// Page 1 (cached, shared with /posts) says how many pages exist, so a page
+// number past the end is a 404 without a CMS call per made-up number.
+const first = await getPosts({ page: 1 }, { locale }).catch(() => null)
 
-if (posts.totalPages > 0 && pageNumber > posts.totalPages) {
+if (first && first.totalPages > 0 && pageNumber > first.totalPages) {
   return Astro.rewrite('/404')
 }
+
+const posts = await getPosts({ page: pageNumber }, { locale })
 
 const site = await getSite(Astro.locals, locale)
 const meta = routeMeta(

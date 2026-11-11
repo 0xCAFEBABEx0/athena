@@ -1,11 +1,15 @@
 import { defineMiddleware } from 'astro:middleware'
+import type { APIContext, MiddlewareNext } from 'astro'
 
 import type { Redirect } from '@athena/shared/payload-types'
 
 import { tagAsContent } from '@/lib/cache'
 import { getRedirects } from '@/lib/cms'
+import { withFreshCmsReads } from '@/lib/cms-cache'
+import { env } from '@/lib/env'
 import { DEFAULT_LOCALE, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
+import { isrBypassToken } from '@/lib/isr-bypass.mjs'
 import { getFooterNav, getHeaderNav, getRecentPosts } from '@/lib/nav'
 import { getSite } from '@/lib/site'
 import { getWork } from '@/lib/work'
@@ -54,7 +58,7 @@ const notFound = () =>
     },
   })
 
-export const onRequest = defineMiddleware(async (context, next) => {
+const handle = async (context: APIContext, next: MiddlewareNext): Promise<Response> => {
   // `/ja/…` and `/zh/…` render the same routes as the English paths: strip
   // the prefix, remember the locale, and rewrite. ISR still caches by the
   // original (prefixed) URL.
@@ -112,4 +116,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   return render()
+}
+
+/**
+ * True for the re-renders /api/invalidate requests right after a CMS change
+ * (and Vercel's own ISR revalidation with the same token): they must read the
+ * CMS itself, not the Runtime Cache copy from before the change.
+ */
+const isRevalidation = (request: Request): boolean => {
+  const token = request.headers.get('x-prerender-revalidate')
+  return Boolean(token) && token === isrBypassToken(env('REVALIDATE_SECRET'))
+}
+
+export const onRequest = defineMiddleware((context, next) => {
+  if (!isRevalidation(context.request)) return handle(context, next)
+  console.info(`[cms-cache] fresh CMS reads for ${context.url.pathname}`)
+  return withFreshCmsReads(() => handle(context, next))
 })

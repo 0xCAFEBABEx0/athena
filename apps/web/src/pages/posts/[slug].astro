@@ -8,7 +8,7 @@ import PostHero from '@/components/heros/PostHero.astro'
 import RelatedPosts from '@/components/blocks/RelatedPosts.astro'
 import RichText from '@/components/RichText.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
-import { getAdjacentPosts, getPost } from '@/lib/cms'
+import { getAdjacentPosts, getPost, getPublishedSlugs } from '@/lib/cms'
 import { isDraft } from '@/lib/draft'
 import { readingMinutes } from '@/lib/format'
 import { renderRichText } from '@/lib/richtext'
@@ -23,6 +23,12 @@ const slug = Astro.params.slug ?? ''
 const locale = localeOf(Astro)
 const t = dict(locale)
 const lp = (path: string) => localizePath(locale, path)
+// Unknown slugs (mostly crawlers and scanners) end here, without a CMS call.
+if (!draft) {
+  const published = await getPublishedSlugs('posts')
+  if (published && !published.has(slug)) return Astro.rewrite('/404')
+}
+
 const post = await getPost(slug, { draft, locale })
 
 if (!post) {

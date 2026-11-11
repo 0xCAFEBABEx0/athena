@@ -49,6 +49,7 @@ production build in `apps/web/.vercel/output`.
 | TC-U-33 | Links | `safeHref` keeps http(s), mailto, tel and on-site paths and drops `javascript:`, `data:`, `//host` and control characters; `httpUrl` only absolute http(s); `isLocalPath` refuses `//host`, `/\host` and absolute URLs |
 | TC-U-34 | Draft mode | `athena-draft` alone, or with a wrong `__prerender_bypass`, is not draft mode; the two cookies `/api/preview` sets are |
 | TC-U-30 | Site global | X picks: only `https://x.com/<handle>/status/<id>` links with text reach the page; fields trimmed, `@` dropped from the handle, day in Japan time, odd `lang` values dropped |
+| TC-U-35 | CMS cache | A published CMS response is loaded once and then served from the Runtime Cache (tag `cms-data`, with a TTL); a failed load is not cached; a cache that errors falls back to the CMS; fresh reads (re-renders after a CMS change) skip the cache and refresh it; `expireCmsData` drops everything; a CMS read that started before an expiry and finishes after the re-render does not bring the old data back (the next read reloads); with no cache (local dev) every call reads the CMS |
 | (14 more) | i18n, cms | Existing `i18n.test.ts` and `cms.test.ts` |
 
 CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
@@ -131,6 +132,8 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 | TC-P-10 | CMS on the deployment: add a public X post under Site → Picks from X with only the link, save | Text, author, handle, date and language are filled; the card shows on `/` after the save (cache invalidated) |
 | TC-P-09 | Schema Markup Validator (validator.schema.org) on `/`, a post, a /work entry; Google Rich Results Test on the post | WebSite / BlogPosting / SoftwareSourceCode parsed without errors; the post is eligible as an Article |
 | TC-P-11 | CMS on the deployment: select three posts in the list and publish or unpublish them at once | athena-cms logs `Web invalidated` once per post and no `Web invalidation unreachable`; `/`, `/posts` and the sidebar no longer list unpublished posts (or list newly published ones) on the first request. Preview needs `WEB_PROTECTION_BYPASS` on athena-cms (else `Web invalidation failed: 401`) |
+| TC-P-12 | After a few pages have been viewed, `GET /no-such-page-<random>`, `/posts/no-such-post-<random>` and `/posts/page/9999` | 404 page; athena-cms runtime logs show no `/api/*` request for them (layout data and the slug lists come from the Runtime Cache) |
+| TC-P-13 | CMS on the deployment: change a header link (or publish a post) and save | The new link shows on `/` and on a page not visited since, on the first request (the Runtime Cache was expired by `/api/invalidate`) |
 
 ## Results
 

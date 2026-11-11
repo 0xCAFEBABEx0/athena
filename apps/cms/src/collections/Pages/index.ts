@@ -137,7 +137,10 @@ export const Pages: CollectionConfig<'pages'> = {
   versions: {
     drafts: {
       autosave: {
-        interval: 100, // We set this interval for optimal live preview
+        // Every autosave is a CMS function call and a database write; the
+        // template's 100 ms saved on almost every keystroke. Payload's default
+        // (2 s) still refreshes live preview soon after typing stops.
+        interval: 2000,
       },
       schedulePublish: true,
     },
