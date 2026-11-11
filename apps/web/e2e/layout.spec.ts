@@ -47,9 +47,11 @@ test.describe('TC-E-29 tap targets on phones', () => {
 
   test('ADE top bar controls are at least 36px tall', async ({ page }) => {
     await open(page, '/', { view: 'modern' })
-    const search = await page.locator('.topbar-search').boundingBox()
-    expect(search?.height ?? 0).toBeGreaterThanOrEqual(40)
-    expect(search?.width ?? 0).toBeGreaterThanOrEqual(40)
+    for (const icon of ['.topbar-search', '.topbar-theme']) {
+      const box = await page.locator(icon).boundingBox()
+      expect(box?.height ?? 0, icon).toBeGreaterThanOrEqual(40)
+      expect(box?.width ?? 0, icon).toBeGreaterThanOrEqual(40)
+    }
     for (const tab of await page.locator('.modern-topbar .tab').all()) {
       expect((await tab.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(36)
     }
@@ -86,4 +88,36 @@ test('TC-E-46 CLI header: the language menu is a [xx] switch like [ade] and [dar
     await summary.click()
     await expect(header.locator('[data-language-menu] a')).toHaveText(['en', 'jp', 'zh'])
   }
+})
+
+test.describe('TC-E-47 ADE below 1024px: the top bar switches the theme', () => {
+  for (const [width, path] of [
+    [320, '/ja'],
+    [390, '/zh'],
+    [1023, '/'],
+  ] as const) {
+    test(`${width}px ${path}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 })
+      await open(page, path, { view: 'modern', theme: 'light' })
+      const toggle = page.locator('.modern-topbar .topbar-theme')
+      const bar = page.locator('.modern-topbar')
+      await expect(toggle).toBeVisible()
+      // One row: the switch does not push the tabs onto a second line.
+      const barBox = await bar.boundingBox()
+      expect(barBox?.height ?? 0).toBeLessThan(70)
+      expect(await overflowX(page)).toBeLessThanOrEqual(0)
+      await toggle.click()
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+      expect(await page.evaluate(() => localStorage.getItem('payload-theme'))).toBe('dark')
+      await toggle.click()
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    })
+  }
+
+  test('1024px and up: the sidebar has the switch, the top bar does not', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 })
+    await open(page, '/', { view: 'modern' })
+    await expect(page.locator('.modern-topbar .topbar-theme')).toBeHidden()
+    await expect(page.locator('.modern-sidebar [data-theme-toggle]')).toBeVisible()
+  })
 })

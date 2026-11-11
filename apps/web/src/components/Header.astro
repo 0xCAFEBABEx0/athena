@@ -125,18 +125,22 @@ const crumbs = current.split('/').filter(Boolean)
       }
     </ul>
   </nav>
-  <div class="ms-auto flex shrink-0 items-center gap-2">
-    <button
-      type="button"
-      class="topbar-search btn btn-ghost btn-square lg:hidden"
-      aria-label={t.searchOpen}
-      data-search-open
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="10.5" cy="10.5" r="6.5"></circle>
-        <path d="m15.5 15.5 5 5"></path>
-      </svg>
-    </button>
+  <div class="ms-auto flex shrink-0 items-center gap-2 max-[22rem]:gap-1">
+    <span class="flex items-center lg:hidden">
+      <button
+        type="button"
+        class="topbar-icon topbar-search btn btn-ghost btn-square"
+        aria-label={t.searchOpen}
+        data-search-open
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="6.5"></circle>
+          <path d="m15.5 15.5 5 5"></path>
+        </svg>
+      </button>
+      {/* Below lg the sidebar (and its theme switch) is hidden. */}
+      <ThemeToggle variant="icon" class="topbar-theme" />
+    </span>
     <ViewToggle variant="segmented" />
     <div class="tabs tabs-box tabs-xs" role="group" aria-label={t.language}>
       {

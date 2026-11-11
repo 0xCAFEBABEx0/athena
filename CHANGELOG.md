@@ -4,6 +4,15 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.0.6] - 2026-11-11
+
+### Added
+
+- ADE view on phones and tablets (below 1024px wide, where the sidebar is
+  hidden): a moon / sun button next to search in the top bar switches
+  between light and dark. Before, the only way was the status panel in the
+  footer.
+
 ## [1.0.5] - 2026-11-11
 
 ### Fixed

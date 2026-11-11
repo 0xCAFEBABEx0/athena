@@ -1026,7 +1026,7 @@ html:not([data-theme='dark']) .theme-when-dark {
     }
   }
 
-  .topbar-search {
+  .topbar-icon {
     width: 2.5rem;
     height: 2.5rem;
     min-height: 2.5rem;

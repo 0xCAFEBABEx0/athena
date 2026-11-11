@@ -93,7 +93,7 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
 | TC-E-26 | network | The popup search filters locally after one index load |
 | TC-E-27 | status | `/status` in the bottom prompt opens the panel |
 | TC-E-28 | status | The panel stays open after changing the language |
-| TC-E-29 | layout | Phones: ADE top bar search ≥40px, tabs ≥36px; search inputs 16px |
+| TC-E-29 | layout | Phones: ADE top bar search and theme buttons ≥40px, tabs ≥36px; search inputs 16px |
 | TC-E-30 | files | Scanner paths (`/wp-login.php`, `/.env`) get a plain 404; real dotted routes still 200 |
 | TC-E-31 | seo | Indexable pages (home, lists, a post, a work entry; en/ja/zh): title unique per language, description 1–160 chars, self canonical = `og:url`, hreflang en/ja/zh-Hans/x-default, no robots tag |
 | TC-E-32 | seo | hreflang is reciprocal across the three versions, each lists itself under its own `lang`, `x-default` is the English URL |
@@ -107,6 +107,7 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
 | TC-E-40 | seo | Home title (en/ja/zh) is the site name or `site name — tagline`, never a dangling ` — `; `og:title` matches |
 | TC-E-45 | banner | ADE: the site avatar in the sidebar, the phone top bar and the home intro card is the favicon's ❯_ mark (an SVG, no letter); the account avatar at the sidebar foot keeps the author's initial |
 | TC-E-46 | layout | CLI header (320px, en/ja/zh): the language menu reads `[en]` / `[jp]` / `[zh]` in the same font, size and colour as `[ade]` and `[dark]`, ≥44px tall; its menu items stay plain `en` / `jp` / `zh` |
+| TC-E-47 | layout | ADE below 1024px (320 ja, 390 zh, 1023 en): the top bar has a theme button that switches light ⇄ dark and stores it; the bar stays one row with no horizontal scroll; at 1024px it is hidden and the sidebar has the switch |
 | TC-E-44 | files | `/api/exit-preview?path=`: `/posts` redirects there; `//example.com`, `/%5Cexample.com`, an absolute URL and an empty path redirect to `/`; `/api/preview` with a wrong secret is 401 |
 | TC-E-41 | picks | Home "Picks from X": ≤ 6 cards, count in the heading, each with text, `@handle`, a `YYYY-MM-DD` date when known and a link to `https://x.com/<handle>/status/<id>`; no request to x.com / twitter.com / twimg.com / t.co, no widget script or iframe (section absent without picks) |
 | TC-E-42 | picks | 320px (CLI light, ADE dark): no horizontal scroll, cards inside the viewport, one column; two columns at 1024px |
@@ -134,6 +135,7 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-11 | local dev (mock CMS) | web 47/47 | 55/55 (6 skipped) | ADE top bar theme button (TC-E-47). Checked by eye at 320 / 375 / 390 / 768 / 1023 / 1280px, light and dark: at 320px the top bar control gaps narrow to 4px so the bar stays on one row. |
 | 2026-11-11 | local dev (mock CMS) | web 47/47 | 51/51 (6 skipped) | CLI language menu as `[en]` / `[jp]` / `[zh]` (TC-E-46). Checked by eye at 1280 / 390 / 320px, light and dark, menu open: same look and hover as `[ade]` / `[dark]`, no horizontal scroll; at 320px the nav wraps as before. |
 | 2026-11-11 | Preview c4d40e5 | cms 19/19 | not run | TC-P-11 again: re-renders now run (the web app passes its automation bypass). Bulk unpublish: `/`, `/posts` and the feeds re-rendered in ~5 s; only the unpublished posts' own pages were reported as failed because they answer 404, now counted as done. Bulk publish on the freshly reset (cold) preview database: the save took ~20 s and the API function hit its 30 s limit while waiting; some post pages missed the 10 s re-render timeout. maxDuration is now 60 s and the CMS waits 25 s. |
 | 2026-11-11 | Preview 5efebfa (after Neon "Reset from parent") | cms 18/18 | not run | TC-P-11: bulk publish of 3 posts logged `Web invalidation failed: 401` 3 times (athena-cms Preview had no `WEB_PROTECTION_BYPASS`); after Master set it, bulk unpublish logged `Web invalidated` 3 times and no `unreachable`, and `/posts` showed 0 posts. That page was a cache MISS though, so the background re-render (`waitUntil`) had not cached it; CodeRabbit also flagged the stale window before it finishes. The endpoint now waits for the re-renders again (CMS timeout 30 s, sent after the response). |
