@@ -5,11 +5,12 @@ import { dict, localeOf } from '@/lib/i18n'
  * Light/dark toggle, persisted in localStorage under the same
  * 'payload-theme' key the cms admin uses (see the theme script in Layout).
  * The label names the theme you switch to: `[dark]` in the CLI header,
- * "Dark" in the modern sidebar, a moon / sun icon in the modern phone top bar.
+ * "Dark" in the modern sidebar. `segmented` is the modern top bar's sun | moon
+ * tabs (below lg), which set a theme instead of toggling it.
  * CSS picks the label from data-theme, so any number of toggles stay in sync.
  */
 type Props = {
-  variant?: 'flag' | 'word' | 'icon'
+  variant?: 'flag' | 'word' | 'segmented'
   class?: string
 }
 
@@ -20,18 +21,20 @@ const toLight = variant === 'flag' ? '[light]' : t.lightWord
 ---
 
 {
-  variant === 'icon' ? (
-    <button type="button" class:list={['topbar-icon btn btn-ghost btn-square', className]} data-theme-toggle>
-      <svg class="theme-when-light" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>
-      </svg>
-      <svg class="theme-when-dark" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="4"></circle>
-        <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"></path>
-      </svg>
-      <span class="sr-only theme-when-light">{t.toDark}</span>
-      <span class="sr-only theme-when-dark">{t.toLight}</span>
-    </button>
+  variant === 'segmented' ? (
+    <div class:list={['tabs tabs-box tabs-xs', className]} role="group" aria-label={t.themeToggle}>
+      <button type="button" class="tab theme-tab-light" data-theme-set="light" aria-label={t.toLight}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"></path>
+        </svg>
+      </button>
+      <button type="button" class="tab theme-tab-dark" data-theme-set="dark" aria-label={t.toDark}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>
+        </svg>
+      </button>
+    </div>
   ) : (
     <button
       type="button"
@@ -53,9 +56,8 @@ const toLight = variant === 'flag' ? '[light]' : t.lightWord
 <script>
   const KEY = 'payload-theme'
 
-  const toggle = () => {
+  const setTheme = (next: 'light' | 'dark') => {
     const root = document.documentElement
-    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
     try {
       window.localStorage.setItem(KEY, next)
     } catch {
@@ -64,8 +66,13 @@ const toLight = variant === 'flag' ? '[light]' : t.lightWord
     root.setAttribute('data-theme', next)
   }
 
+  const toggle = () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
+
   ;(window as Window & { __toggleTheme?: () => void }).__toggleTheme = toggle
   document.addEventListener('click', (event) => {
-    if ((event.target as Element | null)?.closest('[data-theme-toggle]')) toggle()
+    const target = event.target as Element | null
+    if (target?.closest('[data-theme-toggle]')) return toggle()
+    const theme = target?.closest<HTMLElement>('[data-theme-set]')?.dataset.themeSet
+    if (theme === 'light' || theme === 'dark') setTheme(theme)
   })
 </script>

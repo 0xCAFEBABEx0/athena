@@ -47,11 +47,9 @@ test.describe('TC-E-29 tap targets on phones', () => {
 
   test('ADE top bar controls are at least 36px tall', async ({ page }) => {
     await open(page, '/', { view: 'modern' })
-    for (const icon of ['.topbar-search', '.topbar-theme']) {
-      const box = await page.locator(icon).boundingBox()
-      expect(box?.height ?? 0, icon).toBeGreaterThanOrEqual(40)
-      expect(box?.width ?? 0, icon).toBeGreaterThanOrEqual(40)
-    }
+    const search = await page.locator('.topbar-search').boundingBox()
+    expect(search?.height ?? 0).toBeGreaterThanOrEqual(40)
+    expect(search?.width ?? 0).toBeGreaterThanOrEqual(40)
     for (const tab of await page.locator('.modern-topbar .tab').all()) {
       expect((await tab.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(36)
     }
@@ -90,26 +88,33 @@ test('TC-E-46 CLI header: the language menu is a [xx] switch like [ade] and [dar
   }
 })
 
-test.describe('TC-E-47 ADE below 1024px: the top bar switches the theme', () => {
+test.describe('TC-E-47 ADE below 1024px: light | dark tabs in the top bar', () => {
   for (const [width, path] of [
     [320, '/ja'],
+    [375, '/'],
     [390, '/zh'],
     [1023, '/'],
   ] as const) {
     test(`${width}px ${path}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 })
       await open(page, path, { view: 'modern', theme: 'light' })
-      const toggle = page.locator('.modern-topbar .topbar-theme')
-      const bar = page.locator('.modern-topbar')
-      await expect(toggle).toBeVisible()
-      // One row: the switch does not push the tabs onto a second line.
-      const barBox = await bar.boundingBox()
-      expect(barBox?.height ?? 0).toBeLessThan(70)
+      const tabs = page.locator('.modern-topbar .topbar-theme')
+      const light = tabs.locator('[data-theme-set="light"]')
+      const dark = tabs.locator('[data-theme-set="dark"]')
+      await expect(tabs).toBeVisible()
+      // One row: the tabs do not push the other controls onto a second line.
+      expect((await page.locator('.modern-topbar').boundingBox())?.height ?? 0).toBeLessThan(70)
       expect(await overflowX(page)).toBeLessThanOrEqual(0)
-      await toggle.click()
+      const bg = (tab: typeof light) => tab.evaluate((el) => getComputedStyle(el).backgroundColor)
+      const selected = await bg(light)
+      expect(await bg(dark)).not.toBe(selected)
+      await dark.click()
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
       expect(await page.evaluate(() => localStorage.getItem('payload-theme'))).toBe('dark')
-      await toggle.click()
+      // Clicking the selected tab keeps the theme.
+      await dark.click()
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+      await light.click()
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
     })
   }

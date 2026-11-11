@@ -9,9 +9,10 @@ section of each new version as a GitHub Release.
 ### Added
 
 - ADE view on phones and tablets (below 1024px wide, where the sidebar is
-  hidden): a moon / sun button next to search in the top bar switches
-  between light and dark. Before, the only way was the status panel in the
-  footer.
+  hidden): sun | moon tabs in the top bar, next to CLI | ADE and the
+  language tabs, switch between light and dark. Before, the only way was
+  the status panel in the footer. On phones the top bar tabs are a little
+  narrower so the bar stays on one row.
 
 ## [1.0.5] - 2026-11-11
 
