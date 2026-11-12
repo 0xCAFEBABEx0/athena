@@ -83,6 +83,7 @@ if (draft) {
   lang={LANG_TAG[locale]}
   data-view={site.defaultView}
   data-search-path={localizePath(locale, '/search')}
+  data-home-path={localizePath(locale, '/')}
 >
   <head>
     <meta charset="utf-8" />
@@ -233,8 +234,10 @@ if (draft) {
     <StatusDialog site={site} />
     <script is:inline>
       // Shortcuts: "/" search, j/k move through the page's list (notes, builds,
-      // stacks), h/l previous / next header section, t theme, v view, s status.
+      // stacks), h/l previous / next header section, g then h home, t theme,
+      // v view, s status.
       ;(function () {
+        var gAt = 0
         document.addEventListener('keydown', function (event) {
           if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return
           // Turned off in /status → Config (⌘K still opens search).
@@ -248,6 +251,21 @@ if (draft) {
           // An open dialog (search, /status) has keys of its own, such as
           // type-to-search on the Config list: no page shortcuts there.
           if (target && target.closest && target.closest('dialog[open]')) return
+
+          // "g h" goes to the home page: a "g" waits up to a second for the "h";
+          // any other key ends the wait and works as usual.
+          var afterG = gAt > 0 && Date.now() - gAt < 1000
+          gAt = 0
+          if (event.key === 'g') {
+            gAt = Date.now()
+            return
+          }
+          if (afterG && event.key === 'h') {
+            event.preventDefault()
+            var home = document.documentElement.dataset.homePath || '/'
+            if (window.location.pathname.replace(/\/$/, '') !== home.replace(/\/$/, '')) window.location.href = home
+            return
+          }
 
           if (event.key === '/') {
             event.preventDefault()

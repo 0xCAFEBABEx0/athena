@@ -139,6 +139,7 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed, the favicon fetches and GitHub's A
 | TC-E-57 | stacks | `/stacks` in CLI and ADE: `j` focuses the first open row (rows without a link too), `j`/`k` move one row, the last row stops `j`; folded Former rows are skipped |
 | TC-E-58 | layout | `h`/`l` go to the previous / next header link (CLI on `/`, ADE on `/ja/notes`) |
 | TC-E-59 | status | With the `/status` panel on Config and a setting focused, typing `l t j h` goes to the settings search: the page stays, the theme does not change |
+| TC-E-60 | layout | `g` then `h` goes to the home page of the page's language (CLI from `/builds` to `/`, ADE from `/ja/stacks` to `/ja`; a lone `h` there would go to the previous section instead) |
 | TC-E-56 | files | With a CMS Redirects entry from `/posts/moved-away` (the mock CMS has one; elsewhere the case skips): that path answers 301 to the entry's target, not the 308 to `/notes/moved-away`; `/notes/moved-away` and `/ja/notes/moved-away` (where a CMS link typed with the old path points) answer 301 to the same target |
 
 ## Deployment checks (Preview, then Production)
@@ -170,6 +171,7 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-12 | local dev (mock CMS with 5 header links and a Stack global) | web 78/78 | 86/86 (4 skipped) | `g` then `h` goes home (TC-E-60; it fails without the change). The home banner, the hints and the Keys tab list `g h`; no horizontal scroll at 390px. |
 | 2026-11-12 | local dev (mock CMS with 5 header links and a Stack global) | web 78/78, cms 59/59 | 85/85 (4 skipped) | Keyboard: j/k on `/stacks` (TC-E-57), h/l between header sections (TC-E-58), no page shortcuts inside an open dialog (TC-E-59; it fails without the fix). Checked by hand in both views: `l`×5 from `/` walks home → notes → builds → stacks → about and stops, `h`×5 walks back; `/ja/notes/<post>` + `l` → `/ja/builds`; the Keys tab lists `h l`. |
 | 2026-11-12 | local dev (mock CMS with a Redirects entry from `/posts/moved-away`) | web 78/78 | 82/82 (4 skipped) | Codex review on #76: a Redirects entry for an old section path also answers the renamed path, where CMS links typed with the old path point (TC-E-56: `/notes/moved-away` and `/ja/notes/moved-away` answer 301 to `/about` and `/ja/about`). |
 | 2026-11-12 | local dev (mock CMS with a Redirects entry from `/posts/moved-away`), local builds | web 78/78, cms 59/59 | 82/82 (4 skipped) | CodeRabbit review on #76: a CMS redirect for an old section path wins over the 308 (TC-E-56); RSS GUIDs keep the pre-1.2.0 `/posts/<slug>` URLs (TC-E-21); the graph sync keeps `syncedAt` on a failure, skips the write when the username changed during the read, and reports GraphQL errors by type (TC-U-46, -47); the scheduled job runs the projects and graph syncs independently; the pages sitemap checks About per language. |

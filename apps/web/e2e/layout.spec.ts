@@ -209,6 +209,25 @@ test('TC-E-58 h/l go to the previous / next header section, in both views and la
     const next = hrefs[at + 1]
     if (!next) continue
     await Promise.all([page.waitForURL((url) => url.pathname === next), page.keyboard.press('l')])
-    await Promise.all([page.waitForURL((url) => url.pathname === hrefs[at]), page.keyboard.press('h')])
+    await Promise.all([
+      page.waitForURL((url) => url.pathname === hrefs[at]),
+      page.keyboard.press('h'),
+    ])
+  }
+})
+
+test('TC-E-60 g then h goes to the home page of the current language, in both views', async ({
+  page,
+}) => {
+  for (const [view, start, home] of [
+    ['cli', '/builds', '/'],
+    ['modern', '/ja/stacks', '/ja'],
+  ] as const) {
+    await open(page, start, { view })
+    await page.keyboard.press('g')
+    await Promise.all([
+      page.waitForURL((url) => url.pathname.replace(/\/$/, '') === home.replace(/\/$/, '')),
+      page.keyboard.press('h'),
+    ])
   }
 })

@@ -112,7 +112,8 @@ all managed by editors without code changes.
   search, `j`/`k` move through the page's list (note rows, build rows, the
   open Stacks rows, the home project list), `h`/`l` go to the previous / next
   section of the header nav (on a page outside the nav, `l` goes to the first
-  and `h` to the last; no wrap-around), `t` toggles the theme, `v` switches
+  and `h` to the last; no wrap-around), `g` then `h` (within a second) goes
+  to the home page of the page's language, `t` toggles the theme, `v` switches
   between the CLI and ADE views, `s` opens the `/status` panel. Inside an open
   dialog (search, `/status`) these keys belong to the dialog.
 - **F-NAV-4** The site version (`docs/VERSIONING.md`) is shown next to the

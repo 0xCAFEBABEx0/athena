@@ -12,6 +12,8 @@ section of each new version as a GitHub Release.
   notes, builds, stacks, about), in both views. The Keys tab in `/status`,
   the shortcut hints and the home banner's "Tips for getting started" list
   them, with `j` / `k`.
+- `g` then `h` goes to the home page (in the page's language) from anywhere
+  on the site. It is listed in the same places.
 
 ### Fixed
 
