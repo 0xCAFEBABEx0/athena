@@ -206,11 +206,14 @@ review each language and publish. See `src/translation/`.
 | `socialLinks` | array (max 8) of `label`, `url` | Links in the home intro box |
 | `projects` | array (max 12) of `name`, `url`, `description` (localized) | "Things I built" list on the home page |
 | `picks` | array (max 6) of `url` (required, stored as `https://x.com/<handle>/status/<id>`), `note` (localized), `text`, `authorName`, `authorHandle`, `postedAt` (day), `lang` | "Picks from X" cards on the home page. On save, a new pick, a changed link or an empty text is filled from X's oEmbed endpoint; edited text is kept |
+| `github.username` | text (a GitHub username) | Contribution graph on the home page; empty = no graph |
+| `github.contributions` | json, hidden, filled by the CMS | The last year: `login`, `total`, `start` (first day, a Sunday), `counts` and `levels` (0–4) per day |
+| `github.syncedAt`, `github.syncError` | date / text, read-only | When the calendar was last read, and the last error (shown under the field) |
 | `banner.style` | select `fetch` / `off`, default `fetch` | CLI view: Hoo the owl + details, or the plain intro box |
 | `banner.mascot` | checkbox, default on | Show Hoo in the CLI banner |
 | `banner.tips` | array (max 12) of `text` (localized) | Lines Hoo says when woken, in order; empty = built-in |
 
-Hooks: `beforeChange` fills the X picks (`Site/hooks/fillXPicks.ts`, `x/oembed.ts`; a pick X cannot read and that has no text rejects the save with a message); `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
+Hooks: `beforeChange` fills the X picks (`Site/hooks/fillXPicks.ts`, `x/oembed.ts`; a pick X cannot read and that has no text rejects the save with a message) and reads the GitHub calendar when the username is new or changed (`github/contributions.ts`; a failure is stored in `syncError` and does not block the save); `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
 
 `stack` lists the tools shown on `/stacks` (`Stack/config.ts`). The page answers 404, and the sitemap leaves it out, until at least one tool exists.
 

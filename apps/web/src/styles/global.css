@@ -1740,6 +1740,96 @@ html:not([data-view='modern']) {
 }
 
 /* ------------------------------------------------------------------------
+   Home GitHub contribution graph (components/GitHubContributions.astro).
+   Weeks are columns of 7 days, shaded with the accent like GitHub's own
+   calendar. CLI: a plain block of squares under `gh contributions`. ADE: a
+   card with rounded squares. Below 640 px only the last 26 weeks show,
+   below 360 px the last 17.
+   ------------------------------------------------------------------------ */
+.contrib-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 1rem;
+}
+
+.contrib-total {
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+}
+
+.contrib-grid {
+  display: flex;
+  gap: 3px;
+  margin-top: 0.75rem;
+}
+
+.contrib-week {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.contrib-day {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background-color: color-mix(in oklab, var(--color-base-content) 8%, transparent);
+
+  &[data-level='1'] {
+    background-color: color-mix(in oklab, var(--color-primary) 25%, transparent);
+  }
+
+  &[data-level='2'] {
+    background-color: color-mix(in oklab, var(--color-primary) 45%, transparent);
+  }
+
+  &[data-level='3'] {
+    background-color: color-mix(in oklab, var(--color-primary) 70%, transparent);
+  }
+
+  &[data-level='4'] {
+    background-color: var(--color-primary);
+  }
+}
+
+.contrib-pad {
+  visibility: hidden;
+}
+
+@media (max-width: 39.99rem) {
+  .contrib-week:nth-last-child(n + 27) {
+    display: none;
+  }
+}
+
+/* Phones narrower than 360 px: the last 17 weeks (about four months). */
+@media (max-width: 22.49rem) {
+  .contrib-week:nth-last-child(n + 18) {
+    display: none;
+  }
+}
+
+html:not([data-view='modern']) .contrib-day {
+  border-radius: 1px;
+}
+
+[data-view='modern'] {
+  .contrib-box {
+    padding: 1rem 1.25rem 1.125rem;
+    border-radius: 1rem;
+    background-color: var(--modern-card);
+    box-shadow: var(--modern-shadow);
+  }
+
+  .contrib-day {
+    border-radius: 3px;
+  }
+}
+
+/* ------------------------------------------------------------------------
    /stacks (components/stack/StackList.astro). CLI: a `stacks --tree` print
    (group dirs, ├─ └─ rows, year and ↗ on the right). ADE: /work-like list
    with the tool's favicon in a tile, "Name — note" and "since 2025".

@@ -21,6 +21,7 @@ import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Projects } from './collections/Projects'
+import { syncContributions } from './github/contributions'
 import { syncProjects } from './github/sync'
 import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
@@ -136,14 +137,20 @@ export default buildConfig({
     },
     tasks: [
       {
-        // Refresh the GitHub data behind /builds. The hourly Vercel Schedule
-        // hits /api/payload-jobs/run, which queues this when the cron is due.
+        // Refresh the GitHub data behind /builds and the home page's
+        // contribution graph. The hourly Vercel Schedule hits
+        // /api/payload-jobs/run, which queues this when the cron is due.
         slug: 'syncGitHub',
         retries: 1,
         schedule: [{ cron: '0 */6 * * *', queue: 'default' }],
         handler: async ({ req }) => {
           const output = await syncProjects(req.payload)
-          return { output }
+          // Separate from the projects: one failing must not stop the other.
+          const contributions = await syncContributions(req.payload).catch((error: unknown) => {
+            req.payload.logger.error(`GitHub contributions: ${String(error)}`)
+            return { checked: false, updated: false }
+          })
+          return { output: { ...output, contributions: contributions.updated } }
         },
       },
     ],

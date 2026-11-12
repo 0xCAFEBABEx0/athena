@@ -57,7 +57,7 @@ apps/cms/src/
 ├── app/(payload)/            # Payload admin panel + API routes
 ├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only; rendering lives in apps/web
 ├── Site/ Stack/ Header/ Footer/  # globals (Site = name, intro, links, projects; Stack = /stacks tools + favicon fetch)
-├── github/                   # sync.ts: GitHub snapshot for the projects (/builds) collection
+├── github/                   # sync.ts: GitHub snapshot for the projects (/builds) collection; contributions.ts: home contribution graph
 ├── x/                        # oembed.ts: reads posts on X for the Site global picks
 ├── utilities/                # invalidateWeb.ts, generatePreviewPath.ts, env.ts, getURL.ts
 └── payload.config.ts         # Main Payload CMS configuration

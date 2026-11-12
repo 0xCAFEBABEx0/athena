@@ -6,6 +6,15 @@ section of each new version as a GitHub Release.
 
 ## [1.2.0] - Unreleased
 
+### Added
+
+- A **GitHub contribution graph** on the home page: the last year of
+  contributions, one square per day in the site's accent, with the yearly
+  total and a link to the profile. Set the GitHub username in the CMS under
+  Globals → Site → GitHub contributions; the CMS reads the graph from GitHub
+  when you save and every 6 hours after, and visitors load nothing from
+  GitHub. On phones the graph shows the last 6 months (4 below 360 px).
+
 ### Changed
 
 - The three sections have new names and addresses: posts are **Notes** at

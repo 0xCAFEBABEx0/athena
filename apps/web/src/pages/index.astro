@@ -13,6 +13,7 @@ import { getSite } from '@/lib/site'
 import WorkList from '@/components/work/WorkList.astro'
 import CliBanner from '@/components/CliBanner.astro'
 import XPicks from '@/components/XPicks.astro'
+import GitHubContributions from '@/components/GitHubContributions.astro'
 import SiteMark from '@/components/SiteMark.astro'
 import { buildActivity } from '@/lib/activity'
 import { getWork } from '@/lib/work'
@@ -148,6 +149,8 @@ const meta = {
         </section>
       ))
     }
+
+    <GitHubContributions class="mt-9" data={site.contributions} />
 
     <XPicks class="mt-9" picks={site.picks} />
 

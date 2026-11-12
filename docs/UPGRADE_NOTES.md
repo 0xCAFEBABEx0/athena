@@ -2,6 +2,32 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## GitHub contribution graph on the home page — 2026-11-12
+
+**CMS**
+
+- Site global: new group `github` (`username`; `contributions` json, hidden;
+  `syncedAt`, `syncError` read-only). `github/contributions.ts` reads the
+  calendar with one GraphQL request (`GITHUB_TOKEN`, the same token as
+  /builds) when the username is saved, and `syncGitHub` refreshes it every
+  6 hours, saving the Site global only when the calendar changed.
+
+**Web**
+
+- `components/GitHubContributions.astro` on `/` (below the projects), from
+  `site.contributions` (`lib/site.ts`).
+
+**Database (manual, schema push is off)**
+
+Run [`docs/sql/2026-11-12-github-contributions.sql`](./sql/2026-11-12-github-contributions.sql)
+(four columns on `site`) on the preview Neon branch and then production,
+before the CMS deploys. Checked: applied twice to a copy of the 1.1.0 schema,
+it gives the same schema as a push of the new config.
+
+**After deploying (content)**
+
+- Globals → Site → GitHub contributions: enter the GitHub username and save.
+
 ## Sections renamed: `/notes`, `/builds`, `/stacks` — 2026-11-12
 
 **Web**

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { normalizeSite } from './site'
+import { contributionsOf, normalizeSite } from './site'
 
 describe('normalizeSite', () => {
   test('TC-U-10 defaults when the CMS is empty or unreachable', () => {
@@ -75,5 +75,52 @@ describe('normalizeSite', () => {
       },
     ])
     expect(normalizeSite(null).picks).toEqual([])
+  })
+})
+
+describe('contributionsOf', () => {
+  const stored = (over: Record<string, unknown> = {}) => ({
+    username: 'Octocat',
+    contributions: {
+      login: 'octocat',
+      total: 12,
+      // A Wednesday: the first week starts with 3 empty slots (Sun–Tue).
+      start: '2025-11-12',
+      counts: [1, 0, 3, 0, 0, 2, 4, 1, 1],
+      levels: [1, 0, 2, 0, 0, 1, 4, 9, -1],
+      ...over,
+    },
+  })
+
+  test('TC-U-48 the stored calendar becomes Sunday-first weeks with dates', () => {
+    const data = contributionsOf(stored())
+    expect(data?.login).toBe('octocat')
+    expect(data?.total).toBe(12)
+    expect(data?.weeks.map((week) => week.length)).toEqual([7, 5])
+    expect(data?.weeks[0]?.slice(0, 3)).toEqual([null, null, null])
+    expect(data?.weeks[0]?.[3]).toEqual({ date: '2025-11-12', count: 1, level: 1 })
+    expect(data?.weeks[1]?.[0]).toEqual({ date: '2025-11-16', count: 0, level: 0 })
+    // Out-of-range shades fall back to none.
+    expect(data?.weeks[1]?.slice(3).map((day) => day?.level)).toEqual([0, 0])
+    expect(data?.weeks[1]?.[4]?.date).toBe('2025-11-20')
+    expect(normalizeSite({ github: stored() }).contributions).toEqual(data)
+  })
+
+  test('TC-U-48 no graph without a username, for another user, or for malformed data', () => {
+    expect(contributionsOf(undefined)).toBeNull()
+    expect(contributionsOf({ username: '', contributions: stored().contributions })).toBeNull()
+    expect(contributionsOf({ username: 'hubot', contributions: stored().contributions })).toBeNull()
+    for (const bad of [
+      { start: 'yesterday' },
+      { counts: [1, 2], levels: [1] },
+      { counts: [], levels: [] },
+      { counts: 'many' },
+      { login: '<script>' },
+    ]) {
+      expect(contributionsOf(stored(bad)), JSON.stringify(bad)).toBeNull()
+    }
+    expect(contributionsOf({ username: 'octocat', contributions: null })).toBeNull()
+    expect(contributionsOf(stored({ total: -5 }))?.total).toBe(0)
+    expect(normalizeSite(null).contributions).toBeNull()
   })
 })

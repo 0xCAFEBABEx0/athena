@@ -1696,7 +1696,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Name, intro, links, projects and X picks shown on the public site (whoa.me).
+ * Name, intro, links, projects, X picks and the GitHub graph shown on the public site (whoa.me).
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site".
@@ -1780,6 +1780,23 @@ export interface Site {
         id?: string | null;
       }[]
     | null;
+  /**
+   * The contribution graph on the home page. Enter a GitHub username and save: the last year is read from GitHub now and every 6 hours after. Leave it empty to hide the graph.
+   */
+  github?: {
+    username?: string | null;
+    syncedAt?: string | null;
+    syncError?: string | null;
+    contributions?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+  };
   /**
    * Home-page welcome box in the CLI view. Hoo, the owl, sits on the left; clicking it wakes it up and it says one of the tips.
    */
@@ -1965,6 +1982,14 @@ export interface SiteSelect<T extends boolean = true> {
         postedAt?: T;
         lang?: T;
         id?: T;
+      };
+  github?:
+    | T
+    | {
+        username?: T;
+        syncedAt?: T;
+        syncError?: T;
+        contributions?: T;
       };
   banner?:
     | T
