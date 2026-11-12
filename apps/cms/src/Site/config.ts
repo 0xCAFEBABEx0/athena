@@ -1,5 +1,6 @@
 import type { GlobalConfig } from 'payload'
 
+import { fillContributions, isGitHubLogin } from '../github/contributions'
 import { normalizeXUrl } from '../x/oembed'
 import { fillXPicks } from './hooks/fillXPicks'
 import { revalidateSite } from './hooks/revalidateSite'
@@ -15,7 +16,8 @@ export const Site: GlobalConfig = {
     read: () => true,
   },
   admin: {
-    description: 'Name, intro, links, projects and X picks shown on the public site (whoa.me).',
+    description:
+      'Name, intro, links, projects, X picks and the GitHub graph shown on the public site (whoa.me).',
   },
   fields: [
     {
@@ -181,6 +183,54 @@ export const Site: GlobalConfig = {
       ],
     },
     {
+      name: 'github',
+      type: 'group',
+      label: 'GitHub contributions',
+      admin: {
+        description:
+          'The contribution graph on the home page. Enter a GitHub username and save: the last year is read from GitHub now and every 6 hours after. Leave it empty to hide the graph.',
+      },
+      fields: [
+        {
+          name: 'username',
+          type: 'text',
+          label: 'GitHub username',
+          admin: { placeholder: 'octocat' },
+          validate: (value: string | null | undefined) =>
+            !value?.trim() || isGitHubLogin(value.trim())
+              ? true
+              : 'Enter a GitHub username (letters, digits and hyphens), without @ or a link.',
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'syncedAt',
+              type: 'date',
+              label: 'Read from GitHub',
+              admin: {
+                width: '35%',
+                readOnly: true,
+                date: { pickerAppearance: 'dayAndTime' },
+              },
+            },
+            {
+              name: 'syncError',
+              type: 'text',
+              label: 'Last error',
+              admin: { width: '65%', readOnly: true },
+            },
+          ],
+        },
+        {
+          // Filled by the CMS; the web app draws the graph from it.
+          name: 'contributions',
+          type: 'json',
+          admin: { hidden: true },
+        },
+      ],
+    },
+    {
       name: 'banner',
       type: 'group',
       label: 'CLI banner',
@@ -227,7 +277,7 @@ export const Site: GlobalConfig = {
     },
   ],
   hooks: {
-    beforeChange: [fillXPicks()],
+    beforeChange: [fillXPicks(), fillContributions()],
     afterChange: [revalidateSite],
   },
 }

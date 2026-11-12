@@ -56,8 +56,8 @@ bun run deploy:production     # Open a preview -> main PR and enable auto-merge
 apps/cms/src/
 ├── app/(payload)/            # Payload admin panel + API routes
 ├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only; rendering lives in apps/web
-├── Site/ Stack/ Header/ Footer/  # globals (Site = name, intro, links, projects; Stack = /stack tools + favicon fetch)
-├── github/                   # sync.ts: GitHub snapshot for the projects (/work) collection
+├── Site/ Stack/ About/ Header/ Footer/  # globals (Site = name, intro, links, projects; Stack = /stacks tools + favicon fetch; About = /about profile)
+├── github/                   # sync.ts: GitHub snapshot for the projects (/builds) collection; contributions.ts: home contribution graph
 ├── x/                        # oembed.ts: reads posts on X for the Site global picks
 ├── utilities/                # invalidateWeb.ts, generatePreviewPath.ts, env.ts, getURL.ts
 └── payload.config.ts         # Main Payload CMS configuration
@@ -65,15 +65,15 @@ apps/cms/src/
 apps/cms/config/next.config.mjs   # Real Next.js config (root next.config.mjs re-exports it)
 
 apps/web/src/
-├── pages/                    # [...slug], posts/*, search, sitemaps, 404, api/* endpoints
+├── pages/                    # [...slug], notes/* (posts), builds/* (projects), stacks, about, search, sitemaps, 404, api/* endpoints
 ├── components/               # Block/hero renderers (blocks/, heros/, ...)
-├── lib/                      # cms.ts (REST client), site.ts (site global), work.ts (/work entries), stack.ts (/stack), richtext.ts, draft.ts, seo.ts, media.ts
+├── lib/                      # cms.ts (REST client), site.ts (site global), work.ts (/builds entries), stack.ts (/stacks), about.ts (/about), richtext.ts, draft.ts, seo.ts, media.ts
 ├── layouts/Layout.astro      # Theme init, meta tags, Header/Footer
 └── middleware.ts             # Redirects-collection handling
 
 packages/shared/src/
 ├── payload-types.ts          # Auto-generated (DO NOT EDIT; bun run generate:types)
-└── constants.ts              # CACHE_TAGS, DRAFT_COOKIE, COLLECTION_SLUGS, IMAGE_SIZES
+└── constants.ts              # CACHE_TAGS, DRAFT_COOKIE, COLLECTION_SLUGS, IMAGE_SIZES, ROUTES (public section paths)
 ```
 
 ## CMS ⇄ Web Contract
@@ -94,6 +94,7 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 - **CMS**: Server Components by default; add `'use client'` only when needed
 - **Front-end design and browser support** (`apps/web`): read [`docs/BASELINE.md`](./docs/BASELINE.md) before changing UI, CSS or client-side JS. It holds the Baseline target (Widely available freely; Newly available and Limited only as progressive enhancement), the features in use and their fallbacks, and the design rules: themes and dark mode (`data-theme`, not the OS media query), the daisyUI `include:` list, motion, switches, narrow widths
 - **Prefix unused vars** with `_` to suppress lint warnings
+- **Section paths**: posts live under `/notes`, projects under `/builds`, the Stack global at `/stacks` (renamed in 1.2.0), the About global at `/about`. Build them from `ROUTES` in `packages/shared/src/constants.ts`, never as string literals; `middleware.ts` answers the old `/posts`, `/work`, `/stack` (every language) with a 308 to the new path (query kept; `apps/web/scripts/route-legacy-redirects.mjs` routes those paths to the plain function after the build, because the ISR function never sees the query and caches by path), and CMS links typed with an old path are mapped by `currentRoute`
 - **Links from data**: a URL from the CMS, GitHub or a query string becomes an `href` or redirect only through `safeHref` / `httpUrl` / `isLocalPath` (`apps/web/src/lib/safe-url.ts`)
 - **Search** (`/search`) is one ISR page per language filtered in the browser; never read `?q=` on the server
 - **Tests**: add or update a case in `docs/TESTING.md` with each behavior change, and run both web suites before pushing
@@ -199,7 +200,7 @@ REVALIDATE_SECRET=         # Shared with web: bearer token for /api/invalidate (
 WEB_PROTECTION_BYPASS=     # optional; athena-web Protection Bypass for Automation (invalidation past Vercel Authentication)
 BLOB_READ_WRITE_TOKEN=     # Vercel Blob storage token
 ANTHROPIC_API_KEY=         # Translate button (Claude); TRANSLATION_MODEL optional
-GITHUB_TOKEN=              # /work GitHub sync (fine-grained, public repos read-only)
+GITHUB_TOKEN=              # /builds GitHub sync (fine-grained, public repos read-only)
 ```
 
 Web (`apps/web/.env` — see `apps/web/README.md`):

@@ -91,7 +91,7 @@ served at `/`.
 
 ### 3.2 Posts (`posts`)
 
-Blog articles served at `/posts/{slug}`.
+Blog articles served at `/notes/{slug}`.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -144,7 +144,7 @@ Timestamps on. Create or rotate the web service account with
 
 ### 3.5a Work (`projects`)
 
-Repositories shown on the public site at `/work` (and pinned ones on the home
+Repositories shown on the public site at `/builds` (and pinned ones on the home
 page), one entry per public GitHub repository. Nothing is imported
 automatically: only repositories added here appear, and **Hidden** takes one
 off the site without deleting it (visitors' reads filter it out).
@@ -157,7 +157,7 @@ off the site without deleting it (visitors' reads filter it out).
 | `status` | `auto` (default), `waiting`, `working`, `idle`, `done`. Shown as Waiting on you / Working / Idle / Resolved, in that order. Auto: pushed in the last 30 days = working, archived = done, else idle; `waiting` ("try it / feedback wanted") is only set by hand. |
 | `privateRepo` | "Private on GitHub": GitHub is never asked; the entry is shown only with a `liveUrl`, from the CMS text (no source link, commits or languages), and visitors' reads omit `repo` and `github`. Auto status = Resolved. |
 | `order`, `pinned`, `hidden` | Home page selection and order; `hidden` keeps the entry off the site. |
-| `slug` | Read-only, from the repository name: `/work/<slug>`. |
+| `slug` | Read-only, from the repository name: `/builds/<slug>`. |
 | `github`, `syncedAt`, `syncError` | Read-only snapshot from GitHub (languages, topics, stars, latest release, last 5 commits, commit count, open pull requests, custom social preview image, activity) and sync state. |
 
 The snapshot is fetched on save when the entry is new or its repository
@@ -206,13 +206,16 @@ review each language and publish. See `src/translation/`.
 | `socialLinks` | array (max 8) of `label`, `url` | Links in the home intro box |
 | `projects` | array (max 12) of `name`, `url`, `description` (localized) | "Things I built" list on the home page |
 | `picks` | array (max 6) of `url` (required, stored as `https://x.com/<handle>/status/<id>`), `note` (localized), `text`, `authorName`, `authorHandle`, `postedAt` (day), `lang` | "Picks from X" cards on the home page. On save, a new pick, a changed link or an empty text is filled from X's oEmbed endpoint; edited text is kept |
+| `github.username` | text (a GitHub username) | Contribution graph on the home page; empty = no graph |
+| `github.contributions` | json, hidden, filled by the CMS | The last year: `login`, `total`, `start` (first day, a Sunday), `counts` and `levels` (0–4) per day |
+| `github.syncedAt`, `github.syncError` | date / text, read-only | When the calendar was last read, and the last error (shown under the field) |
 | `banner.style` | select `fetch` / `off`, default `fetch` | CLI view: Hoo the owl + details, or the plain intro box |
 | `banner.mascot` | checkbox, default on | Show Hoo in the CLI banner |
 | `banner.tips` | array (max 12) of `text` (localized) | Lines Hoo says when woken, in order; empty = built-in |
 
-Hooks: `beforeChange` fills the X picks (`Site/hooks/fillXPicks.ts`, `x/oembed.ts`; a pick X cannot read and that has no text rejects the save with a message); `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
+Hooks: `beforeChange` fills the X picks (`Site/hooks/fillXPicks.ts`, `x/oembed.ts`; a pick X cannot read and that has no text rejects the save with a message) and reads the GitHub calendar when the username is new or changed (`github/contributions.ts`; a failure is stored in `syncError` and does not block the save); `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
 
-`stack` lists the tools shown on `/stack` (`Stack/config.ts`). The page answers 404, and the sitemap leaves it out, until at least one tool exists.
+`stack` lists the tools shown on `/stacks` (`Stack/config.ts`). The page answers 404, and the sitemap leaves it out, until at least one tool exists.
 
 | Field | Type | Used for |
 |---|---|---|
@@ -221,6 +224,18 @@ Hooks: `beforeChange` fills the X picks (`Site/hooks/fillXPicks.ts`, `x/oembed.t
 | `groups.items` | array (max 40) of `name` (required, not localized), `url` (http(s)), `note` (localized), `since` (year), `status` (`current` / `trying` / `former`, default `current`), `icon` (upload → `media`) | One row per tool. `trying` adds a small label; `former` tools of every group are folded together at the end of the page |
 
 Hooks: `beforeChange` fills the `icon` of each item that has a link but no icon (`Stack/hooks/fillStackIcons.ts`, `Stack/favicon.ts`): the site's own declared icon (SVG, then the largest PNG/WebP, then apple-touch-icon; `.ico` skipped), else Google's favicon service, converted with sharp to a 64×64 PNG and stored once per host in Media as `favicon-<host>.png` (outside the save's transaction). Only public http(s) hosts are fetched, redirects are re-checked, pages are capped at 1 MB and images at 512 KB, 8 s each. A hand-picked icon is kept; changing the link to another site replaces an icon that was fetched for the old site. No readable icon is not an error: the web app shows the name's initials. `afterChange` invalidates `/stack` with the `global_stack` and `sitemap` tags.
+
+`about` is the profile shown on `/about` (`About/config.ts`). The page answers 404, and the sitemap leaves it out, until `lead` or `body` has text.
+
+| Field | Type | Used for |
+|---|---|---|
+| `heading` | text, localized | The page's `h1`; empty = "About" |
+| `lead` | textarea, localized | Opening paragraph and the page's meta description |
+| `portrait` | upload → `media` | Optional picture beside the lead (its `alt` is read aloud) |
+| `portraitCaption` | text, localized | Line under the portrait |
+| `body` | richText (Lexical: paragraphs, H2/H3, lists, quotes, rules, links), localized | The story below the lead |
+
+Hooks: `afterChange` invalidates `/about` with the `global_about` and `sitemap` tags.
 
 `header` and `footer` share the same shape:
 
@@ -267,7 +282,7 @@ default `true`). While locked, the slug is derived from `title` by
 | `appearance` | `default` or `outline` (unless `appearances: false`) |
 
 Resolution (both apps): a page reference becomes `/{slug}`, a post reference
-`/posts/{slug}`, a custom link its `url`.
+`/notes/{slug}`, a custom link its `url`.
 
 `fields/linkGroup.ts` wraps `link` in an array named `links`.
 
@@ -304,12 +319,13 @@ both apps, plus `bun run generate:types`.
 | `publishedAt` field hook | Posts | Sets `publishedAt` to now when publishing without a date. |
 | `populateAuthors` | Posts `afterRead` | Fills `populatedAuthors` with `{ id, name }`. |
 | `revalidatePage` / `revalidateDelete` | Pages | Invalidates `/` or `/{slug}` (old path too on unpublish) with tags `pages`, `sitemap`. |
-| `revalidatePost` / `revalidateDelete` | Posts | Invalidates `/posts/{slug}` and `/posts` with tags `posts`, `sitemap`. |
+| `revalidatePost` / `revalidateDelete` | Posts | Invalidates `/notes/{slug}` and `/notes` with tags `posts`, `sitemap`. |
 | `fillFromGitHub` | Projects `beforeChange` | Normalizes `repo`, sets `slug`, fetches the GitHub snapshot for new or re-pointed entries. |
-| `revalidateProject` / delete | Projects | Invalidates `/`, `/work`, `/work/{slug}` (old slug too) with tag `projects`. |
-| `revalidateSite` | Global | Paths `/`, `/posts`; tag `global_site`. |
+| `revalidateProject` / delete | Projects | Invalidates `/`, `/builds`, `/builds/{slug}` (old slug too) with tag `projects`. |
+| `revalidateSite` | Global | Paths `/`, `/notes`; tag `global_site`. |
 | `fillStackIcons` | Stack `beforeChange` | Fetches a favicon into Media for items with a link and no icon. |
-| `revalidateStack` | Global | Path `/stack`; tags `global_stack`, `sitemap`. |
+| `revalidateStack` | Global | Path `/stacks`; tags `global_stack`, `sitemap`. |
+| `revalidateAbout` | Global | Path `/about`; tags `global_about`, `sitemap`. |
 | `revalidateHeader` / `revalidateFooter` | Globals | Tag `global_header` / `global_footer`. |
 | `revalidateRedirects` | Redirects | Tag `redirects`. |
 | `formatSlugHook` | slug field | Formats slug before validation. |

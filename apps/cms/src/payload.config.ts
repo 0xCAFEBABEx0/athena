@@ -21,12 +21,14 @@ import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Projects } from './collections/Projects'
+import { syncContributions } from './github/contributions'
 import { syncProjects } from './github/sync'
 import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { Site } from './Site/config'
 import { Stack } from './Stack/config'
+import { About } from './About/config'
 import { plugins } from './plugins'
 import { DEFAULT_LOCALE } from '@athena/shared/constants'
 import { defaultLexical } from '@/fields/defaultLexical'
@@ -87,7 +89,7 @@ export default buildConfig({
   // The web frontend lives on its own origin and POSTs form submissions here.
   cors: [getServerSideURL(), getWebURL()].filter(Boolean),
   csrf: [getServerSideURL(), getWebURL()].filter(Boolean),
-  globals: [Site, Stack, Header, Footer],
+  globals: [Site, Stack, About, Header, Footer],
   // English is written first; Japanese and Chinese are translated copies
   // (see endpoints/translate). Untranslated fields fall back to English.
   localization: {
@@ -136,14 +138,29 @@ export default buildConfig({
     },
     tasks: [
       {
-        // Refresh the GitHub data behind /work. The hourly Vercel Schedule
-        // hits /api/payload-jobs/run, which queues this when the cron is due.
+        // Refresh the GitHub data behind /builds and the home page's
+        // contribution graph. The hourly Vercel Schedule hits
+        // /api/payload-jobs/run, which queues this when the cron is due.
         slug: 'syncGitHub',
         retries: 1,
         schedule: [{ cron: '0 */6 * * *', queue: 'default' }],
         handler: async ({ req }) => {
-          const output = await syncProjects(req.payload)
-          return { output }
+          // Separate: one failing must not stop the other. A projects failure
+          // is thrown again afterwards so the job's retry still applies.
+          const [projects, contributions] = await Promise.allSettled([
+            syncProjects(req.payload),
+            syncContributions(req.payload),
+          ])
+          if (contributions.status === 'rejected') {
+            req.payload.logger.error(`GitHub contributions: ${String(contributions.reason)}`)
+          }
+          if (projects.status === 'rejected') throw projects.reason
+          return {
+            output: {
+              ...projects.value,
+              contributions: contributions.status === 'fulfilled' && contributions.value.updated,
+            },
+          }
         },
       },
     ],

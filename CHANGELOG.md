@@ -4,6 +4,39 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.2.0] - 2026-11-12
+
+### Added
+
+- A **GitHub contribution graph** on the home page: the last year of
+  contributions, one square per day in the site's accent, with the yearly
+  total; the whole graph links to the profile. Set the GitHub username in the CMS under
+  Globals → Site → GitHub contributions; the CMS reads the graph from GitHub
+  when you save and every 6 hours after, and visitors load nothing from
+  GitHub. On phones the graph shows the last 6 months (4 below 360 px).
+- An **About** page (`/about`, `/ja/about`, `/zh/about`): a greeting, a short
+  lead, an optional portrait with a caption, and the longer story in rich
+  text, followed by the social links from Site. The CLI view prints it as
+  `cat about.md`; the ADE view puts the lead and portrait in a card. Write
+  it in the CMS under Globals → About; the page stays hidden until it has a
+  lead or a story. Add an `/about` link to the Header nav to show it in the
+  menu.
+
+### Changed
+
+- The three sections have new names and addresses: posts are **Notes** at
+  `/notes`, projects are **Builds** at `/builds`, and the tools page is
+  **Stacks** at `/stacks` (also under `/ja` and `/zh`). Headings, page
+  titles, the CLI commands (`ls notes`, `ls ~/builds`, `stacks --tree`), the
+  sitemap, RSS, `llms.txt` and the search index use the new names.
+- Old addresses (`/posts/...`, `/work/...`, `/stack`, in every language)
+  redirect permanently (308) to the new ones, with their query string, so
+  existing links and search results keep working. A CMS redirect written for
+  an old address still takes precedence, also when it is reached through
+  its new address (a CMS link typed with the old path). Header links saved in the CMS with
+  an old path point at the new page directly. RSS items keep their old IDs,
+  so feed readers do not list every post again.
+
 ## [1.1.0] - 2026-11-12
 
 ### Added

@@ -8,7 +8,7 @@ describe('generatePreviewPath', () => {
   test('English stays unprefixed', () => {
     expect(
       pathOf(generatePreviewPath({ collection: 'posts', slug: 'hello', req: { locale: 'en' } })),
-    ).toBe('/posts/hello')
+    ).toBe('/notes/hello')
     expect(pathOf(generatePreviewPath({ collection: 'pages', slug: 'about', req: {} }))).toBe(
       '/about',
     )
@@ -17,7 +17,7 @@ describe('generatePreviewPath', () => {
   test('the edited translation keeps its locale prefix', () => {
     expect(
       pathOf(generatePreviewPath({ collection: 'posts', slug: 'hello', req: { locale: 'ja' } })),
-    ).toBe('/ja/posts/hello')
+    ).toBe('/ja/notes/hello')
     expect(
       pathOf(generatePreviewPath({ collection: 'pages', slug: 'about', req: { locale: 'zh' } })),
     ).toBe('/zh/about')
@@ -26,6 +26,6 @@ describe('generatePreviewPath', () => {
   test('an unknown locale falls back to English', () => {
     expect(
       pathOf(generatePreviewPath({ collection: 'posts', slug: 'hello', req: { locale: 'all' } })),
-    ).toBe('/posts/hello')
+    ).toBe('/notes/hello')
   })
 })

@@ -1740,7 +1740,199 @@ html:not([data-view='modern']) {
 }
 
 /* ------------------------------------------------------------------------
-   /stack (components/stack/StackList.astro). CLI: a `stack --tree` print
+   Home GitHub contribution graph (components/GitHubContributions.astro).
+   Weeks are columns of 7 days, shaded with the accent like GitHub's own
+   calendar. CLI: a plain block of squares under `gh contributions`. ADE: a
+   card with rounded squares. Below 640 px only the last 26 weeks show,
+   below 360 px the last 17. The whole box is one link to the GitHub
+   profile: hovering it tints the total and the label with the accent.
+   ------------------------------------------------------------------------ */
+.contrib-box {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
+  }
+}
+
+.contrib-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 1rem;
+}
+
+.contrib-label,
+.contrib-total {
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  transition: color 0.2s ease;
+}
+
+.contrib-box:hover {
+  .contrib-label,
+  .contrib-total {
+    color: var(--color-primary);
+  }
+}
+
+.contrib-grid {
+  display: flex;
+  gap: 3px;
+  margin-top: 0.75rem;
+}
+
+.contrib-week {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.contrib-day {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background-color: color-mix(in oklab, var(--color-base-content) 8%, transparent);
+
+  &[data-level='1'] {
+    background-color: color-mix(in oklab, var(--color-primary) 25%, transparent);
+  }
+
+  &[data-level='2'] {
+    background-color: color-mix(in oklab, var(--color-primary) 45%, transparent);
+  }
+
+  &[data-level='3'] {
+    background-color: color-mix(in oklab, var(--color-primary) 70%, transparent);
+  }
+
+  &[data-level='4'] {
+    background-color: var(--color-primary);
+  }
+}
+
+.contrib-pad {
+  visibility: hidden;
+}
+
+@media (max-width: 39.99rem) {
+  .contrib-week:nth-last-child(n + 27) {
+    display: none;
+  }
+}
+
+/* Phones narrower than 360 px: the last 17 weeks (about four months). */
+@media (max-width: 22.49rem) {
+  .contrib-week:nth-last-child(n + 18) {
+    display: none;
+  }
+}
+
+html:not([data-view='modern']) .contrib-day {
+  border-radius: 1px;
+}
+
+[data-view='modern'] {
+  .contrib-box {
+    padding: 1rem 1.25rem 1.125rem;
+    border-radius: 1rem;
+    background-color: var(--modern-card);
+    box-shadow: var(--modern-shadow);
+  }
+
+  .contrib-day {
+    border-radius: 3px;
+  }
+}
+
+/* ------------------------------------------------------------------------
+   /about (pages/about.astro). CLI: `cat about.md` printed under the prompt,
+   indented like the other command output. ADE: the lead and portrait in a
+   card, the story below it. The portrait sits beside the lead from 640 px,
+   and below it, smaller, on phones.
+   ------------------------------------------------------------------------ */
+.about-intro {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.about-lead {
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  white-space: pre-line;
+}
+
+.about-portrait {
+  margin: 0;
+  max-width: 10rem;
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--color-base-300);
+    border-radius: var(--radius-box);
+  }
+
+  figcaption {
+    margin-top: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  }
+}
+
+@media (min-width: 40rem) {
+  .about-intro-portrait {
+    grid-template-columns: minmax(0, 1fr) 12rem;
+    align-items: start;
+  }
+
+  .about-portrait {
+    grid-row: 1;
+    grid-column: 2;
+    max-width: none;
+  }
+}
+
+.about-body {
+  margin-top: 2.25rem;
+}
+
+.about-links {
+  margin-top: 2.5rem;
+}
+
+html:not([data-view='modern']) {
+  .about-intro,
+  .about-body,
+  .about-links {
+    padding-left: 1.25rem;
+  }
+}
+
+[data-view='modern'] {
+  .about-intro {
+    margin-top: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    background-color: var(--modern-card);
+    box-shadow: var(--modern-shadow);
+  }
+
+  .about-portrait img {
+    border-radius: 0.75rem;
+  }
+}
+
+/* ------------------------------------------------------------------------
+   /stacks (components/stack/StackList.astro). CLI: a `stacks --tree` print
    (group dirs, ├─ └─ rows, year and ↗ on the right). ADE: /work-like list
    with the tool's favicon in a tile, "Name — note" and "since 2025".
    ------------------------------------------------------------------------ */

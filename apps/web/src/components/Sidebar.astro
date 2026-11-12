@@ -1,4 +1,5 @@
 ---
+import { ROUTES } from '@athena/shared/constants'
 /**
  * Left sidebar of the modern view (agent-app layout): brand, search, nav,
  * recent posts and the author row. Hidden in the CLI view and below `lg`.
@@ -35,8 +36,8 @@ const links: CMSLinkData[] =
     ? navLinks
     : [
         { type: 'custom', url: '/', label: t.home },
-        { type: 'custom', url: '/posts', label: t.posts },
-        { type: 'custom', url: '/work', label: t.work },
+        { type: 'custom', url: ROUTES.posts, label: t.posts },
+        { type: 'custom', url: ROUTES.work, label: t.work },
         ]
 
 const current = splitLocale(Astro.originPathname).path
@@ -106,16 +107,16 @@ const authorInitial = (
       <section class="mt-5 min-h-0" aria-labelledby="sidebar-work">
         <h2 id="sidebar-work" class="flex items-baseline justify-between px-3 pb-1.5 text-xs font-medium text-base-content/65">
           {t.workTitle}
-          <a class="font-normal no-underline hover:text-base-content" href={lp('/work')}>{t.workAll} →</a>
+          <a class="font-normal no-underline hover:text-base-content" href={lp(ROUTES.work)}>{t.workAll} →</a>
         </h2>
         <ul class="menu w-full p-0 text-[13.5px]">
           {sideWork.map((item) => {
-            const href = lp(`/work/${item.slug}`)
+            const href = lp(`${ROUTES.work}/${item.slug}`)
             return (
               <li>
                 <a
                   href={href}
-                  class:list={['sidebar-work-link', { 'menu-active': current === `/work/${item.slug}` }]}
+                  class:list={['sidebar-work-link', { 'menu-active': current === `${ROUTES.work}/${item.slug}` }]}
                   title={item.description || item.title}
                 >
                   <span class:list={['work-icon', `work-icon-${item.status}`]} aria-hidden="true" />
@@ -137,12 +138,12 @@ const authorInitial = (
         </h2>
         <ul class="menu w-full p-0 text-[13.5px]">
           {recent.map((post) => {
-            const href = lp(`/posts/${post.slug}`)
+            const href = lp(`${ROUTES.posts}/${post.slug}`)
             return (
               <li>
                 <a
                   href={href}
-                  class:list={['block truncate', { 'menu-active': current === `/posts/${post.slug}` }]}
+                  class:list={['block truncate', { 'menu-active': current === `${ROUTES.posts}/${post.slug}` }]}
                   title={post.title}
                 >
                   {post.title}

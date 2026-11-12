@@ -191,7 +191,7 @@ const sameSnapshot = (a: unknown, b: unknown): boolean => JSON.stringify(a) === 
 
 /**
  * Scheduled task body: refresh every project's GitHub snapshot and save only
- * the ones that changed (their afterChange hook invalidates /work).
+ * the ones that changed (their afterChange hook invalidates /builds).
  */
 export async function syncProjects(
   payload: Payload,

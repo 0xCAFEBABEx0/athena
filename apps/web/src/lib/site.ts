@@ -28,6 +28,8 @@ export type SiteData = {
   projects: { name: string; url: string | null; description: string }[]
   /** Posts on X picked for the home page, read from X when the CMS saved them. */
   picks: SitePick[]
+  /** GitHub contribution graph for the home page, or null when off or not read yet. */
+  contributions: Contributions | null
   /** CLI-view welcome box: Hoo the owl beside the intro, or the plain box. */
   banner: {
     style: 'fetch' | 'off'
@@ -46,6 +48,58 @@ export type SitePick = {
   postedAt: string | null
   lang: string | null
   note: string
+}
+
+export type ContributionDay = { date: string; count: number; level: 0 | 1 | 2 | 3 | 4 }
+
+export type Contributions = {
+  login: string
+  total: number
+  /** Columns of 7 days, Sunday first; null pads the first week before the calendar starts. */
+  weeks: (ContributionDay | null)[][]
+}
+
+const DAY_MS = 86_400_000
+
+/**
+ * The calendar the CMS stored (`github.contributions`: login, total, start
+ * date, counts and levels per day) as weeks for the graph. Anything that does
+ * not look like one, or belongs to another user than the one set, gives null.
+ */
+export const contributionsOf = (github: Site['github'] | undefined): Contributions | null => {
+  const login = github?.username?.trim() ?? ''
+  const data = github?.contributions as Record<string, unknown> | null | undefined
+  if (!login || !data || typeof data !== 'object') return null
+  const { login: owner, total, start, counts, levels } = data
+  if (typeof owner !== 'string' || owner.toLowerCase() !== login.toLowerCase()) return null
+  if (!/^[A-Za-z0-9-]{1,39}$/.test(owner)) return null
+  if (typeof start !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(start)) return null
+  if (!Array.isArray(counts) || !Array.isArray(levels) || counts.length !== levels.length)
+    return null
+  if (counts.length === 0 || counts.length > 400) return null
+  const first = Date.parse(`${start}T00:00:00Z`)
+  if (Number.isNaN(first)) return null
+  const weeks: (ContributionDay | null)[][] = []
+  const offset = new Date(first).getUTCDay()
+  let week: (ContributionDay | null)[] = Array.from({ length: offset }, () => null)
+  counts.forEach((count, index) => {
+    const level = Number(levels[index])
+    week.push({
+      date: new Date(first + index * DAY_MS).toISOString().slice(0, 10),
+      count: Number.isInteger(count) && Number(count) > 0 ? Number(count) : 0,
+      level: (level >= 1 && level <= 4 ? Math.trunc(level) : 0) as ContributionDay['level'],
+    })
+    if (week.length === 7) {
+      weeks.push(week)
+      week = []
+    }
+  })
+  if (week.length) weeks.push(week)
+  return {
+    login: owner,
+    total: typeof total === 'number' && Number.isFinite(total) && total > 0 ? Math.trunc(total) : 0,
+    weeks,
+  }
 }
 
 // Only links to a post on x.com reach the page (the CMS stores them in this form).
@@ -89,12 +143,11 @@ export const normalizeSite = (site: Partial<Site> | null | undefined): SiteData 
   tagline: site?.tagline?.trim() || '',
   description: site?.description?.trim() || undefined,
   ogImage: ogImageOf(site?.ogImage),
-  socialLinks: (site?.socialLinks ?? [])
-    .flatMap(({ label, url }) => {
-      // Only http(s), mailto, tel or a path on this site becomes a link.
-      const href = safeHref(url)
-      return label && href ? [{ label, url: href }] : []
-    }),
+  socialLinks: (site?.socialLinks ?? []).flatMap(({ label, url }) => {
+    // Only http(s), mailto, tel or a path on this site becomes a link.
+    const href = safeHref(url)
+    return label && href ? [{ label, url: href }] : []
+  }),
   projects: (site?.projects ?? [])
     .filter((project) => project.name)
     .map(({ name, url, description }) => ({
@@ -103,6 +156,7 @@ export const normalizeSite = (site: Partial<Site> | null | undefined): SiteData 
       description: description ?? '',
     })),
   picks: picksOf(site?.picks),
+  contributions: contributionsOf(site?.github),
   banner: {
     style: site?.banner?.style === 'off' ? 'off' : 'fetch',
     mascot: site?.banner?.mascot !== false,

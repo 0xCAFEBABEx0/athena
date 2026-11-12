@@ -3,18 +3,28 @@ import { expect, test } from '@playwright/test'
 import { open } from './helpers'
 
 // Hosts a page may talk to: itself, Vercel's analytics scripts, and images
-// (CMS media on Vercel Blob, GitHub social previews on /work).
-const ALLOWED = [/vercel-scripts\.com$/, /vercel-insights\.com$/, /blob\.vercel-storage\.com$/, /githubusercontent\.com$/, /githubassets\.com$/]
+// (CMS media on Vercel Blob, GitHub social previews on /builds).
+const ALLOWED = [
+  /vercel-scripts\.com$/,
+  /vercel-insights\.com$/,
+  /blob\.vercel-storage\.com$/,
+  /githubusercontent\.com$/,
+  /githubassets\.com$/,
+]
 
-test('TC-E-24 pages make no unexpected requests (no CMS API calls from the browser)', async ({ page, baseURL }) => {
+test('TC-E-24 pages make no unexpected requests (no CMS API calls from the browser)', async ({
+  page,
+  baseURL,
+}) => {
   const origin = new URL(baseURL ?? 'http://localhost:4321').host
   const offenders: string[] = []
   page.on('request', (request) => {
     const url = new URL(request.url())
     if (url.protocol === 'data:' || url.host === origin) return
-    if (url.pathname.startsWith('/api/') || !ALLOWED.some((host) => host.test(url.hostname))) offenders.push(request.url())
+    if (url.pathname.startsWith('/api/') || !ALLOWED.some((host) => host.test(url.hostname)))
+      offenders.push(request.url())
   })
-  for (const path of ['/', '/ja/posts', '/work', '/zh/search?q=a']) {
+  for (const path of ['/', '/ja/notes', '/builds', '/zh/search?q=a']) {
     await open(page, path, { view: 'cli' })
   }
   expect(offenders).toEqual([])

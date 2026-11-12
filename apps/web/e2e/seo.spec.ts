@@ -40,9 +40,9 @@ const readHead = async (page: Page, path: string): Promise<Head> => {
       ogUrl: attr('meta[property="og:url"]'),
       ogType: attr('meta[property="og:type"]'),
       ogLocale: attr('meta[property="og:locale"]'),
-      ogLocaleAlternates: [...document.querySelectorAll('meta[property="og:locale:alternate"]')].map(
-        (m) => m.getAttribute('content') ?? '',
-      ),
+      ogLocaleAlternates: [
+        ...document.querySelectorAll('meta[property="og:locale:alternate"]'),
+      ].map((m) => m.getAttribute('content') ?? ''),
       hreflang,
       jsonLd: [...document.querySelectorAll('script[type="application/ld+json"]')].map((s) =>
         JSON.parse(s.textContent ?? '{}'),
@@ -56,22 +56,29 @@ const readHead = async (page: Page, path: string): Promise<Head> => {
   return { status: response?.status() ?? 0, ...head }
 }
 
-const pathOf = (url: string | null) => (url ? new URL(url).pathname.replace(/\/$/, '') || '/' : null)
+const pathOf = (url: string | null) =>
+  url ? new URL(url).pathname.replace(/\/$/, '') || '/' : null
 
 const firstLink = async (page: Page, path: string, prefix: string) => {
   await page.goto(path, { waitUntil: 'domcontentloaded' })
-  return page.locator(`a[href^="${prefix}"]`).first().getAttribute('href').catch(() => null)
+  return page
+    .locator(`a[href^="${prefix}"]`)
+    .first()
+    .getAttribute('href')
+    .catch(() => null)
 }
 
 const indexable = async (page: Page) => {
-  const post = await firstLink(page, '/posts', '/posts/')
-  const work = await firstLink(page, '/work', '/work/')
-  return ['/', '/ja', '/zh', '/posts', '/ja/posts', '/work', '/ja/work', post, work].filter(
+  const post = await firstLink(page, '/notes', '/notes/')
+  const work = await firstLink(page, '/builds', '/builds/')
+  return ['/', '/ja', '/zh', '/notes', '/ja/notes', '/builds', '/ja/builds', post, work].filter(
     (path): path is string => Boolean(path),
   )
 }
 
-test('TC-E-31 indexable pages: own title (per language) and description, self canonical, all hreflang', async ({ page }) => {
+test('TC-E-31 indexable pages: own title (per language) and description, self canonical, all hreflang', async ({
+  page,
+}) => {
   const titles = new Map<string, string>()
   for (const path of await indexable(page)) {
     const head = await readHead(page, path)
@@ -93,8 +100,8 @@ test('TC-E-31 indexable pages: own title (per language) and description, self ca
 })
 
 test('TC-E-32 hreflang is reciprocal and points at the right language', async ({ page }) => {
-  const post = await firstLink(page, '/posts', '/posts/')
-  for (const bare of ['/posts', ...(post ? [post] : [])]) {
+  const post = await firstLink(page, '/notes', '/notes/')
+  for (const bare of ['/notes', ...(post ? [post] : [])]) {
     const versions = [bare, `/ja${bare}`, `/zh${bare}`]
     const sets = []
     for (const path of versions) {
@@ -109,7 +116,9 @@ test('TC-E-32 hreflang is reciprocal and points at the right language', async ({
   }
 })
 
-test('TC-E-33 search pages are noindex, follow, with no canonical or hreflang', async ({ page }) => {
+test('TC-E-33 search pages are noindex, follow, with no canonical or hreflang', async ({
+  page,
+}) => {
   for (const path of ['/search', '/search?q=astro', '/ja/search']) {
     const head = await readHead(page, path)
     expect(head.robots, path).toBe('noindex, follow')
@@ -132,14 +141,14 @@ test('TC-E-34 404 pages are noindex with a localized title', async ({ page }) =>
 })
 
 test('TC-E-35 posts: og:type article, dates, BlogPosting matching the page', async ({ page }) => {
-  const post = await firstLink(page, '/posts', '/posts/')
+  const post = await firstLink(page, '/notes', '/notes/')
   test.skip(!post, 'no posts in the CMS')
   for (const path of [post as string, `/ja${post}`]) {
     const head = await readHead(page, path)
     expect(head.ogType, path).toBe('article')
-    expect(await page.locator('meta[property="article:published_time"]').getAttribute('content')).toMatch(
-      /^\d{4}-\d{2}-\d{2}T/,
-    )
+    expect(
+      await page.locator('meta[property="article:published_time"]').getAttribute('content'),
+    ).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     const ld = head.jsonLd.find((d) => d['@type'] === 'BlogPosting')
     expect(ld, path).toBeTruthy()
     expect(ld?.['@context']).toBe('https://schema.org')
@@ -151,15 +160,19 @@ test('TC-E-35 posts: og:type article, dates, BlogPosting matching the page', asy
   }
 })
 
-test('TC-E-36 home: WebSite JSON-LD; work: SoftwareSourceCode; lists have none', async ({ page }) => {
+test('TC-E-36 home: WebSite JSON-LD; work: SoftwareSourceCode; lists have none', async ({
+  page,
+}) => {
   const home = await readHead(page, '/')
   const site = home.jsonLd.find((d) => d['@type'] === 'WebSite')
   expect(site).toBeTruthy()
   expect(site?.url).toBe(home.canonical)
-  expect(site?.name).toBe(await page.locator('meta[property="og:site_name"]').getAttribute('content'))
-  expect((await readHead(page, '/posts')).jsonLd).toEqual([])
+  expect(site?.name).toBe(
+    await page.locator('meta[property="og:site_name"]').getAttribute('content'),
+  )
+  expect((await readHead(page, '/notes')).jsonLd).toEqual([])
 
-  const work = await firstLink(page, '/work', '/work/')
+  const work = await firstLink(page, '/builds', '/builds/')
   test.skip(!work, 'no projects')
   const item = await readHead(page, work as string)
   const code = item.jsonLd.find((d) => d['@type'] === 'SoftwareSourceCode')
@@ -173,26 +186,35 @@ test('TC-E-37 og:locale follows the page language', async ({ page }) => {
     const head = await readHead(page, path)
     expect(head.ogLocale, path).toBe(locale)
     expect(head.ogLocaleAlternates.sort(), path).toEqual(
-      Object.values(expected).filter((l) => l !== locale).sort(),
+      Object.values(expected)
+        .filter((l) => l !== locale)
+        .sort(),
     )
   }
 })
 
 const sitemapURLs = async (request: APIRequestContext, path: string) => {
   const xml = await (await request.get(path)).text()
-  return [...xml.matchAll(/<url><loc>([^<]+)<\/loc>(<lastmod>[^<]+<\/lastmod>)?<\/url>/g)].map((m) => ({
-    loc: m[1] as string,
-    lastmod: Boolean(m[2]),
-  }))
+  return [...xml.matchAll(/<url><loc>([^<]+)<\/loc>(<lastmod>[^<]+<\/lastmod>)?<\/url>/g)].map(
+    (m) => ({
+      loc: m[1] as string,
+      lastmod: Boolean(m[2]),
+    }),
+  )
 }
 
-test('TC-E-38 sitemaps list only indexable 200 pages whose canonical is themselves', async ({ page, request }) => {
+test('TC-E-38 sitemaps list only indexable 200 pages whose canonical is themselves', async ({
+  page,
+  request,
+}) => {
   const pages = await sitemapURLs(request, '/pages-sitemap.xml')
   const paths = pages.map((entry) => new URL(entry.loc).pathname)
   expect(paths).toContain('/')
   expect(paths.some((p) => p.endsWith('/search'))).toBe(false)
   // Fixed routes have no reliable change date, so no <lastmod>.
-  for (const entry of pages.filter((e) => /^\/(ja\/|zh\/)?(posts|work)?$/.test(new URL(e.loc).pathname))) {
+  for (const entry of pages.filter((e) =>
+    /^\/(ja\/|zh\/)?(notes|builds|stacks)?$/.test(new URL(e.loc).pathname),
+  )) {
     expect(entry.lastmod, entry.loc).toBe(false)
   }
   const posts = await sitemapURLs(request, '/posts-sitemap.xml')
@@ -205,11 +227,16 @@ test('TC-E-38 sitemaps list only indexable 200 pages whose canonical is themselv
   }
 })
 
-test('TC-E-40 home title is the site name, or "site name — tagline" from the CMS', async ({ page }) => {
+test('TC-E-40 home title is the site name, or "site name — tagline" from the CMS', async ({
+  page,
+}) => {
   for (const path of ['/', '/ja', '/zh']) {
     const head = await readHead(page, path)
     const name = (await page.locator('meta[property="og:site_name"]').getAttribute('content')) ?? ''
-    expect(head.title === name || head.title.startsWith(`${name} — `), `${path}: ${head.title}`).toBe(true)
+    expect(
+      head.title === name || head.title.startsWith(`${name} — `),
+      `${path}: ${head.title}`,
+    ).toBe(true)
     expect(head.title.endsWith(' — '), path).toBe(false)
     expect(await page.locator('meta[property="og:title"]').getAttribute('content')).toBe(head.title)
   }

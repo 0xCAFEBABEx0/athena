@@ -1,4 +1,5 @@
 ---
+import { ROUTES } from '@athena/shared/constants'
 import { dict, localeOf, localizePath } from '@/lib/i18n'
 import Layout from '@/layouts/Layout.astro'
 import PostsArchive from '@/components/PostsArchive.astro'
@@ -13,7 +14,7 @@ const [site, posts] = await Promise.all([
   getSite(Astro.locals, locale),
   getPosts({ page: 1 }, { locale }),
 ])
-const meta = routeMeta(t.allPosts, lp('/posts'), site, t.postsDescription(site.siteName))
+const meta = routeMeta(t.allPosts, lp(ROUTES.posts), site, t.postsDescription(site.siteName))
 ---
 
 <Layout meta={meta}>

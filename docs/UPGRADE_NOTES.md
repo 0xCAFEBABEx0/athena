@@ -2,6 +2,86 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## About page — 2026-11-12
+
+**CMS**
+
+- New global `about` (`About/config.ts`): `heading`, `lead`,
+  `portraitCaption` and `body` (rich text) localized, `portrait` (upload →
+  Media). Saving invalidates `/about` and the sitemap.
+
+**Web**
+
+- `pages/about.astro` at `/about` (`ROUTES.about`), from `lib/about.ts`.
+  Answers 404 and stays out of the sitemap until the lead or the story has
+  text. A CMS page with the slug `about` is no longer reachable (none exists
+  in production).
+
+**Database (manual, schema push is off)**
+
+Run [`docs/sql/2026-11-12-about.sql`](./sql/2026-11-12-about.sql) (tables
+`about` and `about_locales`) on the preview Neon branch and then production,
+before the CMS deploys. Checked: applied twice to a copy of the schema with
+the GitHub graph columns, it gives the same schema as a push of the new
+config.
+
+**After deploying (content)**
+
+- Globals → About: write the heading, lead and story (English first, then
+  switch the locale for 日本語 and 中文), optionally upload a portrait.
+- Globals → Header: add an `/about` link to the nav if it should be in the
+  menu.
+
+## GitHub contribution graph on the home page — 2026-11-12
+
+**CMS**
+
+- Site global: new group `github` (`username`; `contributions` json, hidden;
+  `syncedAt`, `syncError` read-only). `github/contributions.ts` reads the
+  calendar with one GraphQL request (`GITHUB_TOKEN`, the same token as
+  /builds) when the username is saved, and `syncGitHub` refreshes it every
+  6 hours, saving the Site global only when the calendar changed.
+
+**Web**
+
+- `components/GitHubContributions.astro` on `/` (below the projects), from
+  `site.contributions` (`lib/site.ts`).
+
+**Database (manual, schema push is off)**
+
+Run [`docs/sql/2026-11-12-github-contributions.sql`](./sql/2026-11-12-github-contributions.sql)
+(four columns on `site`) on the preview Neon branch and then production,
+before the CMS deploys. Checked: applied twice to a copy of the 1.1.0 schema,
+it gives the same schema as a push of the new config.
+
+**After deploying (content)**
+
+- Globals → Site → GitHub contributions: enter the GitHub username and save.
+
+## Sections renamed: `/notes`, `/builds`, `/stacks` — 2026-11-12
+
+**Web**
+
+- Posts moved from `/posts` to `/notes`, projects from `/work` to `/builds`,
+  the Stack page from `/stack` to `/stacks` (the CLI, ADE, titles, feeds,
+  sitemap and `llms.txt` follow). The paths live in `ROUTES`
+  (`packages/shared/src/constants.ts`).
+- `middleware.ts` answers the old paths in every language with a 308 to the
+  new one (query string kept), cached at the CDN for a day.
+- Links in the CMS typed with an old path (`/posts`, `/work`, `/stack`)
+  resolve to the new route, so nothing breaks before they are edited.
+
+**CMS**
+
+- Invalidation paths and the draft preview path for posts use `ROUTES`.
+
+**After deploying (content, no SQL)**
+
+- Globals → Header: change the link labels (and, for tidiness, the URLs) to
+  notes / builds / stacks, in each language.
+- Search Console: nothing to do; the sitemap lists only the new URLs and the
+  old ones redirect permanently.
+
 ## `/stack` page and the Stack global — 2026-11-12
 
 **CMS**

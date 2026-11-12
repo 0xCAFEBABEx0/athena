@@ -25,7 +25,7 @@ type InvalidateArgs = {
  * `after()` until the response has been sent. Hooks run before Payload
  * commits the transaction, so a web re-render started from the hook could
  * read the old data and cache it again: a bulk unpublish on 2026-11-11 left
- * the posts listed on /posts that way. Outside a request (scripts, jobs,
+ * the posts listed on /notes that way. Outside a request (scripts, jobs,
  * tests) `after()` throws and the call runs right away.
  */
 export const invalidateWeb = async (args: InvalidateArgs): Promise<void> => {

@@ -20,16 +20,16 @@ describe('llms.txt', () => {
 
   test('TC-U-07 lists sections, posts and projects with absolute URLs', () => {
     expect(text).toContain('## Main sections')
-    expect(text).toContain('- [First post](https://whoa.me/posts/p1): Line one line two')
+    expect(text).toContain('- [First post](https://whoa.me/notes/p1): Line one line two')
     expect(text).not.toContain('skip')
-    expect(text).toContain('- [athena](https://whoa.me/work/athena): This site.')
+    expect(text).toContain('- [athena](https://whoa.me/builds/athena): This site.')
     expect(text).toContain('JP (https://whoa.me/ja)')
     expect(text.endsWith('\n')).toBe(true)
   })
 
   test('TC-U-08 drops empty sections', () => {
     const empty = buildLlmsTxt({ origin: 'https://whoa.me', site, posts: [], work: [] })
-    expect(empty).not.toContain('## Recent posts')
+    expect(empty).not.toContain('## Recent notes')
     expect(empty).not.toContain('## Projects')
   })
 

@@ -1,4 +1,5 @@
 ---
+import { ROUTES } from '@athena/shared/constants'
 import Layout from '@/layouts/Layout.astro'
 import Prompt from '@/components/Prompt.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
@@ -21,7 +22,7 @@ if (stack.groups.length + stack.former.length === 0) {
 const intro = stack.intro || t.stackIntro
 const meta = routeMeta(
   t.stackTitle,
-  localizePath(locale, '/stack'),
+  localizePath(locale, ROUTES.stack),
   site,
   stack.intro || t.stackDescription(site.authorName || site.siteName),
 )
@@ -31,7 +32,7 @@ const meta = routeMeta(
   <div class="container">
     <Prompt
       class="mt-8"
-      command="stack --tree"
+      command="stacks --tree"
       question={t.askStack}
       heading={t.stackTitle}
       count={stack.count}

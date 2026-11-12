@@ -1,4 +1,5 @@
 ---
+import { ROUTES } from '@athena/shared/constants'
 import Layout from '@/layouts/Layout.astro'
 import Prompt from '@/components/Prompt.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
@@ -14,7 +15,7 @@ const site = await getSite(Astro.locals, locale)
 const items = await getWork(Astro.locals, locale)
 const meta = routeMeta(
   t.workTitle,
-  localizePath(locale, '/work'),
+  localizePath(locale, ROUTES.work),
   site,
   t.workDescription(site.authorName || site.siteName),
 )
@@ -24,7 +25,7 @@ const meta = routeMeta(
   <div class="container">
     <Prompt
       class="modern-only mt-8"
-      command="ls ~/work --sort=activity"
+      command="ls ~/builds --sort=activity"
       question={t.askWork}
       heading={t.workTitle}
       count={items.length}

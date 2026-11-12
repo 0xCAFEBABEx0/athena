@@ -1,4 +1,5 @@
 ---
+import { ROUTES } from '@athena/shared/constants'
 /**
  * One work thread (a GitHub repository), drawn like a finished agent thread:
  * the brief as the user's message, the write-up as the reply, then the steps
@@ -28,7 +29,7 @@ if (!item) {
 const site = await getSite(Astro.locals, locale)
 const baseMeta = routeMeta(
   item.title,
-  lp(`/work/${item.slug}`),
+  lp(`${ROUTES.work}/${item.slug}`),
   site,
   item.description || t.workItemDescription(item.title, site.authorName || site.siteName),
 )
@@ -59,7 +60,7 @@ const details = [
     <div class="min-w-0">
       <article class="container work-thread pb-4">
         <p class="cli-only mt-8 font-mono text-sm text-base-content/65">
-          <span class="text-primary" aria-hidden="true">❯</span> cd ~/work/{item.slug}
+          <span class="text-primary" aria-hidden="true">❯</span> cd ~/builds/{item.slug}
         </p>
 
         <header class="work-head">
@@ -173,7 +174,7 @@ const details = [
         </ol>
 
         <p class="work-back mt-10 border-t border-base-300 pt-4 font-mono text-sm">
-          <span class="text-base-content/65">↑ </span><a class="link-term" href={lp('/work')}>{t.workAll}</a>
+          <span class="text-base-content/65">↑ </span><a class="link-term" href={lp(ROUTES.work)}>{t.workAll}</a>
         </p>
       </article>
       <div class="container">

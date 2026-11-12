@@ -10,19 +10,26 @@ test.describe('/search (one cached page, filtered in the browser)', () => {
     await open(page, '/search', { view: 'cli' })
     const all = await page.locator('[data-search-text]').count()
     test.skip(all === 0, 'no posts in this CMS')
-    const word = ((await page.locator('[data-search-text]').first().getAttribute('data-search-text')) ?? '').split(' ')[0] ?? ''
+    const word =
+      (
+        (await page.locator('[data-search-text]').first().getAttribute('data-search-text')) ?? ''
+      ).split(' ')[0] ?? ''
     await open(page, `/search?q=${encodeURIComponent(word)}`, { view: 'cli' })
     await expect(page.locator('[data-search-input]')).toHaveValue(word)
     const rows = visibleRows(page)
     expect(await rows.count()).toBeGreaterThan(0)
-    for (const text of await rows.evaluateAll((els) => els.map((el) => el.getAttribute('data-search-text') ?? ''))) {
+    for (const text of await rows.evaluateAll((els) =>
+      els.map((el) => el.getAttribute('data-search-text') ?? ''),
+    )) {
       expect(text).toContain(word)
     }
-    await expect(page.locator('[data-prompt-line]')).toHaveText(`grep -ri "${word}" posts/`)
+    await expect(page.locator('[data-prompt-line]')).toHaveText(`grep -ri "${word}" notes/`)
     await expect(page.locator('[data-prompt-count]').first()).toHaveText(String(await rows.count()))
   })
 
-  test('TC-E-13 typing filters without any network request; no match shows the empty line', async ({ page }) => {
+  test('TC-E-13 typing filters without any network request; no match shows the empty line', async ({
+    page,
+  }) => {
     await open(page, '/search', { view: 'cli' })
     const requests: string[] = []
     page.on('request', (request) => requests.push(request.url()))
@@ -31,7 +38,7 @@ test.describe('/search (one cached page, filtered in the browser)', () => {
     await expect(page.locator('[data-search-empty]')).toBeVisible()
     await expect(page.locator('[data-prompt-count]').first()).toHaveText('0')
     await page.locator('[data-search-input]').fill('')
-    await expect(page.locator('[data-prompt-line]')).toHaveText('ls posts')
+    await expect(page.locator('[data-prompt-line]')).toHaveText('ls notes')
     expect(requests).toEqual([])
   })
 
@@ -51,7 +58,9 @@ test.describe('/search (one cached page, filtered in the browser)', () => {
     await open(page, '/search', { view: 'cli' })
     await page.locator('[data-search-input]').fill('/status')
     // The suggestion keeps its own text (the page filter must not rewrite it).
-    await expect(page.locator('[data-prompt-commands] [data-prompt-command="/status"]')).toContainText('/status')
+    await expect(
+      page.locator('[data-prompt-commands] [data-prompt-command="/status"]'),
+    ).toContainText('/status')
     await page.locator('[data-search-input]').press('Enter')
     await expect(page.locator('[data-status-dialog]')).toHaveAttribute('open', '')
   })

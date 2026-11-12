@@ -20,7 +20,14 @@ test.describe('TC-E-09 no horizontal scroll', () => {
 
   test('other pages at 320px', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 800 })
-    for (const path of ['/posts', '/work', '/search', '/ja/search?q=a', '/zh/posts', '/nope-404']) {
+    for (const path of [
+      '/notes',
+      '/builds',
+      '/search',
+      '/ja/search?q=a',
+      '/zh/notes',
+      '/nope-404',
+    ]) {
       for (const view of VIEWS) {
         await open(page, path, { view })
         expect(await overflowX(page), `${path} ${view}`).toBeLessThanOrEqual(0)
@@ -29,8 +36,11 @@ test.describe('TC-E-09 no horizontal scroll', () => {
   })
 })
 
-test('TC-E-11 Japanese and Chinese pages take "…" from a CJK font, English does not', async ({ page }) => {
-  const mono = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--font-mono'))
+test('TC-E-11 Japanese and Chinese pages take "…" from a CJK font, English does not', async ({
+  page,
+}) => {
+  const mono = () =>
+    page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--font-mono'))
   for (const path of ['/ja', '/zh']) {
     await open(page, path)
     expect(await mono(), path).toMatch(/^\s*'?"?CJK Ellipsis/)
@@ -38,7 +48,9 @@ test('TC-E-11 Japanese and Chinese pages take "…" from a CJK font, English doe
   await open(page, '/')
   expect(await mono()).not.toContain('CJK Ellipsis')
   // Utilities read the variable (the theme is not inlined).
-  const utility = await page.evaluate(() => getComputedStyle(document.querySelector('.font-mono') as Element).fontFamily)
+  const utility = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.font-mono') as Element).fontFamily,
+  )
   expect(utility).toContain('Geist Mono')
 })
 
@@ -57,19 +69,26 @@ test.describe('TC-E-29 tap targets on phones', () => {
 
   test('search inputs are 16px so iOS does not zoom', async ({ page }) => {
     await open(page, '/', { view: 'cli' })
-    const size = await page.locator('[data-search-input]').evaluate((el) => getComputedStyle(el).fontSize)
+    const size = await page
+      .locator('[data-search-input]')
+      .evaluate((el) => getComputedStyle(el).fontSize)
     expect(Number.parseFloat(size)).toBeGreaterThanOrEqual(16)
   })
 })
 
-test('TC-E-46 CLI header: the language menu is a [xx] switch like [ade] and [dark]', async ({ page }) => {
+test('TC-E-46 CLI header: the language menu is a [xx] switch like [ade] and [dark]', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 320, height: 800 })
   const header = page.locator('header.cli-header')
   const style = (selector: string) =>
-    header.locator(selector).first().evaluate((el) => {
-      const s = getComputedStyle(el)
-      return `${s.fontFamily} ${s.fontSize} ${s.fontWeight} ${s.color}`
-    })
+    header
+      .locator(selector)
+      .first()
+      .evaluate((el) => {
+        const s = getComputedStyle(el)
+        return `${s.fontFamily} ${s.fontSize} ${s.fontWeight} ${s.color}`
+      })
   for (const [path, label] of [
     ['/', '[en]'],
     ['/ja', '[jp]'],
@@ -80,7 +99,9 @@ test('TC-E-46 CLI header: the language menu is a [xx] switch like [ade] and [dar
     await expect(summary, path).toHaveText(label)
     await expect(header.locator('[data-view-set]')).toHaveText('[ade]')
     expect(await style('[data-language-menu] summary'), path).toBe(await style('[data-view-set]'))
-    expect(await style('[data-language-menu] summary'), path).toBe(await style('[data-theme-toggle]'))
+    expect(await style('[data-language-menu] summary'), path).toBe(
+      await style('[data-theme-toggle]'),
+    )
     expect((await summary.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
     // The menu items stay plain codes.
     await summary.click()
@@ -150,7 +171,9 @@ test.describe('TC-E-48 switches in one order in both views: view, language, them
     ])
     expect(ade).toEqual([...ade].sort((a, b) => a - b))
     // The status panel's config rows follow the same order.
-    const rows = await page.locator('[data-config]').evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.config))
+    const rows = await page
+      .locator('[data-config]')
+      .evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.config))
     expect(rows.slice(0, 3)).toEqual(['view', 'language', 'theme'])
   })
 

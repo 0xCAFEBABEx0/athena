@@ -343,6 +343,22 @@ describe('TC-U-37 / TC-U-39 favicon lookup: resolved addresses and time budget',
   })
 })
 
+test('TC-U-39 an over-size body is dropped without waiting for its stream to cancel', async () => {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(64))
+    },
+    cancel: () => new Promise<void>(() => {}),
+  })
+  const started = Date.now()
+  expect(await readCapped(new Response(stream), 16)).toBeNull()
+  const declared = new Response(new ReadableStream({ cancel: () => new Promise<void>(() => {}) }), {
+    headers: { 'content-length': '999' },
+  })
+  expect(await readCapped(declared, 16)).toBeNull()
+  expect(Date.now() - started).toBeLessThan(1000)
+})
+
 describe('TC-U-40 toPng', () => {
   test('makes a 64×64 PNG from a PNG and from an SVG; garbage gives null', async () => {
     const sharp = (await import('sharp')).default
@@ -547,12 +563,13 @@ describe('TC-U-41 Stack hook', () => {
       groups: { items: { icon: unknown }[] }[]
     }
     // 4 at a time: the first two rounds start before the 90 ms deadline, the third after it.
+    // The second round (started at ~60 ms with ~30 ms left) is cut off at the deadline.
     expect(budgets.length).toBe(8)
     expect(budgets.every((b) => b > 0 && b <= 90)).toBe(true)
     expect(Date.now() - started).toBeLessThan(1000)
     const icons = result.groups[0]?.items.map((i) => i.icon) ?? []
-    expect(icons.filter(Boolean).length).toBe(8)
-    expect(icons.slice(8)).toEqual([null, null, null, null])
+    expect(icons.slice(0, 4).every(Boolean)).toBe(true)
+    expect(icons.slice(4)).toEqual(Array(8).fill(null))
 
     // No time left to store: the icons found are not saved, the save still goes through.
     const late = fillStackIcons(
@@ -570,6 +587,22 @@ describe('TC-U-41 Stack hook', () => {
       groups: { items: { icon: unknown }[] }[]
     }
     expect(out.groups[0]?.items.map((i) => i.icon)).toEqual([null, null])
+  })
+
+  test('a lookup that ignores its budget still ends at the save deadline', async () => {
+    const hook = fillStackIcons(
+      () => new Promise<Favicon | null>(() => {}),
+      async (_req, found) => `media-${found.host}`,
+      async () => null,
+      { lookupMs: 60, storeMs: 10_000 },
+    )
+    const started = Date.now()
+    const out = (await hook({
+      data: { groups: [{ items: [{ id: 'a', name: 'A', url: 'https://hang.example/' }] }] },
+      req,
+    } as never)) as { groups: { items: { icon: unknown }[] }[] }
+    expect(Date.now() - started).toBeLessThan(1000)
+    expect(out.groups[0]?.items.map((i) => i.icon)).toEqual([null])
   })
 
   test('a stalled upload ends with the store budget; the save goes through without that icon', async () => {

@@ -35,8 +35,23 @@ all managed by editors without code changes.
   handle, day and language from X's public oEmbed endpoint when the Site
   global is saved (no API key); visitors' browsers load nothing from X.
   Photos and videos are not shown (text only; the card links to the post).
-- **F-PAGE-1** A published page with slug `s` is served at `/s` (e.g. `/about`).
-  The CMS page with slug `home` is no longer routed.
+- **F-HOME-3** GitHub contribution graph: when `site.github.username` is
+  set, `/` shows that user's last year of GitHub contributions (one square
+  per day, shaded 0–4 like GitHub's calendar, the yearly total; the whole
+  block is one link to the profile) below the projects. The CMS reads the calendar from GitHub's
+  GraphQL API when the username is saved and every 6 hours (`syncGitHub`);
+  visitors load nothing from GitHub. Below 640 px only the last 26 weeks are
+  drawn, below 360 px the last 17, with no horizontal scroll.
+- **F-ABOUT-1** `/about` (and `/ja/about`, `/zh/about`) shows the About
+  global: the heading (default "About") as the page's `h1` under a
+  `cat about.md` prompt, the lead, the portrait with its caption (beside the
+  lead from 640 px, below it on phones), the story as rich text, then the
+  Site social links (`rel="me"`). It answers 404, and the sitemap leaves it
+  out, until the lead or the story has text; when the CMS cannot answer it is
+  the uncached 500 page. The lead is the meta description.
+- **F-PAGE-1** A published page with slug `s` is served at `/s` (e.g.
+  `/contact`). The CMS page with slug `home` is no longer routed, and a page
+  with slug `about` is shadowed by F-ABOUT-1.
 - **F-PAGE-2** A page shows its hero (none / low / medium / high impact) then
   its layout blocks in order: Call to Action, Content (1–4 columns), Media,
   Archive, Form.
@@ -45,11 +60,11 @@ all managed by editors without code changes.
 
 ### 2.2 Blog
 
-- **F-POST-1** `/posts` lists published posts as one-line rows (date, title,
+- **F-POST-1** `/notes` lists published posts as one-line rows (date, title,
   first category), newest `publishedAt` first, 12 per page, with pagination.
-- **F-POST-2** `/posts/page/n` shows page `n`; `/posts/page/1` redirects to
-  `/posts`; `n` below 1, non-numeric or past the last page returns 404.
-- **F-POST-3** `/posts/{slug}` shows a breadcrumb, the title, date, reading
+- **F-POST-2** `/notes/page/n` shows page `n`; `/notes/page/1` redirects to
+  `/notes`; `n` below 1, non-numeric or past the last page returns 404.
+- **F-POST-3** `/notes/{slug}` shows a breadcrumb, the title, date, reading
   time, authors and categories, the meta description as an "概要" box, the
   hero image, the rich-text body (headings, lists, links, banners, code
   blocks, images, horizontal rules), the editor-selected related posts and
@@ -122,14 +137,14 @@ all managed by editors without code changes.
   own title (the home page: site name, plus ` — <tagline>` when the Site
   global sets one) and a description of at most ~155 characters (SEO field, else
   the post text, else the Site description → intro → welcome line; lists
-  and /work have localized descriptions), a self-referencing canonical,
+  and /builds have localized descriptions), a self-referencing canonical,
   `hreflang` for en / ja / zh-Hans plus `x-default`, and Open Graph with
   `og:locale`. Posts are `og:type=article` with published/modified times.
   JSON-LD: `WebSite` on the home page, `BlogPosting` on posts,
-  `SoftwareSourceCode` on /work entries. `/search`, 404 pages and drafts
+  `SoftwareSourceCode` on /builds entries. `/search`, 404 pages and drafts
   are `noindex, follow` with no canonical or hreflang. The pages sitemap
   always lists `/`, never `/search`, and gives `<lastmod>` only where the
-  date is real (CMS pages, /work entries from GitHub, posts).
+  date is real (CMS pages, /builds entries from GitHub, posts).
 - **F-NAV-2** If the CMS cannot be reached, header and footer render without
   links instead of failing the page.
 - **F-THEME-1** Light and dark themes. Initial theme comes from
@@ -145,6 +160,15 @@ all managed by editors without code changes.
 - **F-REDIR-2** A redirect change invalidates the `content` cache tag, so
   cached pages pick it up on their next request; a function instance keeps
   the redirect list for at most 5 s.
+- **F-REDIR-3** The pre-1.2.0 section paths `/posts`, `/work`, `/stack`
+  (with `/ja`, `/zh` and any subpath) answer `308` to `/notes`, `/builds`,
+  `/stacks` with the same language, subpath and query string. On Vercel
+  they are served by the plain function, not ISR, so the query reaches the
+  redirect and the CDN caches each full URL separately. A Redirects entry
+  whose `from` is an old section path wins over this `308`, and also answers
+  the renamed path (`from: /posts/x` redirects `/notes/x` too, since CMS
+  links typed with `/posts/x` render as `/notes/x`); an entry for the exact
+  path wins.
 
 ### 2.8 SEO and crawlers
 
@@ -158,7 +182,7 @@ all managed by editors without code changes.
   `lastmod`.
 - **F-SEO-3** `/robots.txt` allows everything except `/api/` and links the
   sitemap. `/llms.txt` describes the site for LLM crawlers (generated from the
-  CMS: Site global, newest posts, `/work`).
+  CMS: Site global, newest posts, `/builds`).
 
 ## 3. Editing (CMS Admin)
 

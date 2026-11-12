@@ -229,7 +229,8 @@ const safeGet = async (input: string, accept: string, ctx: Lookup): Promise<Resp
 export const readCapped = async (res: Response, max: number): Promise<Uint8Array | null> => {
   const declared = Number(res.headers.get('content-length') ?? 0)
   if (declared > max || !res.body) {
-    await res.body?.cancel().catch(() => {})
+    // Not awaited: a stream whose cancel never settles must not hold the save.
+    void res.body?.cancel().catch(() => {})
     return null
   }
   const reader = res.body.getReader()
@@ -240,7 +241,7 @@ export const readCapped = async (res: Response, max: number): Promise<Uint8Array
     if (done) break
     size += value.byteLength
     if (size > max) {
-      await reader.cancel().catch(() => {})
+      void reader.cancel().catch(() => {})
       return null
     }
     chunks.push(value)

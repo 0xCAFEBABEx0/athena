@@ -1,3 +1,4 @@
+import { ROUTES } from '@athena/shared/constants'
 import type { WorkItem } from './work'
 
 export type BannerActivity = {
@@ -38,11 +39,11 @@ export const buildActivity = (
       date: post.publishedAt as string,
       kind: 'post',
       label: post.title || post.slug,
-      href: href(`/posts/${post.slug}`),
+      href: href(`${ROUTES.posts}/${post.slug}`),
     })
   }
   for (const item of work) {
-    const link = href(`/work/${item.slug}`)
+    const link = href(`${ROUTES.work}/${item.slug}`)
     const release = time(item.release?.date)
     const push = time(item.pushedAt)
     if (item.release && !Number.isNaN(release) && (Number.isNaN(push) || release >= push - RELEASE_SLACK_MS)) {
