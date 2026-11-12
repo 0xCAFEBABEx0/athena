@@ -1,8 +1,8 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'payload'
 
 import { CACHE_TAGS, ROUTES } from '@athena/shared/constants'
-import type { Post } from '../../../payload-types'
-import { invalidateWeb } from '../../../utilities/invalidateWeb'
+import type { Post } from '@/payload-types'
+import { invalidateWeb } from '@/utilities/invalidateWeb'
 
 export const revalidatePost: CollectionAfterChangeHook<Post> = async ({
   doc,

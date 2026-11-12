@@ -11,10 +11,10 @@ import type { Project } from '@athena/shared/payload-types'
 
 import { CACHE_TAGS, ROUTES } from '@athena/shared/constants'
 
-import { authenticated } from '../../access/authenticated'
-import { fetchRepos, isRepoName } from '../../github/sync'
-import { translateUIField } from '../../translation/translate'
-import { invalidateWeb } from '../../utilities/invalidateWeb'
+import { authenticated } from '@/access/authenticated'
+import { fetchRepos, isRepoName } from '@/github/sync'
+import { translateUIField } from '@/translation/translate'
+import { invalidateWeb } from '@/utilities/invalidateWeb'
 
 /**
  * Portfolio entries shown on the public site at /work, one per GitHub

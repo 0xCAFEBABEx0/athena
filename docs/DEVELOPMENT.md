@@ -156,7 +156,9 @@ rm -rf apps/cms/.next
 
 - TypeScript strict mode (`noUncheckedIndexedAccess`, `strictNullChecks`); use
   type-only imports for Payload generated types.
-- Path alias `@/*` → `./src/*` in both apps.
+- Path alias `@/*` → `./src/*` in both apps: use it for imports from another
+  folder, `./` only within the same folder. Payload's generated files under
+  `apps/cms/src/app/(payload)/` keep their relative imports.
 - Never edit `packages/shared/src/payload-types.ts` — regenerate it.
 - CMS uses Server Components by default; add `'use client'` only when needed.
 - Dark mode is driven by `data-theme="dark"` (stored under the `payload-theme`

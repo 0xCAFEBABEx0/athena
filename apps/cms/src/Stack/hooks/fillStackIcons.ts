@@ -9,7 +9,7 @@ import {
   publicHost,
   withinDeadline,
   type Favicon,
-} from '../favicon'
+} from '@/Stack/favicon'
 
 type Item = {
   id?: string | null

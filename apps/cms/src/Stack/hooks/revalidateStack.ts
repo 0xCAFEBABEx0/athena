@@ -1,7 +1,7 @@
 import type { GlobalAfterChangeHook } from 'payload'
 
 import { CACHE_TAGS, ROUTES } from '@athena/shared/constants'
-import { invalidateWeb } from '../../utilities/invalidateWeb'
+import { invalidateWeb } from '@/utilities/invalidateWeb'
 
 /** /stacks (and /ja, /zh), plus the sitemap, which lists /stacks only while it has items. */
 export const revalidateStack: GlobalAfterChangeHook = async ({

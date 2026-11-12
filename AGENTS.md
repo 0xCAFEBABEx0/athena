@@ -89,7 +89,10 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 ## Code Conventions
 
 - **TypeScript strict mode** with `noUncheckedIndexedAccess` and `strictNullChecks`
-- **Path alias**: `@/*` maps to `./src/*` in both apps - use consistently
+- **Path alias**: `@/*` maps to `./src/*` in both apps. Import anything outside the
+  file's own folder through `@/` (`@/utilities/invalidateWeb`, not `../../utilities/...`);
+  `./` is for files in the same folder. Exceptions: the files Payload generates under
+  `apps/cms/src/app/(payload)/` (kept as generated) and imports of files outside `src/`
 - **Never edit** `packages/shared/src/payload-types.ts` - regenerate with `bun run generate:types`
 - **CMS**: Server Components by default; add `'use client'` only when needed
 - **Front-end design and browser support** (`apps/web`): read [`docs/BASELINE.md`](./docs/BASELINE.md) before changing UI, CSS or client-side JS. It holds the Baseline target (Widely available freely; Newly available and Limited only as progressive enhancement), the features in use and their fallbacks, and the design rules: themes and dark mode (`data-theme`, not the OS media query), the daisyUI `include:` list, motion, switches, narrow widths

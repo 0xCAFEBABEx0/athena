@@ -2,8 +2,8 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'paylo
 
 import { CACHE_TAGS } from '@athena/shared/constants'
 
-import type { Page } from '../../../payload-types'
-import { invalidateWeb } from '../../../utilities/invalidateWeb'
+import type { Page } from '@/payload-types'
+import { invalidateWeb } from '@/utilities/invalidateWeb'
 
 export const revalidatePage: CollectionAfterChangeHook<Page> = async ({
   doc,

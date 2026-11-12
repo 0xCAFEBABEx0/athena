@@ -1,7 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
-import { fillContributions, isGitHubLogin } from '../github/contributions'
-import { normalizeXUrl } from '../x/oembed'
+import { fillContributions, isGitHubLogin } from '@/github/contributions'
+import { normalizeXUrl } from '@/x/oembed'
 import { fillXPicks } from './hooks/fillXPicks'
 import { revalidateSite } from './hooks/revalidateSite'
 

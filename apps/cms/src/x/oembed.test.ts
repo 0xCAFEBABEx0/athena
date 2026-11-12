@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { fillXPicks } from '../Site/hooks/fillXPicks'
+import { fillXPicks } from '@/Site/hooks/fillXPicks'
 import { fetchXPost, normalizeXUrl, parseOEmbed, type XPost } from './oembed'
 
 // Shape of publish.twitter.com/oembed?omit_script=1 (text and names invented).
