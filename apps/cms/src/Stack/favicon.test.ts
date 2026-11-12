@@ -9,6 +9,7 @@ import {
   isPrivateAddress,
   publicHost,
   readCapped,
+  withinDeadline,
   type Favicon,
 } from './favicon'
 import { fillStackIcons, isFetchedIconOf, mapLimit, toPng } from './hooks/fillStackIcons'
@@ -316,6 +317,30 @@ describe('TC-U-37 / TC-U-39 favicon lookup: resolved addresses and time budget',
     ).toBeNull()
     expect(asked).toEqual([])
   })
+
+  test('a stalled image conversion ends with the budget', async () => {
+    const started = Date.now()
+    const stalled = () => new Promise<Buffer | null>(() => {})
+    expect(
+      await fetchFavicon('https://tool.example/', stalled, async () => png(), {
+        resolve: async () => ['93.184.215.14'],
+        budgetMs: 80,
+      }),
+    ).toBeNull()
+    expect(Date.now() - started).toBeLessThan(1000)
+  })
+
+  test('withinDeadline: the result in time, null after, a failure in time is thrown', async () => {
+    const soon = Date.now() + 200
+    expect(await withinDeadline(Promise.resolve(7), soon)).toBe(7)
+    expect(await withinDeadline(new Promise<number>(() => {}), Date.now() + 30)).toBeNull()
+    expect(await withinDeadline(Promise.resolve(7), Date.now() - 1)).toBeNull()
+    await expect(withinDeadline(Promise.reject(new Error('boom')), soon)).rejects.toThrow('boom')
+    // A failure after the deadline is swallowed, not reported as unhandled.
+    const late = new Promise<number>((_, reject) => setTimeout(() => reject(new Error('late')), 40))
+    expect(await withinDeadline(late, Date.now() + 10)).toBeNull()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  })
 })
 
 describe('TC-U-40 toPng', () => {
@@ -333,6 +358,15 @@ describe('TC-U-40 toPng', () => {
       expect([meta.format, meta.width, meta.height]).toEqual(['png', 64, 64])
     }
     expect(await toPng(new TextEncoder().encode('not an image'))).toBeNull()
+  })
+
+  test('an SVG declaring a huge canvas gives null instead of a huge decode', async () => {
+    const huge = new TextEncoder().encode(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="100000" height="100000"><rect width="10" height="10"/></svg>',
+    )
+    const started = Date.now()
+    expect(await toPng(huge)).toBeNull()
+    expect(Date.now() - started).toBeLessThan(5000)
   })
 })
 
@@ -517,6 +551,37 @@ describe('TC-U-41 Stack hook', () => {
       groups: { items: { icon: unknown }[] }[]
     }
     expect(out.groups[0]?.items.map((i) => i.icon)).toEqual([null, null])
+  })
+
+  test('a stalled upload ends with the store budget; the save goes through without that icon', async () => {
+    const warnings: string[] = []
+    const logReq = {
+      payload: { logger: { warn: (m: string) => warnings.push(m) } },
+    } as unknown as PayloadRequest
+    const hook = fillStackIcons(
+      async (url) => ({ data: Buffer.from('png'), host: new URL(url).hostname }),
+      async (_req, found) =>
+        found.host === 'slow.example' ? new Promise<number>(() => {}) : `media-${found.host}`,
+      async () => null,
+      { lookupMs: 10_000, storeMs: 60 },
+    )
+    const started = Date.now()
+    const out = (await hook({
+      data: {
+        groups: [
+          {
+            items: [
+              { id: 'a', name: 'A', url: 'https://fast.example/' },
+              { id: 'b', name: 'B', url: 'https://slow.example/' },
+            ],
+          },
+        ],
+      },
+      req: logReq,
+    } as never)) as { groups: { items: { icon: unknown }[] }[] }
+    expect(Date.now() - started).toBeLessThan(1000)
+    expect(out.groups[0]?.items.map((i) => i.icon)).toEqual(['media-fast.example', null])
+    expect(warnings.some((w) => w.includes('slow.example') && w.includes('later save'))).toBe(true)
   })
 
   test('sites are looked up a few at a time, results kept in order', async () => {

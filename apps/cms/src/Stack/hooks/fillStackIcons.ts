@@ -2,7 +2,14 @@ import type { GlobalBeforeChangeHook, PayloadRequest } from 'payload'
 
 import sharp from 'sharp'
 
-import { fetchFavicon, ICON_SIZE, LOOKUP_BUDGET_MS, publicHost, type Favicon } from '../favicon'
+import {
+  fetchFavicon,
+  ICON_SIZE,
+  LOOKUP_BUDGET_MS,
+  publicHost,
+  withinDeadline,
+  type Favicon,
+} from '../favicon'
 
 type Item = {
   id?: string | null
@@ -68,7 +75,10 @@ export const mediaFilename = async (
 /** Any image sharp can read, as a transparent 64×64 PNG. */
 export const toPng = async (image: Uint8Array): Promise<Buffer | null> => {
   try {
-    return await sharp(image, { density: 192, failOn: 'error' })
+    // A small file can still declare a huge canvas (an SVG especially): cap
+    // the decoded size and the time libvips may spend on it.
+    return await sharp(image, { density: 192, failOn: 'error', limitInputPixels: 4096 * 4096 })
+      .timeout({ seconds: 5 })
       .resize(ICON_SIZE, ICON_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toBuffer()
@@ -187,7 +197,17 @@ export const fillStackIcons =
         continue
       }
       try {
-        saved.set(host, await save(req, favicon))
+        // An upload still running at the deadline is left to finish on its
+        // own: it only adds `favicon-<host>.png` to Media, which the next save
+        // finds and reuses.
+        const id = await withinDeadline(save(req, favicon), storeUntil)
+        if (id === null) {
+          req.payload.logger.warn(
+            `Stack: out of time, the icon for ${host} is stored on a later save`,
+          )
+          continue
+        }
+        saved.set(host, id)
       } catch (error) {
         req.payload.logger.warn(`Stack: could not store the icon for ${host}: ${String(error)}`)
       }

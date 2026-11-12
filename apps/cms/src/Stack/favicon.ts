@@ -117,6 +117,28 @@ const resolvesPublic = async (
   }
 }
 
+/**
+ * `work`'s result, or null once `deadline` passes first. The work itself
+ * cannot be cancelled (an image conversion, an upload): it may still finish
+ * in the background, and a late failure is swallowed.
+ */
+export const withinDeadline = async <T>(work: Promise<T>, deadline: number): Promise<T | null> => {
+  work.catch(() => {})
+  const left = deadline - Date.now()
+  if (left <= 0) return null
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      work,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), left)
+      }),
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 const attr = (tag: string, name: string): string | null => {
   const match = tag.match(
     new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'>]+))`, 'i'),
@@ -275,7 +297,8 @@ export const fetchFavicon = async (
       if (!res || !(res.headers.get('content-type') ?? '').startsWith('image/')) continue
       const image = await readCapped(res, MAX_IMAGE_BYTES)
       if (!image) continue
-      const png = await toPng(image)
+      // sharp cannot be aborted; the save stops waiting for it at the deadline.
+      const png = await withinDeadline(toPng(image), ctx.deadline)
       if (png) return { data: png, host }
     } catch {
       // Try the next candidate.
