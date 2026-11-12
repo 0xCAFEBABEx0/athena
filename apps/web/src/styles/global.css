@@ -2108,13 +2108,13 @@ html:not([data-view='modern']) {
   }
 
   a.stack-row:hover .stack-name,
-  a.stack-row:focus-visible .stack-name,
+  .stack-row:focus-visible .stack-name,
   a.stack-row:hover .stack-arrow,
-  a.stack-row:focus-visible .stack-arrow {
+  .stack-row:focus-visible .stack-arrow {
     color: var(--color-primary);
   }
 
-  a.stack-row:focus-visible {
+  .stack-row:focus-visible {
     outline: none;
     background-color: color-mix(in oklab, var(--color-primary) 10%, var(--color-base-100));
   }
@@ -2189,7 +2189,7 @@ html:not([data-view='modern']) {
     line-height: 1.6;
 
     &:is(a):hover,
-    &:is(a):focus-visible {
+    &:focus-visible {
       background-color: var(--modern-sel);
       outline: none;
     }

@@ -137,7 +137,7 @@ const meta = {
                 </span>
                 <span>
                   {project.url ? (
-                    <a class="link-term font-mono text-[14.5px]" href={project.url}>{project.name}</a>
+                    <a class="link-term font-mono text-[14.5px]" href={project.url} data-post-row>{project.name}</a>
                   ) : (
                     <span class="font-mono text-[14.5px] text-primary">{project.name}</span>
                   )}{' '}
@@ -157,6 +157,7 @@ const meta = {
     <SearchPrompt class="mt-11" />
     <p class="cli-only mt-2 hidden flex-wrap gap-x-4 font-mono text-xs text-base-content/65 sm:flex">
       <span><kbd class="kbd kbd-xs">j</kbd> <kbd class="kbd kbd-xs">k</kbd> {t.shortcutMove}</span>
+      <span><kbd class="kbd kbd-xs">h</kbd> <kbd class="kbd kbd-xs">l</kbd> {t.shortcutSection}</span>
       <span><kbd class="kbd kbd-xs">t</kbd> {t.shortcutTheme}</span>
     </p>
   </div>

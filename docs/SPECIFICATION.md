@@ -109,7 +109,10 @@ all managed by editors without code changes.
   Footer globals. With no Header links set, the header shows `home` and
   `posts`. The footer always links to `/rss.xml`.
 - **F-NAV-3** Keyboard shortcuts outside text fields: `/` opens the popup
-  search, `j`/`k` move through post rows, `t` toggles the theme, `v` switches
+  search, `j`/`k` move through the page's list (note rows, build rows, the
+  open Stacks rows, the home project list), `h`/`l` go to the previous / next
+  section of the header nav (on a page outside the nav, `l` goes to the first
+  and `h` to the last; no wrap-around), `t` toggles the theme, `v` switches
   between the CLI and ADE views, `s` opens the `/status` panel.
 - **F-NAV-4** The site version (`docs/VERSIONING.md`) is shown next to the
   site name and in the footer. Clicking it, pressing `s`, or running

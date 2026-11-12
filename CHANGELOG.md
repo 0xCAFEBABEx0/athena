@@ -4,6 +4,20 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.3.0] - 2026-11-12
+
+### Added
+
+- `h` / `l` go to the previous / next section of the header nav (home,
+  notes, builds, stacks, about), in both views. The Keys tab in `/status`
+  and the shortcut hints list them.
+
+### Fixed
+
+- `j` / `k` now move through the tools on `/stacks`, including tools without
+  a link, and through the home project list. The hints say "move through the
+  list" instead of "move between notes".
+
 ## [1.2.0] - 2026-11-12
 
 ### Added

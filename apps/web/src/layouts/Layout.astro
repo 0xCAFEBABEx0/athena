@@ -232,7 +232,8 @@ if (draft) {
     <SearchDialog />
     <StatusDialog site={site} />
     <script is:inline>
-      // Shortcuts: "/" search, j/k move through post lists, t theme, v view.
+      // Shortcuts: "/" search, j/k move through the page's list (notes, builds,
+      // stacks), h/l previous / next header section, t theme, v view, s status.
       ;(function () {
         document.addEventListener('keydown', function (event) {
           if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return
@@ -260,6 +261,21 @@ if (draft) {
             next = Math.max(0, Math.min(rows.length - 1, next))
             event.preventDefault()
             rows[next].focus()
+          } else if (event.key === 'h' || event.key === 'l') {
+            // Previous / next section of the header nav (home, notes, builds, …).
+            var links = Array.prototype.slice.call(document.querySelectorAll('[data-section-nav] a[href]')).filter(function (link) {
+              return link.origin === window.location.origin && !link.target
+            })
+            if (links.length === 0) return
+            var at = -1
+            links.forEach(function (link, i) {
+              if (link.getAttribute('aria-current') === 'page') at = i
+            })
+            var to = event.key === 'l' ? at + 1 : at - 1
+            if (at === -1) to = event.key === 'l' ? 0 : links.length - 1
+            if (to < 0 || to >= links.length || to === at) return
+            event.preventDefault()
+            window.location.href = links[to].href
           } else if (event.key === 't' && window.__toggleTheme) {
             window.__toggleTheme()
           } else if (event.key === 'v' && window.__toggleView) {

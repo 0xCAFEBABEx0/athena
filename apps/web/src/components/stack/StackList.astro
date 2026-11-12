@@ -42,10 +42,12 @@ const sections = [
         <ul class="stack-rows" role="list">
           {section.items.map((item, index) => {
             const Tag = item.url ? 'a' : 'div'
-            const link = item.url ? { href: item.url, target: '_blank', rel: 'noopener' } : {}
+            // Rows without a link still take focus from j/k (tabindex -1 keeps
+            // them out of the Tab order).
+            const link = item.url ? { href: item.url, target: '_blank', rel: 'noopener' } : { tabindex: -1 }
             return (
               <li>
-                <Tag class="stack-row" {...link}>
+                <Tag class="stack-row" {...link} data-post-row>
                   <span class="stack-tree" aria-hidden="true">
                     {index === section.items.length - 1 ? '└─' : '├─'}
                   </span>
