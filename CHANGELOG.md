@@ -4,6 +4,21 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.1.0] - 2026-11-12
+
+### Added
+
+- A **Stack** page (`/stack`, `/ja/stack`, `/zh/stack`) listing the tools
+  behind the site in groups, each with a one-line note, the year it came in
+  and a link to its site. The CLI view prints it as a `stack --tree`; the ADE
+  view lists it like /work, with each tool's favicon. Tools you are trying
+  get a small label, and tools you no longer use fold into a "Former" group
+  at the end. Everything is edited in the CMS under Globals → Stack.
+- Favicons are fetched by the CMS when you save a tool with a link and kept
+  in Media, so visitors load them from the site's own storage. You can pick
+  another image instead; a site without a readable icon shows the tool's
+  initials.
+
 ## [1.0.8] - 2026-11-12
 
 ### Changed

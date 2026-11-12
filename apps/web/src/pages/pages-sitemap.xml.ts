@@ -4,14 +4,19 @@ import { getAllSlugs } from '@/lib/cms'
 import { webURL } from '@/lib/env'
 import { DEFAULT_LOCALE } from '@/lib/i18n'
 import { localizedEntries, sitemapResponse, sitemapXML, type SitemapEntry } from '@/lib/sitemap'
+import { getStack } from '@/lib/stack'
 import { getWork } from '@/lib/work'
 
 export const GET: APIRoute = async ({ url }) => {
   const base = url.origin || webURL()
 
   try {
-    // getWork never throws (a CMS outage just leaves /work out).
-    const [docs, work] = await Promise.all([getAllSlugs('pages'), getWork({}, DEFAULT_LOCALE)])
+    // getWork and getStack never throw (a CMS outage just leaves /work or /stack out).
+    const [docs, work, stack] = await Promise.all([
+      getAllSlugs('pages'),
+      getWork({}, DEFAULT_LOCALE),
+      getStack(DEFAULT_LOCALE),
+    ])
 
     // Fixed routes carry no <lastmod>: Google uses it only when it is
     // accurate, and "now" on every request is not. /search is left out (its
@@ -26,6 +31,9 @@ export const GET: APIRoute = async ({ url }) => {
       ...work.flatMap((item) =>
         localizedEntries(base, `/work/${item.slug}`, item.pushedAt || undefined),
       ),
+      ...(stack && stack.groups.length + stack.former.length > 0
+        ? localizedEntries(base, '/stack')
+        : []),
     ]
 
     return sitemapResponse(sitemapXML(entries))

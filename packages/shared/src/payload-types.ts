@@ -107,12 +107,14 @@ export interface Config {
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('en' | 'ja' | 'zh') | ('en' | 'ja' | 'zh')[];
   globals: {
     site: Site;
+    stack: Stack;
     header: Header;
     footer: Footer;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
     site: SiteSelect<false> | SiteSelect<true>;
+    stack: StackSelect<false> | StackSelect<true>;
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
@@ -1798,6 +1800,57 @@ export interface Site {
   createdAt?: string | null;
 }
 /**
+ * Tools shown on /stack. Add a Stack link to the Header nav to show the page in the menu.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stack".
+ */
+export interface Stack {
+  id: number;
+  /**
+   * One line under the page title, also the page’s search-result snippet. Empty = a built-in line.
+   */
+  intro?: string | null;
+  /**
+   * Shown in this order. Drag to reorder.
+   */
+  groups?:
+    | {
+        title: string;
+        description?: string | null;
+        items?:
+          | {
+              /**
+               * Product name (not translated).
+               */
+              name: string;
+              /**
+               * Official site. Its favicon is fetched when you save.
+               */
+              url?: string | null;
+              /**
+               * What you use it for, in one line.
+               */
+              note?: string | null;
+              /**
+               * Year you started (optional).
+               */
+              since?: number | null;
+              status: 'current' | 'trying' | 'former';
+              /**
+               * Filled from the site’s favicon on save; pick another image to replace it. Initials are shown when the site has no readable icon.
+               */
+              icon?: (number | null) | Media;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "header".
  */
@@ -1924,6 +1977,34 @@ export interface SiteSelect<T extends boolean = true> {
               text?: T;
               id?: T;
             };
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stack_select".
+ */
+export interface StackSelect<T extends boolean = true> {
+  intro?: T;
+  groups?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        items?:
+          | T
+          | {
+              name?: T;
+              url?: T;
+              note?: T;
+              since?: T;
+              status?: T;
+              icon?: T;
+              id?: T;
+            };
+        id?: T;
       };
   updatedAt?: T;
   createdAt?: T;

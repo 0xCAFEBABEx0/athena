@@ -26,6 +26,7 @@ import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { Site } from './Site/config'
+import { Stack } from './Stack/config'
 import { plugins } from './plugins'
 import { DEFAULT_LOCALE } from '@athena/shared/constants'
 import { defaultLexical } from '@/fields/defaultLexical'
@@ -86,7 +87,7 @@ export default buildConfig({
   // The web frontend lives on its own origin and POSTs form submissions here.
   cors: [getServerSideURL(), getWebURL()].filter(Boolean),
   csrf: [getServerSideURL(), getWebURL()].filter(Boolean),
-  globals: [Site, Header, Footer],
+  globals: [Site, Stack, Header, Footer],
   // English is written first; Japanese and Chinese are translated copies
   // (see endpoints/translate). Untranslated fields fall back to English.
   localization: {

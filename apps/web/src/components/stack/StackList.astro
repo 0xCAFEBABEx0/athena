@@ -1,0 +1,92 @@
+---
+/**
+ * /stack, drawn for both views from one HTML:
+ *
+ *   CLI  a tree, like `stack --tree` printed it:
+ *          agents/  Models and agents I work with every day
+ *          ├─ Claude Code   Terminal agent; writes most diffs…   2025 ↗
+ *          └─ CodeRabbit trying  Second reviewer on every PR     2026 ↗
+ *        and "› former (3)" folded at the end.
+ *   ADE  a list like /work's threads: "Agents · 3 ⌄" headings, the tool's
+ *        favicon (or its initials) in a tile, "Name — note", "since 2025"
+ *        on the right; "Former · 3 ›" folded at the end.
+ *
+ * Rows with a link open the tool's site in a new tab.
+ */
+import { dict, localeOf } from '@/lib/i18n'
+import type { StackGroup, StackItem } from '@/lib/stack'
+
+type Props = { groups: StackGroup[]; former: StackItem[]; class?: string }
+
+const { groups, former, class: className } = Astro.props
+const t = dict(localeOf(Astro))
+
+const sections = [
+  ...groups.map((group) => ({ ...group, isFormer: false })),
+  ...(former.length > 0
+    ? [{ title: t.stackFormer, description: '', items: former, isFormer: true }]
+    : []),
+]
+---
+
+<div class:list={['stack-list', className]}>
+  {
+    sections.map((section) => (
+      <details class:list={['stack-group', { 'stack-former': section.isFormer }]} open={!section.isFormer}>
+        <summary class="stack-group-heading">
+          <span class="stack-group-title">{section.title}</span>
+          <span class="stack-group-count">{section.items.length}</span>
+          <span class="stack-group-chevron" aria-hidden="true" />
+          {section.description && <span class="stack-group-desc">{section.description}</span>}
+        </summary>
+        <ul class="stack-rows" role="list">
+          {section.items.map((item, index) => {
+            const Tag = item.url ? 'a' : 'div'
+            const link = item.url ? { href: item.url, target: '_blank', rel: 'noopener' } : {}
+            return (
+              <li>
+                <Tag class="stack-row" {...link}>
+                  <span class="stack-tree" aria-hidden="true">
+                    {index === section.items.length - 1 ? '└─' : '├─'}
+                  </span>
+                  <span class="stack-icon" aria-hidden="true">
+                    {item.icon ? (
+                      <img src={item.icon} alt="" width="20" height="20" loading="lazy" decoding="async" />
+                    ) : (
+                      item.initials
+                    )}
+                  </span>
+                  <span class="stack-main">
+                    <span class="stack-head">
+                      <span class="stack-name">{item.name}</span>
+                      {item.status === 'trying' && <span class="stack-trying">{t.stackTrying}</span>}
+                    </span>
+                    {item.note && (
+                      <span class="stack-note">
+                        <span class="stack-dash" aria-hidden="true">
+                          —{' '}
+                        </span>
+                        {item.note}
+                      </span>
+                    )}
+                  </span>
+                  <span class="stack-end">
+                    {item.since && (
+                      <>
+                        <span class="stack-since cli-only">{item.since}</span>
+                        <span class="stack-since modern-only">{t.stackSince(item.since)}</span>
+                      </>
+                    )}
+                    <span class="stack-arrow" aria-hidden="true">
+                      {item.url ? '↗' : ''}
+                    </span>
+                  </span>
+                </Tag>
+              </li>
+            )
+          })}
+        </ul>
+      </details>
+    ))
+  }
+</div>

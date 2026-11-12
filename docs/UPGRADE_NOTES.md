@@ -2,6 +2,37 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## `/stack` page and the Stack global — 2026-11-12
+
+**CMS**
+
+- New global **`stack`** (`Stack/config.ts`): `intro`, `groups` (title,
+  description) and their `items` (name, link, note, year, status, icon).
+  Details in [CONTENT_MODEL.md](./CONTENT_MODEL.md#4-globals).
+- On save, items with a link and no icon get the site's favicon, fetched by
+  the CMS and stored in Media (Vercel Blob) as a 64×64 PNG, so visitors
+  never request it from the tool's site or Google. Uses the existing `sharp`.
+- New cache tag `global_stack` (`packages/shared/src/constants.ts`).
+
+**Web**
+
+- `/stack` (`pages/stack.astro`, `components/stack/StackList.astro`,
+  `lib/stack.ts`) in both views and all three languages; listed in the pages
+  sitemap while it has a tool. Add a `/stack` link to Globals → Header to
+  show it in the menu.
+
+**Database (manual, push is off)**
+
+Run [`docs/sql/2026-11-12-stack.sql`](./sql/2026-11-12-stack.sql) (creates
+`stack`, `stack_locales`, `stack_groups`, `stack_groups_locales`,
+`stack_groups_items`, `stack_groups_items_locales` and the
+`enum_stack_groups_items_status` type) on the preview Neon branch and then
+production, **before** the CMS deploy. Without it the CMS cannot load the
+Stack global; the rest of the site is unaffected and `/stack` answers 404.
+Idempotent; verified locally: applied twice to a copy of the previous
+schema, it gives the same `pg_dump --schema-only` as a fresh push of the new
+config.
+
 ## Security review of the 1.0.0 changes — 2026-11-11
 
 Review of everything between `main` and `development` before the release.

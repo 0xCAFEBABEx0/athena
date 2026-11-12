@@ -182,6 +182,13 @@ const en = {
   workFilter: 'Search…',
   workHints: '↑/↓ to move · Enter to open · 1–9 to jump · / to search',
   workNoMatch: 'No match',
+  stackTitle: 'Stack',
+  askStack: 'What do you build with?',
+  stackIntro: 'The tools I build, write and ship with.',
+  stackDescription: (who: string) => `The tools ${who} builds, writes and ships with, and what each one is for.`,
+  stackTrying: 'trying',
+  stackSince: (year: number) => `since ${year}`,
+  stackFormer: 'Former',
   keepReading: 'Keep reading',
 }
 
@@ -322,6 +329,13 @@ const ja: Dictionary = {
   workFilter: '検索…',
   workHints: '↑/↓ で移動 · Enter で開く · 1〜9 で番号の作品へ · / で検索',
   workNoMatch: '一致するものがありません',
+  stackTitle: 'スタック',
+  askStack: '普段どんな道具で作っていますか？',
+  stackIntro: '作る・書く・届けるのに使っている道具。',
+  stackDescription: (who: string) => `${who} が作る・書く・届けるのに使っている道具と、それぞれの用途。`,
+  stackTrying: 'お試し中',
+  stackSince: (year: number) => `${year}年〜`,
+  stackFormer: '以前使っていた',
   keepReading: '続けて読む',
 }
 
@@ -460,6 +474,13 @@ const zh: Dictionary = {
   workFilter: '搜索…',
   workHints: '↑/↓ 移动 · Enter 打开 · 1–9 跳转 · / 搜索',
   workNoMatch: '没有匹配的项目',
+  stackTitle: '技术栈',
+  askStack: '你平时用什么工具开发？',
+  stackIntro: '我用来构建、写作和发布的工具。',
+  stackDescription: (who: string) => `${who} 用来构建、写作和发布的工具，以及各自的用途。`,
+  stackTrying: '试用中',
+  stackSince: (year: number) => `${year} 年起`,
+  stackFormer: '曾经使用',
   keepReading: '继续阅读',
 }
 
