@@ -443,6 +443,25 @@ describe('TC-U-41 Stack hook', () => {
     expect(removed.asked).toEqual([])
   })
 
+  test('a Media read that stalls ends with the lookup budget, and the icon is kept', async () => {
+    const hook = fillStackIcons(
+      async () => icon,
+      async (_req, found) => `media-${found.host}`,
+      () => new Promise<string | null>(() => {}),
+      { lookupMs: 60, storeMs: 10_000 },
+    )
+    const started = Date.now()
+    const out = (await hook({
+      data: {
+        groups: [{ items: [{ id: 'a', name: 'Astro', url: 'https://astro.build/', icon: 3 }] }],
+      },
+      originalDoc: { groups: [{ items: [{ id: 'a', url: 'https://old.example/', icon: 3 }] }] },
+      req,
+    } as never)) as { groups: { items: { icon: unknown }[] }[] }
+    expect(Date.now() - started).toBeLessThan(1000)
+    expect(out.groups[0]?.items.map((i) => i.icon)).toEqual([3])
+  })
+
   test('a hand-picked icon stays when the link moves to another site or is removed', async () => {
     const original = { groups: [{ items: [{ id: 'a', url: 'https://old.example/', icon: 9 }] }] }
     const moved = await run(

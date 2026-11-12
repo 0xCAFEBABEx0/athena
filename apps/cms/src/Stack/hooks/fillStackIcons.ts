@@ -160,7 +160,8 @@ export const fillStackIcons =
               old?.host &&
               old.host !== host &&
               old.icon === icon &&
-              isFetchedIconOf(await filenameOf(req, icon), old.host)
+              // An unanswered Media read counts as hand-picked: the icon stays.
+              isFetchedIconOf(await withinDeadline(filenameOf(req, icon), lookupUntil), old.host)
             ) {
               icon = null
             }
