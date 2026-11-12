@@ -82,7 +82,7 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 
 - **Cache invalidation**: on publish/unpublish, `apps/cms/src/utilities/invalidateWeb.ts` POSTs `{ paths, tags }` to `${WEB_URL}/api/invalidate` with `Authorization: Bearer ${REVALIDATE_SECRET}`. The Astro endpoint marks the Vercel cache tag `content` stale (every cached page, feed, sitemap and `/search-index.json` carries it, added in `middleware.ts`) and re-renders the affected paths right away. ISR expiration is 7 days, only a safety net. A new deployment starts with an empty cache, so `.github/workflows/warm-cache.yml` (on Vercel's `deployment_status`) runs `scripts/warm-cache.sh` to request every sitemap URL once on the preview or production domain (repository variables `PREVIEW_WEB_URL` / `PRODUCTION_WEB_URL`; update the defaults there when the domain moves). The preview domain is behind Vercel Authentication, so warming it needs the athena-web Protection Bypass for Automation secret as the repository secret `VERCEL_AUTOMATION_BYPASS_SECRET`; without it the run ends early with a warning. On a miss, `middleware.ts` starts the layout's CMS requests together (memos keyed by `Astro.locals`), so pass `Astro.locals`, not `Astro.request`, to `getSite`/`getWork`/nav helpers. Published CMS responses are also kept in the Vercel Runtime Cache (`apps/web/src/lib/cms-cache.ts`, tag `cms-data`, 1-day TTL, Vercel only): `/api/invalidate` expires it before anything re-renders, and the re-renders it requests (`x-prerender-revalidate`) skip cache reads. Page routes 404 an unknown slug from the cached `getPublishedSlugs()` list (not in draft mode), so a crawler's made-up URLs never reach the CMS or wake Neon. Hovered links are prerendered (speculation rules in `Layout.astro`): scripts that must only run when a page is shown wait for `prerenderingchange`. The ISR bypass token is derived from `REVALIDATE_SECRET` (`apps/web/src/lib/isr-bypass.mjs`); draft preview sets it as the `__prerender_bypass` cookie.
 - **Draft preview**: the admin Preview button targets `${WEB_URL}/api/preview?slug&collection&path&previewSecret` (`generatePreviewPath.ts`). The endpoint validates `PREVIEW_SECRET`, sets the HttpOnly `athena-draft` and `__prerender_bypass` cookies, and redirects (only to a path on the site, `isLocalPath`); `isDraft` needs both cookies, the second equal to the ISR bypass token, so `athena-draft` alone shows no drafts; draft-aware pages then fetch with `draft=true` using the `web-frontend` service account's API key (`PAYLOAD_API_KEY`). Create/rotate that account with `apps/cms/src/scripts/create-web-service-account.ts`.
-- **Forms**: the web `FormBlock` posts JSON to `${CMS_URL}/api/form-submissions`; CMS CORS already allows the web origin.
+- **Forms**: the web `FormBlock` posts JSON to its own `/api/form-submissions`, which forwards it server-side to `${CMS_URL}/api/form-submissions` with the protection bypass (`apps/web/src/lib/form-submission.ts`); browsers never call the CMS.
 
 `PREVIEW_SECRET` and `REVALIDATE_SECRET` must be identical in both deployments — drift shows up as silent 401s (`invalidateWeb` logs errors but never throws; a missing secret logs `Web invalidation skipped`, a redirect to the Vercel login `Web invalidation failed: 302`).
 
@@ -249,11 +249,13 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
     a schema change (see pitfall 12). The web app passes `locale` +
     `fallback-locale=en` on every CMS fetch and must keep `/ja`/`/zh` links
     via `localizePath` (`apps/web/src/lib/i18n.ts`).
-14. **Never enable Vercel Deployment Protection on athena-cms Production.** It
-    302s `/api/*` to Vercel SSO, and athena-web HTML routes 500. Protect
-    Preview only; Payload already gates `/admin`. If Production must stay
-    protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches
-    only — browser form posts to the CMS still fail).
+14. **Before protecting athena-cms Production with Vercel Deployment
+    Protection, set `CMS_PROTECTION_BYPASS` on athena-web Production** (the
+    athena-cms Protection Bypass for Automation secret). Without it the CMS
+    302s `/api/*` to Vercel SSO and athena-web HTML routes 500. With it, every
+    web → CMS call (page reads, form forwarding) passes; nothing in the browser
+    calls the CMS. Check `/api/payload-jobs/run` in the athena-cms logs after
+    switching: Vercel does not document whether Schedules pass protection.
 15. **Bun runtime caveats**: Vercel's automatic source maps and bytecode
     caching are Node-only; `engines.node` in an app `package.json` silently
     switches its functions back to Node. To roll back, remove `bunVersion`

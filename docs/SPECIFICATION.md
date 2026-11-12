@@ -82,7 +82,8 @@ all managed by editors without code changes.
 - **F-FORM-1** A Form block renders the selected form's fields (text, email,
   number, textarea, select, checkbox, country, state, message) with their
   widths, labels, defaults and required flags.
-- **F-FORM-2** Submitting posts the values to the CMS and then shows the
+- **F-FORM-2** Submitting posts the values to the web app, which forwards them
+  to the CMS server-side, and then shows the
   form's confirmation message or redirects to its redirect URL.
 - **F-FORM-3** Submissions are stored in `form-submissions` and visible in the
   admin. No email is sent.

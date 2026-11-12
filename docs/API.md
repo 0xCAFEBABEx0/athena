@@ -152,17 +152,22 @@ Vercel SSO bounce), non-`2xx`, non-JSON content type and invalid JSON all
 throw `CmsRequestError { status, path }`. Unit tests live in
 `apps/web/src/lib/cms.test.ts` (`bun test` in `apps/web`).
 
-### Form submission (browser → CMS)
+### Form submission (browser → web → CMS)
 
 ```http
-POST ${CMS_URL}/api/form-submissions
+POST /api/form-submissions            (athena-web, same origin)
 Content-Type: application/json
 
 { "form": "3", "submissionData": [{ "field": "email", "value": "a@example.com" }] }
 ```
 
-Allowed cross-origin because `WEB_URL` is in the CMS `cors` and `csrf` lists.
-There is no captcha, honeypot or rate limit.
+`apps/web/src/pages/api/form-submissions.ts` checks the body (form id, at most
+50 string fields, 32 KB), drops any other key, and posts it to
+`${CMS_URL}/api/form-submissions` with `x-vercel-protection-bypass` when
+`CMS_PROTECTION_BYPASS` is set, without following redirects. Payload's status
+and JSON errors are passed back; a redirect (the Vercel login), a network
+failure or a non-JSON error becomes `502`. There is no captcha, honeypot or
+rate limit.
 
 ## 3. Other CMS Endpoints
 
@@ -201,7 +206,7 @@ both apps together.
 | `REVALIDATE_SECRET` | yes | yes | Must match, in Preview and in Production. The ISR bypass token is derived from it. Unset in the CMS = saves do not refresh the web cache (logged as `Web invalidation skipped`). |
 | `WEB_PROTECTION_BYPASS` | optional | | athena-web Protection Bypass for Automation secret, so the invalidation call passes Vercel Authentication on a protected Preview. |
 | `PAYLOAD_API_KEY` | | yes | `web-frontend` API key for draft reads. |
-| `CMS_PROTECTION_BYPASS` | | optional | Vercel protection bypass for server-side fetches. |
+| `CMS_PROTECTION_BYPASS` | | optional | athena-cms Protection Bypass for Automation secret, sent on every server-side CMS request (reads and form forwarding). Required on any environment where athena-cms is protected. |
 | `BLOB_READ_WRITE_TOKEN` | yes | | Vercel Blob. |
 | `ANTHROPIC_API_KEY` | for translation | | Claude API key for the Translate button. Unset = button answers 503. |
 | `TRANSLATION_MODEL` | optional | | Overrides the translation model (default `claude-opus-5-5`). |

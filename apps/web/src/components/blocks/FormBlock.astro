@@ -3,7 +3,6 @@ import type { Form } from '@athena/shared/payload-types'
 import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
 
 import RichText from '@/components/RichText.astro'
-import { cmsURL } from '@/lib/env'
 
 type Props = {
   enableIntro?: boolean | null
@@ -67,7 +66,6 @@ const widthStyle = (width: number | null) =>
         <form
           method="post"
           data-cms-form={String(form.id)}
-          data-cms-url={cmsURL()}
           data-confirmation-type={form.confirmationType ?? 'message'}
           data-redirect-url={
             form.confirmationType === 'redirect' && form.redirect?.url ? form.redirect.url : ''
@@ -170,7 +168,9 @@ const widthStyle = (width: number | null) =>
 }
 
 <script>
-  // Submit form-builder forms as JSON to the CMS (port of apps/cms Form/Component.tsx).
+  // Submit form-builder forms as JSON (port of apps/cms Form/Component.tsx). The
+  // web app forwards them to the CMS (pages/api/form-submissions.ts), so the CMS
+  // can stay behind Vercel Deployment Protection.
   document.querySelectorAll<HTMLFormElement>('form[data-cms-form]').forEach((formEl) => {
     formEl.addEventListener('submit', async (event) => {
       event.preventDefault()
@@ -186,7 +186,7 @@ const widthStyle = (width: number | null) =>
       }
 
       try {
-        const req = await fetch(`${formEl.dataset.cmsUrl}/api/form-submissions`, {
+        const req = await fetch('/api/form-submissions', {
           body: JSON.stringify({ form: formEl.dataset.cmsForm, submissionData }),
           headers: { 'Content-Type': 'application/json' },
           method: 'POST',
