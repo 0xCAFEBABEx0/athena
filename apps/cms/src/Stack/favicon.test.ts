@@ -33,7 +33,15 @@ describe('TC-U-37 publicHost', () => {
     expect(publicHost('https://8.8.8.8/')).toBe('8.8.8.8')
     expect(publicHost('https://example.com./')).toBe('example.com')
     // Neighbours of the refused special-purpose ranges stay public.
-    for (const ip of ['198.17.255.255', '198.20.0.1', '192.0.3.1', '203.0.114.1', '172.32.0.1']) {
+    for (const ip of [
+      '198.17.255.255',
+      '198.20.0.1',
+      '192.0.3.1',
+      '203.0.114.1',
+      '172.32.0.1',
+      '192.0.0.9',
+      '192.0.0.10',
+    ]) {
       expect(publicHost(`http://${ip}/`), ip).toBe(ip)
     }
   })
@@ -51,6 +59,7 @@ describe('TC-U-37 publicHost', () => {
       'http://198.18.0.1/',
       'http://198.19.255.255/',
       'http://192.0.2.10/',
+      'http://192.0.0.8/',
       'http://203.0.113.5/',
       'http://127.0.0.1/',
       'http://10.0.0.5/',

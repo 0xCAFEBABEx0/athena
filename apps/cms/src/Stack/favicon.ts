@@ -52,7 +52,7 @@ export const isPrivateAddress = (address: string): boolean => {
   const ip = address.toLowerCase()
   const v4 = ip.replace(/^::ffff:/, '').match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
   if (v4) {
-    const [a, b, c] = [Number(v4[1]), Number(v4[2]), Number(v4[3])]
+    const [a, b, c, d] = [Number(v4[1]), Number(v4[2]), Number(v4[3]), Number(v4[4])]
     return (
       a === 0 || // "this network"
       a === 10 || // private
@@ -60,7 +60,8 @@ export const isPrivateAddress = (address: string): boolean => {
       (a === 100 && b >= 64 && b <= 127) || // CGNAT
       (a === 169 && b === 254) || // link-local, cloud metadata
       (a === 172 && b >= 16 && b <= 31) || // private
-      (a === 192 && b === 0 && (c === 0 || c === 2)) || // IETF assignments, TEST-NET-1
+      (a === 192 && b === 0 && c === 0 && d !== 9 && d !== 10) || // IETF assignments (PCP and TURN anycast are global)
+      (a === 192 && b === 0 && c === 2) || // TEST-NET-1
       (a === 192 && b === 88 && c === 99) || // 6to4 relay anycast
       (a === 192 && b === 168) || // private
       (a === 198 && (b === 18 || b === 19)) || // benchmarking
