@@ -74,14 +74,26 @@ const notFound = () =>
     },
   })
 
-/** The CMS Redirects entry for this exact path, as a 301, or null. */
+/**
+ * The CMS Redirects entry for this path, as a 301, or null. An entry written
+ * for an old section path (`/posts/old-slug`) also answers its renamed path
+ * (`/notes/old-slug`), because CMS links typed with the old path are rewritten
+ * to the new one before anyone clicks them; an exact entry wins.
+ */
 const cmsRedirect = (
   redirects: Redirect[],
   pathname: string,
   locale: Locale,
   context: APIContext,
 ): Response | null => {
-  const match = redirects.find((redirect) => redirect.from === pathname)
+  const match =
+    redirects.find((redirect) => redirect.from === pathname) ??
+    redirects.find(
+      (redirect) =>
+        typeof redirect.from === 'string' &&
+        redirect.from !== pathname &&
+        currentRoute(redirect.from) === pathname,
+    )
   if (!match?.to) return null
   const dest =
     match.to.type === 'reference'

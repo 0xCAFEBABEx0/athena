@@ -137,4 +137,14 @@ test('TC-E-56 a CMS redirect written for an old section path wins over the renam
   if (res.status() === 308) test.skip(true, 'No Redirects entry for /posts/moved-away in this CMS')
   expect(res.status()).toBe(301)
   expect(res.headers().location).toBe('/about')
+  // A CMS link typed as /posts/moved-away renders as /notes/moved-away: the
+  // same entry answers there too, in every language.
+  for (const [path, to] of [
+    ['/notes/moved-away', '/about'],
+    ['/ja/notes/moved-away', '/ja/about'],
+  ] as const) {
+    const renamed = await request.get(path, { maxRedirects: 0 })
+    expect(renamed.status(), path).toBe(301)
+    expect(renamed.headers().location, path).toBe(to)
+  }
 })

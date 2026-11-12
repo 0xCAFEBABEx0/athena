@@ -32,7 +32,8 @@ section of each new version as a GitHub Release.
 - Old addresses (`/posts/...`, `/work/...`, `/stack`, in every language)
   redirect permanently (308) to the new ones, with their query string, so
   existing links and search results keep working. A CMS redirect written for
-  an old address still takes precedence. Header links saved in the CMS with
+  an old address still takes precedence, also when it is reached through
+  its new address (a CMS link typed with the old path). Header links saved in the CMS with
   an old path point at the new page directly. RSS items keep their old IDs,
   so feed readers do not list every post again.
 

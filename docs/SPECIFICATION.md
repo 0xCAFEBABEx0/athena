@@ -164,7 +164,11 @@ all managed by editors without code changes.
   (with `/ja`, `/zh` and any subpath) answer `308` to `/notes`, `/builds`,
   `/stacks` with the same language, subpath and query string. On Vercel
   they are served by the plain function, not ISR, so the query reaches the
-  redirect and the CDN caches each full URL separately.
+  redirect and the CDN caches each full URL separately. A Redirects entry
+  whose `from` is an old section path wins over this `308`, and also answers
+  the renamed path (`from: /posts/x` redirects `/notes/x` too, since CMS
+  links typed with `/posts/x` render as `/notes/x`); an entry for the exact
+  path wins.
 
 ### 2.8 SEO and crawlers
 
