@@ -52,7 +52,14 @@ test('TC-E-39 no link to the CMS admin in the header, sidebar or footer', async 
 test('TC-E-21 feeds and crawler files', async ({ request }) => {
   const rss = await request.get('/ja/rss.xml')
   expect(rss.status()).toBe(200)
-  expect(await rss.text()).toContain('<language>ja</language>')
+  const feed = await rss.text()
+  expect(feed).toContain('<language>ja</language>')
+  // Items link to /notes but keep their pre-1.2.0 GUIDs, so readers do not
+  // list every post again.
+  for (const item of feed.match(/<item>.*?<\/item>/gs) ?? []) {
+    expect(item).toMatch(/<link>[^<]*\/ja\/notes\/[^<]+<\/link>/)
+    expect(item).toMatch(/<guid isPermaLink="true">[^<]*\/ja\/posts\/[^<]+<\/guid>/)
+  }
   const robots = await request.get('/robots.txt')
   expect(await robots.text()).toContain('Sitemap:')
   const sitemap = await request.get('/pages-sitemap.xml')
@@ -121,4 +128,13 @@ test('TC-E-53 old section URLs (1.1 and before) redirect permanently to the rena
   }
   // Paths that only start with the same letters are not sections.
   expect((await request.get('/postscript', { maxRedirects: 0 })).status()).not.toBe(308)
+})
+
+test('TC-E-56 a CMS redirect written for an old section path wins over the rename', async ({
+  request,
+}) => {
+  const res = await request.get('/posts/moved-away', { maxRedirects: 0 })
+  if (res.status() === 308) test.skip(true, 'No Redirects entry for /posts/moved-away in this CMS')
+  expect(res.status()).toBe(301)
+  expect(res.headers().location).toBe('/about')
 })

@@ -1,4 +1,5 @@
 import type { CollectionSlug, Payload, PayloadRequest, File } from 'payload'
+import { ROUTES } from '@athena/shared/constants'
 
 import { contactForm as contactFormData } from './contact-form'
 import { contact as contactPageData } from './contact-page'
@@ -301,7 +302,7 @@ export const seed = async ({
             link: {
               type: 'custom',
               label: 'Posts',
-              url: '/notes',
+              url: ROUTES.posts,
             },
           },
           {

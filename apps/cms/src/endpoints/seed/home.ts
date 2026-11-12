@@ -1,4 +1,5 @@
 import type { RequiredDataFromCollectionSlug } from 'payload'
+import { ROUTES } from '@athena/shared/constants'
 import type { Media } from '@/payload-types'
 
 type HomeArgs = {
@@ -21,7 +22,7 @@ export const home: (args: HomeArgs) => RequiredDataFromCollectionSlug<'pages'> =
             type: 'custom',
             appearance: 'default',
             label: 'All posts',
-            url: '/notes',
+            url: ROUTES.posts,
           },
         },
         {
@@ -578,7 +579,7 @@ export const home: (args: HomeArgs) => RequiredDataFromCollectionSlug<'pages'> =
               type: 'custom',
               appearance: 'default',
               label: 'All posts',
-              url: '/notes',
+              url: ROUTES.posts,
             },
           },
         ],

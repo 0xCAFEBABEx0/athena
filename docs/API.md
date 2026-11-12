@@ -210,7 +210,7 @@ both apps together.
 | `BLOB_READ_WRITE_TOKEN` | yes | | Vercel Blob. |
 | `ANTHROPIC_API_KEY` | for translation | | Claude API key for the Translate button. Unset = button answers 503. |
 | `TRANSLATION_MODEL` | optional | | Overrides the translation model (default `claude-opus-5-5`). |
-| `GITHUB_TOKEN` | for /builds | | Fine-grained token with read access to public repositories only, for the `syncGitHub` job and the home contribution graph. Unset = entries show `syncError` and stay off `/builds`, and the graph is not shown. |
+| `GITHUB_TOKEN` | for /builds | | Fine-grained token with read access to public repositories only, for the `syncGitHub` job and the home contribution graph. Unset = entries show `syncError` and stay off `/builds`; the graph is not shown until a first successful read, and after one a failed read (an unset token included) keeps the last calendar and only records `syncError`. |
 | `CRON_SECRET` | yes | | Jobs runner auth for Vercel Schedules (sent as a bearer token, like Vercel Cron). |
 | `DEPLOY_ENV` | optional | | Overrides `VERCEL_ENV` for stage detection (Sentry environment). |
 | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | optional | | See [SENTRY_SETUP.md](./SENTRY_SETUP.md). |

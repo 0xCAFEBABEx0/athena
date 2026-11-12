@@ -61,6 +61,8 @@ type Response = {
       }
     } | null
   } | null
+  /** GraphQL errors (bad token scope, rate limit, ...) come with a 200. */
+  errors?: { type?: string; message?: string }[] | null
 }
 
 /** The calendar from GitHub's answer, or null when it is not one. */
@@ -101,8 +103,16 @@ export const fetchContributions = async (
       signal: AbortSignal.timeout(timeoutMs),
     })
     if (!res.ok) return { ok: false, error: `GitHub API ${res.status}` }
-    const calendar = toCalendar((await res.json()) as Response)
-    return calendar ? { ok: true, calendar } : { ok: false, error: 'GitHub user not found.' }
+    const body = (await res.json()) as Response
+    const calendar = toCalendar(body)
+    if (calendar) return { ok: true, calendar }
+    // A missing user also comes back as an error (type NOT_FOUND); anything
+    // else is a problem with the token or the API, not with the name.
+    const errorTypes = (body.errors ?? []).map((error) => error.type ?? 'ERROR')
+    if (errorTypes.some((type) => type !== 'NOT_FOUND')) {
+      return { ok: false, error: `GitHub API error: ${[...new Set(errorTypes)].join(', ')}` }
+    }
+    return { ok: false, error: 'GitHub user not found.' }
   } catch (error) {
     return { ok: false, error: `GitHub API: ${String(error)}` }
   }
@@ -191,9 +201,17 @@ export async function syncContributions(
     ? !sameCalendar(before.contributions, result.calendar) || Boolean(before.syncError)
     : before.syncError !== result.error
   if (!changed) return { checked: true, updated: false }
+  // The lookup can take seconds: if the username was changed meanwhile, the
+  // save that changed it already read the new user's calendar. Writing this
+  // group now would put the old name back.
+  const current = (await payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true })) as {
+    github?: GitHubGroup | null
+  }
+  if (current.github?.username?.trim() !== login) return { checked: true, updated: false }
   await payload.updateGlobal({
     slug: 'site',
-    data: { github: { ...next, syncedAt: new Date().toISOString() } },
+    // syncedAt is the last successful read; a failure only records its error.
+    data: { github: result.ok ? { ...next, syncedAt: new Date().toISOString() } : next },
     depth: 0,
     overrideAccess: true,
     context: { skipContributionsFetch: true },

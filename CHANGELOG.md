@@ -30,9 +30,11 @@ section of each new version as a GitHub Release.
   titles, the CLI commands (`ls notes`, `ls ~/builds`, `stacks --tree`), the
   sitemap, RSS, `llms.txt` and the search index use the new names.
 - Old addresses (`/posts/...`, `/work/...`, `/stack`, in every language)
-  redirect permanently (308) to the new ones, so existing links and search
-  results keep working. Header links saved in the CMS with an old path point
-  at the new page directly.
+  redirect permanently (308) to the new ones, with their query string, so
+  existing links and search results keep working. A CMS redirect written for
+  an old address still takes precedence. Header links saved in the CMS with
+  an old path point at the new page directly. RSS items keep their old IDs,
+  so feed readers do not list every post again.
 
 ## [1.1.0] - 2026-11-12
 

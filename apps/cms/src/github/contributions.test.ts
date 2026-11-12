@@ -147,6 +147,27 @@ describe('TC-U-46 GitHub contributions: reading the calendar', () => {
       ok: false,
       error: 'GitHub user not found.',
     })
+    // GitHub reports a missing user as a NOT_FOUND error too.
+    expect(
+      await fetchContributions(
+        'ghost',
+        counting(() =>
+          Response.json({ data: { user: null }, errors: [{ type: 'NOT_FOUND', message: 'x' }] }),
+        ),
+      ),
+    ).toEqual({ ok: false, error: 'GitHub user not found.' })
+    // Any other GraphQL error (token scope, rate limit) is not "not found".
+    expect(
+      await fetchContributions(
+        'octocat',
+        counting(() =>
+          Response.json({
+            data: null,
+            errors: [{ type: 'RATE_LIMITED', message: 'secret detail' }, { type: 'RATE_LIMITED' }],
+          }),
+        ),
+      ),
+    ).toEqual({ ok: false, error: 'GitHub API error: RATE_LIMITED' })
     const failed = await fetchContributions(
       'octocat',
       counting(() => {
@@ -295,6 +316,9 @@ describe('TC-U-47 GitHub contributions: Site save and the 6-hourly sync', () => 
       contributions: calendar('octocat'),
       syncError: 'GitHub API 502',
     })
+    // syncedAt stays the time of the last successful read.
+    expect(down.updates[0]?.data.github).not.toHaveProperty('syncedAt')
+    expect(grew.updates[0]?.data.github).toHaveProperty('syncedAt')
     const stillDown = fakePayload({ username: 'octocat', syncError: 'GitHub API 502' })
     await syncContributions(stillDown.payload, async () => ({ ok: false, error: 'GitHub API 502' }))
     expect(stillDown.updates).toHaveLength(0)
@@ -308,5 +332,25 @@ describe('TC-U-47 GitHub contributions: Site save and the 6-hourly sync', () => 
       }),
     ).toEqual({ checked: false, updated: false })
     expect(asked).toBe(0)
+  })
+
+  test('the sync writes nothing when the username changed during the lookup', async () => {
+    const updates: unknown[] = []
+    let reads = 0
+    const payload = {
+      findGlobal: async () => {
+        reads += 1
+        return { github: { username: reads === 1 ? 'octocat' : 'hubot' } }
+      },
+      updateGlobal: async (args: unknown) => {
+        updates.push(args)
+        return {}
+      },
+      logger: { info: () => {}, warn: () => {} },
+    } as unknown as Payload
+    expect(
+      await syncContributions(payload, async () => ({ ok: true, calendar: calendar('octocat') })),
+    ).toEqual({ checked: true, updated: false })
+    expect(updates).toHaveLength(0)
   })
 })

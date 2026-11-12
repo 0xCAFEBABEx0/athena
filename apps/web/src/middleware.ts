@@ -8,7 +8,7 @@ import { tagAsContent } from '@/lib/cache'
 import { getRedirects } from '@/lib/cms'
 import { withFreshCmsReads } from '@/lib/cms-cache'
 import { env } from '@/lib/env'
-import { DEFAULT_LOCALE, localizePath, splitLocale } from '@/lib/i18n'
+import { DEFAULT_LOCALE, localizePath, splitLocale, type Locale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
 import { isrBypassToken } from '@/lib/isr-bypass.mjs'
 import { getFooterNav, getHeaderNav, getRecentPosts } from '@/lib/nav'
@@ -74,6 +74,22 @@ const notFound = () =>
     },
   })
 
+/** The CMS Redirects entry for this exact path, as a 301, or null. */
+const cmsRedirect = (
+  redirects: Redirect[],
+  pathname: string,
+  locale: Locale,
+  context: APIContext,
+): Response | null => {
+  const match = redirects.find((redirect) => redirect.from === pathname)
+  if (!match?.to) return null
+  const dest =
+    match.to.type === 'reference'
+      ? linkHref({ type: 'reference', reference: match.to.reference } as CMSLinkData)
+      : match.to.url
+  return dest ? context.redirect(localizePath(locale, dest), 301) : null
+}
+
 const handle = async (context: APIContext, next: MiddlewareNext): Promise<Response> => {
   // `/ja/…` and `/zh/…` render the same routes as the English paths: strip
   // the prefix, remember the locale, and rewrite. ISR still caches by the
@@ -89,7 +105,12 @@ const handle = async (context: APIContext, next: MiddlewareNext): Promise<Respon
 
   const moved = currentRoute(pathname)
   if (moved !== pathname) {
-    return movedPermanently(`${localizePath(locale, moved)}${context.url.search}`)
+    // A Redirects entry written for an old path (`/posts/old-slug`) still
+    // wins over the section rename, as it did before 1.2.0.
+    const own = await loadRedirects()
+      .then((redirects) => cmsRedirect(redirects, pathname, locale, context))
+      .catch(() => null)
+    return own ?? movedPermanently(`${localizePath(locale, moved)}${context.url.search}`)
   }
 
   // Everything else (pages, feeds, sitemaps, the search index) is cached at
@@ -126,17 +147,7 @@ const handle = async (context: APIContext, next: MiddlewareNext): Promise<Respon
     return render()
   }
 
-  const match = redirects.find((redirect) => redirect.from === pathname)
-  if (match?.to) {
-    const dest =
-      match.to.type === 'reference'
-        ? linkHref({ type: 'reference', reference: match.to.reference } as CMSLinkData)
-        : match.to.url
-
-    if (dest) return context.redirect(localizePath(locale, dest), 301)
-  }
-
-  return render()
+  return cmsRedirect(redirects, pathname, locale, context) ?? render()
 }
 
 /**

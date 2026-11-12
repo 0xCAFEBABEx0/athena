@@ -145,13 +145,22 @@ export default buildConfig({
         retries: 1,
         schedule: [{ cron: '0 */6 * * *', queue: 'default' }],
         handler: async ({ req }) => {
-          const output = await syncProjects(req.payload)
-          // Separate from the projects: one failing must not stop the other.
-          const contributions = await syncContributions(req.payload).catch((error: unknown) => {
-            req.payload.logger.error(`GitHub contributions: ${String(error)}`)
-            return { checked: false, updated: false }
-          })
-          return { output: { ...output, contributions: contributions.updated } }
+          // Separate: one failing must not stop the other. A projects failure
+          // is thrown again afterwards so the job's retry still applies.
+          const [projects, contributions] = await Promise.allSettled([
+            syncProjects(req.payload),
+            syncContributions(req.payload),
+          ])
+          if (contributions.status === 'rejected') {
+            req.payload.logger.error(`GitHub contributions: ${String(contributions.reason)}`)
+          }
+          if (projects.status === 'rejected') throw projects.reason
+          return {
+            output: {
+              ...projects.value,
+              contributions: contributions.status === 'fulfilled' && contributions.value.updated,
+            },
+          }
         },
       },
     ],
