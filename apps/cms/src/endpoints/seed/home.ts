@@ -21,7 +21,7 @@ export const home: (args: HomeArgs) => RequiredDataFromCollectionSlug<'pages'> =
             type: 'custom',
             appearance: 'default',
             label: 'All posts',
-            url: '/posts',
+            url: '/notes',
           },
         },
         {
@@ -578,7 +578,7 @@ export const home: (args: HomeArgs) => RequiredDataFromCollectionSlug<'pages'> =
               type: 'custom',
               appearance: 'default',
               label: 'All posts',
-              url: '/posts',
+              url: '/notes',
             },
           },
         ],

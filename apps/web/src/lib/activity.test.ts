@@ -22,8 +22,8 @@ describe('buildActivity (banner "Recent activity")', () => {
       href,
     )
     expect(items.map((item) => item.label)).toEqual(['x', 'B', 'A'])
-    expect(items[0]).toEqual({ date: '2026-11-10T00:00:00Z', kind: 'push', label: 'x', href: '/ja/work/x' })
-    expect(items[1]?.href).toBe('/ja/posts/b')
+    expect(items[0]).toEqual({ date: '2026-11-10T00:00:00Z', kind: 'push', label: 'x', href: '/ja/builds/x' })
+    expect(items[1]?.href).toBe('/ja/notes/b')
   })
 
   test('TC-U-02 a release at (or within an hour before) the last push wins', () => {

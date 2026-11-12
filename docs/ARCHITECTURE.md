@@ -163,8 +163,8 @@ sequenceDiagram
     participant E as Vercel ISR cache
     Ed->>C: Publish post "hello"
     C->>C: afterChange hook (revalidatePost)
-    C->>W: POST {paths:["/posts/hello","/posts"], tags:["posts","sitemap"]}<br/>Authorization: Bearer REVALIDATE_SECRET
-    W->>W: map tags to paths (sitemap → *-sitemap.xml, posts → /posts)
+    C->>W: POST {paths:["/notes/hello","/notes"], tags:["posts","sitemap"]}<br/>Authorization: Bearer REVALIDATE_SECRET
+    W->>W: map tags to paths (sitemap → *-sitemap.xml, posts → /notes)
     loop each path
         W->>E: GET path with x-prerender-revalidate
         E-->>W: re-rendered
@@ -181,7 +181,7 @@ sequenceDiagram
 - Hooks skip invalidation when `req.context.disableRevalidate` is set (used by
   seeding).
 
-Paginated archives (`/posts/page/N`), pages containing an Archive block and
+Paginated archives (`/notes/page/N`), pages containing an Archive block and
 pages that link to a renamed document are not re-rendered at once: the cache
 tag marks them stale and they re-render on their next request.
 
@@ -266,7 +266,7 @@ minutes), not at the exact minute chosen. Each run processes at most 10 jobs
 runs.
 
 The same runner queues **scheduled tasks**: `syncGitHub` (cron `0 */6 * * *`)
-refreshes the GitHub snapshot of every `projects` entry for `/work` and saves
+refreshes the GitHub snapshot of every `projects` entry for `/builds` and saves
 only the entries that changed, so a quiet run costs one GitHub request and no
 web re-render. With the preview schedule disabled, the preview CMS fetches
 GitHub only when an entry is saved.

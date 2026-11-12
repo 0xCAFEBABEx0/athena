@@ -91,7 +91,7 @@ served at `/`.
 
 ### 3.2 Posts (`posts`)
 
-Blog articles served at `/posts/{slug}`.
+Blog articles served at `/notes/{slug}`.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -144,7 +144,7 @@ Timestamps on. Create or rotate the web service account with
 
 ### 3.5a Work (`projects`)
 
-Repositories shown on the public site at `/work` (and pinned ones on the home
+Repositories shown on the public site at `/builds` (and pinned ones on the home
 page), one entry per public GitHub repository. Nothing is imported
 automatically: only repositories added here appear, and **Hidden** takes one
 off the site without deleting it (visitors' reads filter it out).
@@ -157,7 +157,7 @@ off the site without deleting it (visitors' reads filter it out).
 | `status` | `auto` (default), `waiting`, `working`, `idle`, `done`. Shown as Waiting on you / Working / Idle / Resolved, in that order. Auto: pushed in the last 30 days = working, archived = done, else idle; `waiting` ("try it / feedback wanted") is only set by hand. |
 | `privateRepo` | "Private on GitHub": GitHub is never asked; the entry is shown only with a `liveUrl`, from the CMS text (no source link, commits or languages), and visitors' reads omit `repo` and `github`. Auto status = Resolved. |
 | `order`, `pinned`, `hidden` | Home page selection and order; `hidden` keeps the entry off the site. |
-| `slug` | Read-only, from the repository name: `/work/<slug>`. |
+| `slug` | Read-only, from the repository name: `/builds/<slug>`. |
 | `github`, `syncedAt`, `syncError` | Read-only snapshot from GitHub (languages, topics, stars, latest release, last 5 commits, commit count, open pull requests, custom social preview image, activity) and sync state. |
 
 The snapshot is fetched on save when the entry is new or its repository
@@ -212,7 +212,7 @@ review each language and publish. See `src/translation/`.
 
 Hooks: `beforeChange` fills the X picks (`Site/hooks/fillXPicks.ts`, `x/oembed.ts`; a pick X cannot read and that has no text rejects the save with a message); `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
 
-`stack` lists the tools shown on `/stack` (`Stack/config.ts`). The page answers 404, and the sitemap leaves it out, until at least one tool exists.
+`stack` lists the tools shown on `/stacks` (`Stack/config.ts`). The page answers 404, and the sitemap leaves it out, until at least one tool exists.
 
 | Field | Type | Used for |
 |---|---|---|
@@ -267,7 +267,7 @@ default `true`). While locked, the slug is derived from `title` by
 | `appearance` | `default` or `outline` (unless `appearances: false`) |
 
 Resolution (both apps): a page reference becomes `/{slug}`, a post reference
-`/posts/{slug}`, a custom link its `url`.
+`/notes/{slug}`, a custom link its `url`.
 
 `fields/linkGroup.ts` wraps `link` in an array named `links`.
 
@@ -304,12 +304,12 @@ both apps, plus `bun run generate:types`.
 | `publishedAt` field hook | Posts | Sets `publishedAt` to now when publishing without a date. |
 | `populateAuthors` | Posts `afterRead` | Fills `populatedAuthors` with `{ id, name }`. |
 | `revalidatePage` / `revalidateDelete` | Pages | Invalidates `/` or `/{slug}` (old path too on unpublish) with tags `pages`, `sitemap`. |
-| `revalidatePost` / `revalidateDelete` | Posts | Invalidates `/posts/{slug}` and `/posts` with tags `posts`, `sitemap`. |
+| `revalidatePost` / `revalidateDelete` | Posts | Invalidates `/notes/{slug}` and `/notes` with tags `posts`, `sitemap`. |
 | `fillFromGitHub` | Projects `beforeChange` | Normalizes `repo`, sets `slug`, fetches the GitHub snapshot for new or re-pointed entries. |
-| `revalidateProject` / delete | Projects | Invalidates `/`, `/work`, `/work/{slug}` (old slug too) with tag `projects`. |
-| `revalidateSite` | Global | Paths `/`, `/posts`; tag `global_site`. |
+| `revalidateProject` / delete | Projects | Invalidates `/`, `/builds`, `/builds/{slug}` (old slug too) with tag `projects`. |
+| `revalidateSite` | Global | Paths `/`, `/notes`; tag `global_site`. |
 | `fillStackIcons` | Stack `beforeChange` | Fetches a favicon into Media for items with a link and no icon. |
-| `revalidateStack` | Global | Path `/stack`; tags `global_stack`, `sitemap`. |
+| `revalidateStack` | Global | Path `/stacks`; tags `global_stack`, `sitemap`. |
 | `revalidateHeader` / `revalidateFooter` | Globals | Tag `global_header` / `global_footer`. |
 | `revalidateRedirects` | Redirects | Tag `redirects`. |
 | `formatSlugHook` | slug field | Formats slug before validation. |

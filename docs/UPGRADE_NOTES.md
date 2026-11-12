@@ -2,6 +2,30 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## Sections renamed: `/notes`, `/builds`, `/stacks` — 2026-11-12
+
+**Web**
+
+- Posts moved from `/posts` to `/notes`, projects from `/work` to `/builds`,
+  the Stack page from `/stack` to `/stacks` (the CLI, ADE, titles, feeds,
+  sitemap and `llms.txt` follow). The paths live in `ROUTES`
+  (`packages/shared/src/constants.ts`).
+- `middleware.ts` answers the old paths in every language with a 308 to the
+  new one (query string kept), cached at the CDN for a day.
+- Links in the CMS typed with an old path (`/posts`, `/work`, `/stack`)
+  resolve to the new route, so nothing breaks before they are edited.
+
+**CMS**
+
+- Invalidation paths and the draft preview path for posts use `ROUTES`.
+
+**After deploying (content, no SQL)**
+
+- Globals → Header: change the link labels (and, for tidiness, the URLs) to
+  notes / builds / stacks, in each language.
+- Search Console: nothing to do; the sitemap lists only the new URLs and the
+  old ones redirect permanently.
+
 ## `/stack` page and the Stack global — 2026-11-12
 
 **CMS**

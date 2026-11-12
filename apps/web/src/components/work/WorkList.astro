@@ -1,4 +1,5 @@
 ---
+import { ROUTES } from '@athena/shared/constants'
 /**
  * Work threads (GitHub repositories), drawn for both views from one HTML:
  *
@@ -67,7 +68,7 @@ const searchText = (item: WorkItem) =>
         <ul class="work-rows" role="list">
           {group.items.map((item) => (
             <li data-work-item data-search={searchText(item)}>
-              <a class="work-row" href={localizePath(locale, `/work/${item.slug}`)} data-post-row>
+              <a class="work-row" href={localizePath(locale, `${ROUTES.work}/${item.slug}`)} data-post-row>
                 <span class="post-row-marker" aria-hidden="true">
                   ❯
                 </span>

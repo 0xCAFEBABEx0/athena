@@ -1,3 +1,4 @@
+import { ROUTES } from '@athena/shared/constants'
 import type { APIRoute } from 'astro'
 
 import { getPosts } from '@/lib/cms'
@@ -18,7 +19,7 @@ export const GET: APIRoute = async ({ locals }) => {
   const items = posts.docs
     .filter((post) => post.slug)
     .map((post) => {
-      const link = `${origin}${localizePath(locale, `/posts/${post.slug}`)}`
+      const link = `${origin}${localizePath(locale, `${ROUTES.posts}/${post.slug}`)}`
       return [
         '<item>',
         `<title>${escapeHTML(post.title ?? '')}</title>`,

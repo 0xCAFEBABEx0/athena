@@ -9,7 +9,7 @@ import type {
 
 import type { Project } from '@athena/shared/payload-types'
 
-import { CACHE_TAGS } from '@athena/shared/constants'
+import { CACHE_TAGS, ROUTES } from '@athena/shared/constants'
 
 import { authenticated } from '../../access/authenticated'
 import { fetchRepos, isRepoName } from '../../github/sync'
@@ -77,8 +77,8 @@ const fillFromGitHub: CollectionBeforeChangeHook = async ({ data, originalDoc, r
 
 const revalidateProject: CollectionAfterChangeHook = async ({ doc, previousDoc, req }) => {
   if (req.context.disableRevalidate) return doc
-  const paths = ['/', '/work', `/work/${doc.slug}`]
-  if (previousDoc?.slug && previousDoc.slug !== doc.slug) paths.push(`/work/${previousDoc.slug}`)
+  const paths = ['/', ROUTES.work, `${ROUTES.work}/${doc.slug}`]
+  if (previousDoc?.slug && previousDoc.slug !== doc.slug) paths.push(`${ROUTES.work}/${previousDoc.slug}`)
   await invalidateWeb({ paths, tags: [CACHE_TAGS.projects], payload: req.payload })
   return doc
 }
@@ -86,7 +86,7 @@ const revalidateProject: CollectionAfterChangeHook = async ({ doc, previousDoc, 
 const revalidateProjectDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
   if (req.context.disableRevalidate) return doc
   await invalidateWeb({
-    paths: ['/', '/work', `/work/${doc?.slug}`],
+    paths: ['/', ROUTES.work, `${ROUTES.work}/${doc?.slug}`],
     tags: [CACHE_TAGS.projects],
     payload: req.payload,
   })
@@ -236,7 +236,7 @@ export const Projects: CollectionConfig<'projects'> = {
       admin: {
         position: 'sidebar',
         readOnly: true,
-        description: 'URL: /work/<slug>, from the repository name.',
+        description: 'URL: /builds/<slug>, from the repository name.',
       },
     },
     translateUIField,

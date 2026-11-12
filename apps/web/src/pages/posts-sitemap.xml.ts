@@ -1,3 +1,4 @@
+import { ROUTES } from '@athena/shared/constants'
 import type { APIRoute } from 'astro'
 
 import { getAllSlugs } from '@/lib/cms'
@@ -12,7 +13,7 @@ export const GET: APIRoute = async ({ url }) => {
 
     const entries = docs
       .filter((doc) => Boolean(doc.slug))
-      .flatMap((doc) => localizedEntries(base, `/posts/${doc.slug}`, doc.updatedAt))
+      .flatMap((doc) => localizedEntries(base, `${ROUTES.posts}/${doc.slug}`, doc.updatedAt))
 
     return sitemapResponse(sitemapXML(entries))
   } catch (error) {

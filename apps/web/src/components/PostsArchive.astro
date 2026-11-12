@@ -15,7 +15,7 @@ type Props = {
 const locale = localeOf(Astro)
 const t = dict(locale)
 const { posts } = Astro.props
-const command = posts.page > 1 ? `ls posts --page=${posts.page}` : 'ls posts'
+const command = posts.page > 1 ? `ls notes --page=${posts.page}` : 'ls notes'
 ---
 
 <div class="container pt-10">

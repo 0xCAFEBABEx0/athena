@@ -51,8 +51,9 @@ production build in `apps/web/.vercel/output`.
 | TC-U-30 | Site global | X picks: only `https://x.com/<handle>/status/<id>` links with text reach the page; fields trimmed, `@` dropped from the handle, day in Japan time, odd `lang` values dropped |
 | TC-U-35 | CMS cache | A published CMS response is loaded once and then served from the Runtime Cache (tag `cms-data`, with a TTL); a failed load is not cached; a cache that errors falls back to the CMS; fresh reads (re-renders after a CMS change) skip the cache and refresh it; `expireCmsData` drops everything; a CMS read that started before an expiry and finishes after the re-render does not bring the old data back (the next read reloads); with no cache (local dev) every call reads the CMS |
 | TC-U-36 | Form forwarding | `/api/form-submissions` keeps only `form` (an id) and `submissionData` (at most 50 string fields) and refuses other bodies with 400 and bodies over 32 KB with 413, without calling the CMS; it posts to `${CMS_URL}/api/form-submissions` with `x-vercel-protection-bypass` and no redirect following; Payload's status and JSON errors come back as they are; a redirect (Vercel login), a network failure, a body that fails mid-read or any non-JSON answer (even a 200) becomes 502; a body without `Content-Length` stops being read past 32 KB |
-| TC-U-42 | Stack | Groups without tools give no groups, so `/stack` answers 404; a CMS that cannot answer makes `/stack` throw (the uncached 500 page, never a 404 the CDN keeps for a day), while the sitemap just leaves `/stack` out |
+| TC-U-42 | Stack | Groups without tools give no groups, so `/stacks` answers 404; a CMS that cannot answer makes `/stacks` throw (the uncached 500 page, never a 404 the CDN keeps for a day), while the sitemap just leaves `/stacks` out |
 | TC-U-43 | Stack | Names and notes trimmed; links only absolute http(s); years only whole numbers 1970–2100; the icon is the Media URL with its `updatedAt`; former tools of every group are gathered at the end and not counted; groups left with no tools are dropped |
+| TC-U-45 | Routes | `ROUTES` is `/notes`, `/builds`, `/stacks`; `currentRoute` maps `/posts…`, `/work…`, `/stack…` (query kept) and leaves other paths, including `/postscript` and `/posts-sitemap.xml`; CMS post references link to `/notes/<slug>` and custom links typed with an old path resolve to the new one, with the locale prefix |
 | TC-U-44 | Stack | Initials for the icon tile: first letters of up to two words (`Claude Code` → `CC`, `TypeScript` → `T`, `cal.com` → `CC`) |
 | (14 more) | i18n, cms | Existing `i18n.test.ts` and `cms.test.ts` |
 
@@ -95,7 +96,7 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed and the favicon fetches are mocked,
 | TC-E-18 | files | `/website-template-OG.webp` is gone (404) |
 | TC-E-19 | files | `/llms.txt` is text/plain, generated, no template name |
 | TC-E-20 | files | Footer has no Payload template links (content: delete them in Globals → Footer) |
-| TC-E-21 | files | `/ja/rss.xml` in Japanese; robots.txt links the sitemap; pages sitemap has `/work` |
+| TC-E-21 | files | `/ja/rss.xml` in Japanese; robots.txt links the sitemap; pages sitemap has `/builds` |
 | TC-E-22 | files | Unknown paths answer 404, in the page language |
 | TC-E-23 | build | One stylesheet under 30 KB brotli, no `data:font`; no Cyrillic/Vietnamese/symbol font files |
 | TC-E-24 | network | Pages make no requests outside the site, Vercel scripts and image hosts; no CMS API calls |
@@ -110,23 +111,24 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed and the favicon fetches are mocked,
 | TC-E-33 | seo | `/search`, `/search?q=`, `/ja/search`: `noindex, follow`, no canonical, no hreflang |
 | TC-E-34 | seo | 404 (en, ja): status 404, `noindex, follow`, no canonical / `og:url` / hreflang, localized title |
 | TC-E-35 | seo | Posts (en, ja): `og:type` article, `article:published_time`, BlogPosting whose headline is the h1, `inLanguage` = page lang, `url` = canonical |
-| TC-E-36 | seo | Home: WebSite JSON-LD (`url` = canonical, `name` = site name); /work entry: SoftwareSourceCode without "Other"; lists: none |
+| TC-E-36 | seo | Home: WebSite JSON-LD (`url` = canonical, `name` = site name); /builds entry: SoftwareSourceCode without "Other"; lists: none |
 | TC-E-37 | seo | `og:locale` en_US / ja_JP / zh_CN with the other two as alternates |
 | TC-E-38 | seo | Every URL in the pages and posts sitemaps answers 200, is indexable and canonical to itself; `/` listed, `/search` not; fixed routes have no `<lastmod>` |
-| TC-E-39 | files | No link to `/admin` in the header, sidebar or footer (`/`, `/ja/posts`); content check: keep such links out of Globals → Header / Footer |
+| TC-E-39 | files | No link to `/admin` in the header, sidebar or footer (`/`, `/ja/notes`); content check: keep such links out of Globals → Header / Footer |
 | TC-E-40 | seo | Home title (en/ja/zh) is the site name or `site name — tagline`, never a dangling ` — `; `og:title` matches |
 | TC-E-45 | banner | ADE: the site avatar in the sidebar, the phone top bar and the home intro card is the favicon's ❯_ mark (an SVG, no letter); the account avatar at the sidebar foot keeps the author's initial |
 | TC-E-46 | layout | CLI header (320px, en/ja/zh): the language menu reads `[en]` / `[jp]` / `[zh]` in the same font, size and colour as `[ade]` and `[dark]`, ≥44px tall; its menu items stay plain `en` / `jp` / `zh` |
 | TC-E-47 | layout | ADE below 1024px (320 ja, 375 en, 390 zh, 1023 en): sun \| moon tabs in the top bar, the current theme selected; the moon tab sets dark and stores it, clicking it again keeps dark, the sun tab sets light; the bar stays one row with no horizontal scroll; at 1024px they are hidden and the sidebar has the switch |
 | TC-E-48 | layout | Switches in one order, view → language → theme: CLI header (`[ade] [en] [dark]`), ADE top bar (CLI \| ADE, EN \| JP \| ZH, sun \| moon) and the status panel config rows; the CLI language menu stays on screen when opened at 320 / 340 / 390 / 768px (en/ja/zh) |
-| TC-E-44 | files | `/api/exit-preview?path=`: `/posts` redirects there; `//example.com`, `/%5Cexample.com`, an absolute URL and an empty path redirect to `/`; `/api/preview` with a wrong secret is 401 |
+| TC-E-44 | files | `/api/exit-preview?path=`: `/notes` redirects there; `//example.com`, `/%5Cexample.com`, an absolute URL and an empty path redirect to `/`; `/api/preview` with a wrong secret is 401 |
 | TC-E-41 | picks | Home "Picks from X": ≤ 6 cards, count in the heading, each with text, `@handle`, a `YYYY-MM-DD` date when known and a link to `https://x.com/<handle>/status/<id>`; no request to x.com / twitter.com / twimg.com / t.co, no widget script or iframe (section absent without picks) |
 | TC-E-42 | picks | 320px (CLI light, ADE dark): no horizontal scroll, cards inside the viewport, one column; two columns at 1024px |
 | TC-E-43 | picks | `/ja`: heading and link text in Japanese; each text keeps the post's own `lang` |
-| TC-E-49 | stack | `/pages-sitemap.xml` lists `/stack`, `/ja/stack` and `/zh/stack` only while the page answers 200 (404 with no tools; the other cases then skip; any status other than 200 or 404 fails) |
+| TC-E-49 | stack | `/pages-sitemap.xml` lists `/stacks`, `/ja/stacks` and `/zh/stacks` only while the page answers 200 (404 with no tools; the other cases then skip; any status other than 200 or 404 fails) |
 | TC-E-50 | stack | CLI: each group's rows start with `├─` and the last with `└─`; the heading count is the number of current and trying tools; links are absolute http(s), open in a new tab with `noopener`; the former group starts folded |
 | TC-E-51 | stack | ADE: every tool has an icon tile, either an image that loads from Media (never the tool's own host) or one or two letters; no request to google.com / gstatic.com |
 | TC-E-52 | stack | 320 and 390px (CLI light ja, ADE dark en, ADE light zh): no horizontal scroll and every row inside the viewport |
+| TC-E-53 | files | `/posts`, `/posts/page/2`, `/ja/posts/<slug>`, `/work`, `/zh/work/my.app`, `/stack`, `/ja/stack?view=cli` answer 308 with `Location` on `/notes…`, `/builds…`, `/stacks…` (same language, query kept); `/postscript` is not redirected |
 
 ## Deployment checks (Preview, then Production)
 
@@ -143,17 +145,19 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 | TC-P-07 | Warm-cache workflow run | Succeeds for the deployment's commit, with 200 responses (no "Cache not warmed" warning; Preview needs the `VERCEL_AUTOMATION_BYPASS_SECRET` repository secret) |
 | TC-P-08 | E2E suite with `E2E_BASE_URL` set to the deployment | All pass (TC-E-20 needs the footer rows deleted) |
 | TC-P-10 | CMS on the deployment: add a public X post under Site → Picks from X with only the link, save | Text, author, handle, date and language are filled; the card shows on `/` after the save (cache invalidated) |
-| TC-P-09 | Schema Markup Validator (validator.schema.org) on `/`, a post, a /work entry; Google Rich Results Test on the post | WebSite / BlogPosting / SoftwareSourceCode parsed without errors; the post is eligible as an Article |
+| TC-P-09 | Schema Markup Validator (validator.schema.org) on `/`, a post, a /builds entry; Google Rich Results Test on the post | WebSite / BlogPosting / SoftwareSourceCode parsed without errors; the post is eligible as an Article |
 | TC-P-11 | CMS on the deployment: select three posts in the list and publish or unpublish them at once | athena-cms logs `Web invalidated` once per post and no `Web invalidation unreachable`; `/`, `/posts` and the sidebar no longer list unpublished posts (or list newly published ones) on the first request. Preview needs `WEB_PROTECTION_BYPASS` on athena-cms (else `Web invalidation failed: 401`) |
-| TC-P-12 | After a few pages have been viewed, `GET /no-such-page-<random>`, `/posts/no-such-post-<random>` and `/posts/page/9999` | 404 page; athena-cms runtime logs show no `/api/*` request for them (layout data and the slug lists come from the Runtime Cache) |
+| TC-P-12 | After a few pages have been viewed, `GET /no-such-page-<random>`, `/notes/no-such-post-<random>` and `/notes/page/9999` | 404 page; athena-cms runtime logs show no `/api/*` request for them (layout data and the slug lists come from the Runtime Cache) |
 | TC-P-13 | CMS on the deployment: change a header link (or publish a post) and save | The new link shows on `/` and on a page not visited since, on the first request (the Runtime Cache was expired by `/api/invalidate`) |
-| TC-P-15 | CMS on the deployment: Globals → Stack, add a group and a tool with only a name and a link (e.g. `https://astro.build`), save; add a second tool on the same site, save | The tool's Icon shows the site's favicon (Media `favicon-<host>.png`, 64×64); the second save adds no Media file; `/stack` (and `/ja/stack`) show the tool with its icon in the ADE view on the first request; `/pages-sitemap.xml` lists `/stack` |
+| TC-P-15 | CMS on the deployment: Globals → Stack, add a group and a tool with only a name and a link (e.g. `https://astro.build`), save; add a second tool on the same site, save | The tool's Icon shows the site's favicon (Media `favicon-<host>.png`, 64×64); the second save adds no Media file; `/stacks` (and `/ja/stack`) show the tool with its icon in the ADE view on the first request; `/pages-sitemap.xml` lists `/stacks` |
+| TC-P-16 | `GET /posts`, `/ja/posts/<a post>`, `/work/<repo>`, `/stack` twice each on the deployment | 308 to `/notes`, `/ja/notes/<a post>`, `/builds/<repo>`, `/stacks`; the second response comes from the CDN (`x-vercel-cache: HIT`); the targets answer 200 |
 | TC-P-14 | Send the `/contact` form on the deployment (en, then `/ja/contact`) | The confirmation message shows; the browser's only request is `POST /api/form-submissions` on the web origin (none to the CMS origin); the submission is listed in the admin under Form Submissions. With athena-cms protected, this needs `CMS_PROTECTION_BYPASS` on athena-web (else the form shows an error and athena-web logs `CMS redirected 302`) |
 
 ## Results
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-12 | local dev (mock CMS whose Header links still use `/posts`, `/work`, `/stack`), local builds | web 70/70, cms 47/47 | 73/73 (4 skipped) | Sections renamed (TC-U-45, TC-E-53): every old path answered 308 to the new one with the query kept; the header links typed with old paths rendered as `/notes`, `/builds`, `/stacks`. |
 | 2026-11-12 | local dev (same mock CMS), in-flight deadlines on #75 | web 68/68, cms 47/47 | 72/72 (4 skipped) | A stalled image conversion ends with the lookup budget and a stalled upload with the store budget, a stalled Media read with the lookup budget; an SVG declaring a 100000×100000 canvas gives null at once (TC-U-39, -40, -41). |
 | 2026-11-12 | local dev (same mock CMS), review fixes on #75 | web 68/68, cms 42/42 | 72/72 (4 skipped) | Favicon lookup: resolved-address check, 20 s budget (DNS included), one 25 s deadline per save, trailing-dot names, IANA special-purpose IPv4, at most 4 sites at once, failed upload (TC-U-37, -39, -41). With the mock CMS stopped, `/stack` and `/ja/stack` answered 500 with no `Vercel-CDN-Cache-Control`, and 200 again once it was back (TC-U-42). DNS itself is stubbed in the tests: the container has no resolver, so the real lookup is checked on Preview (TC-P-15). |
 | 2026-11-12 | Preview bfa2e78 (via Vercel share link) | — | not run | TC-P-15 (first half): after the SQL on the preview branch, a tool saved with only `https://claude.ai/` got `favicon-claude.ai.png` (64×64 PNG in Blob); athena-cms logged `Web invalidated: paths=[/stack] tags=[global_stack, sitemap]` and no warnings or errors; `/stack` and `/ja/stack` showed it on the first request with the Blob image; `/pages-sitemap.xml` lists the three `/stack` URLs. The same-host second tool was not tried. |

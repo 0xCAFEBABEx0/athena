@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 import { open } from './helpers'
 
 test('TC-E-17 og:image is the site image, and /og.png is served', async ({ page, request }) => {
-  await open(page, '/posts')
+  await open(page, '/notes')
   const og = await page.locator('meta[property="og:image"]').getAttribute('content')
   expect(og).toMatch(/^https?:\/\//)
   expect(og).not.toContain('website-template')
@@ -35,7 +35,7 @@ test('TC-E-20 the footer has no Payload template links', async ({ page }) => {
 })
 
 test('TC-E-39 no link to the CMS admin in the header, sidebar or footer', async ({ page }) => {
-  for (const path of ['/', '/ja/posts']) {
+  for (const path of ['/', '/ja/notes']) {
     await open(page, path)
     const hrefs = await page
       .locator('header a, footer a, nav a, aside a')
@@ -57,7 +57,7 @@ test('TC-E-21 feeds and crawler files', async ({ request }) => {
   expect(await robots.text()).toContain('Sitemap:')
   const sitemap = await request.get('/pages-sitemap.xml')
   expect(sitemap.status()).toBe(200)
-  expect(await sitemap.text()).toContain('/work</loc>')
+  expect(await sitemap.text()).toContain('/builds</loc>')
 })
 
 test('TC-E-22 unknown paths answer 404 in the page language', async ({ page }) => {
@@ -69,7 +69,7 @@ test('TC-E-22 unknown paths answer 404 in the page language', async ({ page }) =
 })
 
 test('TC-E-30 scanner paths get a plain 404 without a page render', async ({ request }) => {
-  for (const path of ['/wp-login.php', '/.env', '/ja/config.php', '/posts/x.bak']) {
+  for (const path of ['/wp-login.php', '/.env', '/ja/config.php', '/notes/x.bak']) {
     const res = await request.get(path)
     expect(res.status(), path).toBe(404)
     expect(res.headers()['content-type'], path).toContain('text/plain')
@@ -92,7 +92,7 @@ test('TC-E-44 leaving preview only redirects to a path on this site', async ({ r
     expect(res.status(), path).toBe(307)
     return res.headers().location ?? ''
   }
-  expect(await target('/posts')).toBe('/posts')
+  expect(await target('/notes')).toBe('/notes')
   for (const path of ['//example.com', '/%5Cexample.com', 'https://example.com', '']) {
     expect(await target(path), path).toBe('/')
   }
@@ -101,4 +101,24 @@ test('TC-E-44 leaving preview only redirects to a path on this site', async ({ r
     maxRedirects: 0,
   })
   expect(preview.status()).toBe(401)
+})
+
+test('TC-E-53 old section URLs (1.1 and before) redirect permanently to the renamed ones', async ({
+  request,
+}) => {
+  for (const [from, to] of [
+    ['/posts', '/notes'],
+    ['/posts/page/2', '/notes/page/2'],
+    ['/ja/posts/some-post', '/ja/notes/some-post'],
+    ['/work', '/builds'],
+    ['/zh/work/my.app', '/zh/builds/my.app'],
+    ['/stack', '/stacks'],
+    ['/ja/stack?view=cli', '/ja/stacks?view=cli'],
+  ] as const) {
+    const res = await request.get(from, { maxRedirects: 0 })
+    expect(res.status(), from).toBe(308)
+    expect(res.headers().location, from).toBe(to)
+  }
+  // Paths that only start with the same letters are not sections.
+  expect((await request.get('/postscript', { maxRedirects: 0 })).status()).not.toBe(308)
 })

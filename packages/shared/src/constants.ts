@@ -52,3 +52,35 @@ export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS]
 export const LOCALES = ['en', 'ja', 'zh'] as const
 export type Locale = (typeof LOCALES)[number]
 export const DEFAULT_LOCALE: Locale = 'en'
+
+/**
+ * Public URL paths of the web app's sections (without a locale prefix). The
+ * CMS uses them for invalidation and draft preview; the web app for routes,
+ * links, feeds and sitemaps.
+ */
+export const ROUTES = {
+  /** Posts collection: list, `/notes/page/<n>` and `/notes/<slug>`. */
+  posts: '/notes',
+  /** Projects collection: list and `/builds/<repo>`. */
+  work: '/builds',
+  /** Stack global. */
+  stack: '/stacks',
+} as const
+
+/** Section paths used before 1.2.0, each permanently redirected to its route. */
+export const LEGACY_ROUTES: Record<string, string> = {
+  '/posts': ROUTES.posts,
+  '/work': ROUTES.work,
+  '/stack': ROUTES.stack,
+}
+
+/**
+ * Maps an old section path (`/posts/x`, `/work`, `/stack`) to its current
+ * route; any other path comes back unchanged. Keeps links typed in the CMS
+ * before the rename pointing at the right page without a redirect.
+ */
+export const currentRoute = (path: string): string => {
+  const match = /^(\/[^/?#]+)(.*)$/.exec(path)
+  const next = match?.[1] ? LEGACY_ROUTES[match[1]] : undefined
+  return next ? `${next}${match?.[2] ?? ''}` : path
+}

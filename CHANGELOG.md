@@ -4,6 +4,20 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.2.0] - Unreleased
+
+### Changed
+
+- The three sections have new names and addresses: posts are **Notes** at
+  `/notes`, projects are **Builds** at `/builds`, and the tools page is
+  **Stacks** at `/stacks` (also under `/ja` and `/zh`). Headings, page
+  titles, the CLI commands (`ls notes`, `ls ~/builds`, `stacks --tree`), the
+  sitemap, RSS, `llms.txt` and the search index use the new names.
+- Old addresses (`/posts/...`, `/work/...`, `/stack`, in every language)
+  redirect permanently (308) to the new ones, so existing links and search
+  results keep working. Header links saved in the CMS with an old path point
+  at the new page directly.
+
 ## [1.1.0] - 2026-11-12
 
 ### Added

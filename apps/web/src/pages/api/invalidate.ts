@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro'
 
-import { CACHE_TAGS, type CacheTag } from '@athena/shared/constants'
-
+import { CACHE_TAGS, ROUTES, type CacheTag } from '@athena/shared/constants'
 import { invalidateContent } from '@/lib/cache'
 import { expireCmsData } from '@/lib/cms-cache'
 import { env, webURL } from '@/lib/env'
@@ -34,9 +33,9 @@ import { isrBypassToken } from '@/lib/isr-bypass.mjs'
  */
 const TAG_PATH_MAP: Partial<Record<CacheTag, string[]>> = {
   [CACHE_TAGS.sitemap]: ['/pages-sitemap.xml', '/posts-sitemap.xml'],
-  [CACHE_TAGS.posts]: ['/', '/posts', '/rss.xml', '/search-index.json'],
+  [CACHE_TAGS.posts]: ['/', ROUTES.posts, '/rss.xml', '/search-index.json'],
   [CACHE_TAGS.pages]: ['/search-index.json'],
-  [CACHE_TAGS.site]: ['/', '/posts', '/rss.xml'],
+  [CACHE_TAGS.site]: ['/', ROUTES.posts, '/rss.xml'],
   // Site settings, header/footer and redirects also affect every other page;
   // the cache-tag invalidation covers those.
 }

@@ -1,4 +1,5 @@
 ---
+import { ROUTES } from '@athena/shared/constants'
 import Layout from '@/layouts/Layout.astro'
 import Prompt from '@/components/Prompt.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
@@ -36,7 +37,7 @@ if (!isDraft(Astro.cookies)) {
     </p>
     <p class="mt-4 pl-5 font-mono text-sm">
       <a class="link-term" href={lp('/')}>{t.backHome}</a> ·
-      <a class="link-term" href={lp('/posts')}>{t.allPosts}</a>
+      <a class="link-term" href={lp(ROUTES.posts)}>{t.allPosts}</a>
     </p>
     <SearchPrompt class="mt-10" />
   </div>

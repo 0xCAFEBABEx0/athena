@@ -31,7 +31,7 @@ test.describe('CLI banner', () => {
       const row = rows.nth(i)
       await expect(row.locator('time')).not.toHaveText(/^\d{4}-\d{2}-\d{2}$/) // relative after load
       await expect(row.locator('.cli-banner-kind')).not.toBeEmpty()
-      await expect(row.locator('a')).toHaveAttribute('href', /^\/(posts|work)\//)
+      await expect(row.locator('a')).toHaveAttribute('href', /^\/(notes|builds)\//)
     }
     // Two panes: the side pane starts to the right of the owl.
     const owl = await page.locator('.cli-banner-owl').boundingBox()
@@ -61,7 +61,9 @@ test.describe('CLI banner', () => {
     await expect(page.locator('html')).toHaveAttribute('data-view', 'modern')
   })
 
-  test('TC-E-06 clicking Hoo wakes it with a tip, clicking again puts it to sleep', async ({ page }) => {
+  test('TC-E-06 clicking Hoo wakes it with a tip, clicking again puts it to sleep', async ({
+    page,
+  }) => {
     await open(page, '/', { view: 'cli', motion: 'full' })
     const button = page.locator('[data-owl-button]')
     const svg = page.locator('[data-owl-frame]')

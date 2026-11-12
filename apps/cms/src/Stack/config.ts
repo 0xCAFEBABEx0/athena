@@ -4,7 +4,7 @@ import { fillStackIcons } from './hooks/fillStackIcons'
 import { revalidateStack } from './hooks/revalidateStack'
 
 /**
- * The tools Master builds with, shown on /stack: groups of items, each with a
+ * The tools Master builds with, shown on /stacks: groups of items, each with a
  * one-line note, an optional link, year and status, and the site's favicon
  * (fetched on save, see ./favicon.ts). The page stays hidden (404) until at
  * least one item exists.
@@ -17,7 +17,7 @@ export const Stack: GlobalConfig = {
   },
   admin: {
     description:
-      'Tools shown on /stack. Add a Stack link to the Header nav to show the page in the menu.',
+      'Tools shown on /stacks. Add a /stacks link to the Header nav to show the page in the menu.',
   },
   fields: [
     {

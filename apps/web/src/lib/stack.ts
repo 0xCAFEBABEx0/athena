@@ -7,7 +7,7 @@ import { mediaUrl } from './media'
 import { httpUrl } from './safe-url'
 
 /**
- * /stack: the tools Master builds with, from the CMS `stack` global. Each
+ * /stacks: the tools Master builds with, from the CMS `stack` global. Each
  * item's favicon was fetched by the CMS on save and lives in Media, so the
  * page never asks the tool's site (or Google) for it.
  */
@@ -92,13 +92,13 @@ export const normalizeStack = (stack: Partial<Stack> | null | undefined): StackD
 }
 
 /**
- * The Stack global; throws when the CMS cannot answer, so `/stack` shows the
+ * The Stack global; throws when the CMS cannot answer, so `/stacks` shows the
  * 500 page (never cached) instead of a 404 the CDN would keep for a day.
  */
 export const loadStack = async (locale: Locale): Promise<StackData> =>
   normalizeStack(await getGlobal<Stack>('stack', { locale }))
 
-/** The Stack global, or null when the CMS cannot answer (the sitemap then leaves `/stack` out). */
+/** The Stack global, or null when the CMS cannot answer (the sitemap then leaves `/stacks` out). */
 export const getStack = async (locale: Locale): Promise<StackData | null> => {
   try {
     return await loadStack(locale)

@@ -1740,7 +1740,7 @@ html:not([data-view='modern']) {
 }
 
 /* ------------------------------------------------------------------------
-   /stack (components/stack/StackList.astro). CLI: a `stack --tree` print
+   /stacks (components/stack/StackList.astro). CLI: a `stacks --tree` print
    (group dirs, ├─ └─ rows, year and ↗ on the right). ADE: /work-like list
    with the tool's favicon in a tile, "Name — note" and "since 2025".
    ------------------------------------------------------------------------ */

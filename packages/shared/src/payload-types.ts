@@ -797,7 +797,7 @@ export interface Project {
    */
   hidden?: boolean | null;
   /**
-   * URL: /work/<slug>, from the repository name.
+   * URL: /builds/<slug>, from the repository name.
    */
   slug?: string | null;
   /**
@@ -1800,7 +1800,7 @@ export interface Site {
   createdAt?: string | null;
 }
 /**
- * Tools shown on /stack. Add a Stack link to the Header nav to show the page in the menu.
+ * Tools shown on /stacks. Add a /stacks link to the Header nav to show the page in the menu.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "stack".

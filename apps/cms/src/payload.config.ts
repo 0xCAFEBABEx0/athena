@@ -136,7 +136,7 @@ export default buildConfig({
     },
     tasks: [
       {
-        // Refresh the GitHub data behind /work. The hourly Vercel Schedule
+        // Refresh the GitHub data behind /builds. The hourly Vercel Schedule
         // hits /api/payload-jobs/run, which queues this when the cron is due.
         slug: 'syncGitHub',
         retries: 1,

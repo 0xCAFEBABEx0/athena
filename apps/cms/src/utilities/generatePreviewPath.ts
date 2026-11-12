@@ -1,9 +1,8 @@
 import type { PayloadRequest, CollectionSlug } from 'payload'
 
-import { DEFAULT_LOCALE, LOCALES } from '@athena/shared/constants'
-
+import { DEFAULT_LOCALE, LOCALES, ROUTES } from '@athena/shared/constants'
 const collectionPrefixMap: Partial<Record<CollectionSlug, string>> = {
-  posts: '/posts',
+  posts: ROUTES.posts,
   pages: '',
 }
 

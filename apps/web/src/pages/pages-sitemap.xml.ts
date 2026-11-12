@@ -1,3 +1,4 @@
+import { ROUTES } from '@athena/shared/constants'
 import type { APIRoute } from 'astro'
 
 import { getAllSlugs } from '@/lib/cms'
@@ -11,7 +12,7 @@ export const GET: APIRoute = async ({ url }) => {
   const base = url.origin || webURL()
 
   try {
-    // getWork and getStack never throw (a CMS outage just leaves /work or /stack out).
+    // getWork and getStack never throw (a CMS outage just leaves /builds or /stacks out).
     const [docs, work, stack] = await Promise.all([
       getAllSlugs('pages'),
       getWork({}, DEFAULT_LOCALE),
@@ -26,13 +27,13 @@ export const GET: APIRoute = async ({ url }) => {
       ...docs
         .filter((doc) => doc.slug && doc.slug !== 'home')
         .flatMap((doc) => localizedEntries(base, `/${doc.slug}`, doc.updatedAt)),
-      ...localizedEntries(base, '/posts'),
-      ...(work.length > 0 ? localizedEntries(base, '/work') : []),
+      ...localizedEntries(base, ROUTES.posts),
+      ...(work.length > 0 ? localizedEntries(base, ROUTES.work) : []),
       ...work.flatMap((item) =>
-        localizedEntries(base, `/work/${item.slug}`, item.pushedAt || undefined),
+        localizedEntries(base, `${ROUTES.work}/${item.slug}`, item.pushedAt || undefined),
       ),
       ...(stack && stack.groups.length + stack.former.length > 0
-        ? localizedEntries(base, '/stack')
+        ? localizedEntries(base, ROUTES.stack)
         : []),
     ]
 

@@ -1,6 +1,7 @@
 import { defineMiddleware } from 'astro:middleware'
 import type { APIContext, MiddlewareNext } from 'astro'
 
+import { currentRoute } from '@athena/shared/constants'
 import type { Redirect } from '@athena/shared/payload-types'
 
 import { tagAsContent } from '@/lib/cache'
@@ -41,12 +42,27 @@ const DOTTED_ROUTES = new Set([
   '/search-index.json',
 ])
 
-// /work/<repo> pages keep the repository name, which may contain dots
-// (`owner/my.app` -> /work/my.app; see the CMS Projects collection's slugOf).
-const WORK_DETAIL = /^\/work\/[a-z0-9._-]+\/?$/
+// /builds/<repo> pages keep the repository name, which may contain dots
+// (`owner/my.app` -> /builds/my.app; see the CMS Projects collection's slugOf).
+const WORK_DETAIL = /^\/builds\/[a-z0-9._-]+\/?$/
 
 const isDotted = (pathname: string): boolean =>
   pathname.includes('.') && !WORK_DETAIL.test(pathname)
+
+/**
+ * Permanent redirect for a section renamed in 1.2.0 (`/posts/x` → `/notes/x`,
+ * `/ja/work` → `/ja/builds`, `/stack` → `/stacks`), kept at the CDN for a day
+ * so old links rarely reach a function.
+ */
+const movedPermanently = (location: string) =>
+  new Response(null, {
+    status: 308,
+    headers: {
+      Location: location,
+      'Cache-Control': 'public, max-age=0, must-revalidate',
+      'Vercel-CDN-Cache-Control': 'public, max-age=86400',
+    },
+  })
 
 const notFound = () =>
   new Response('Not found\n', {
@@ -70,6 +86,11 @@ const handle = async (context: APIContext, next: MiddlewareNext): Promise<Respon
     locale === DEFAULT_LOCALE ? next() : next(`${pathname}${context.url.search}`)
 
   if (pathname.startsWith('/api/')) return render()
+
+  const moved = currentRoute(pathname)
+  if (moved !== pathname) {
+    return movedPermanently(`${localizePath(locale, moved)}${context.url.search}`)
+  }
 
   // Everything else (pages, feeds, sitemaps, the search index) is cached at
   // Vercel until /api/invalidate marks this tag stale.

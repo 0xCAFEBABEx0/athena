@@ -1,12 +1,12 @@
 /**
- * /stack: the tools from the CMS Stack global. Hidden (404) until the global
+ * /stacks: the tools from the CMS Stack global. Hidden (404) until the global
  * has a tool; these cases skip then, after checking that it is hidden.
  */
 import { expect, test, type Page } from '@playwright/test'
 
 import { open, overflowX } from './helpers'
 
-const hasStack = async (page: Page, path = '/stack') => {
+const hasStack = async (page: Page, path = '/stacks') => {
   const response = await open(page, path, { view: 'cli' })
   // 404 = no tools yet (cases skip); anything else but 200 is a failure.
   expect([200, 404], path).toContain(response?.status())
@@ -14,10 +14,10 @@ const hasStack = async (page: Page, path = '/stack') => {
 }
 
 test.describe('Stack', () => {
-  test('TC-E-49 sitemap lists /stack only while the page exists', async ({ page, request }) => {
+  test('TC-E-49 sitemap lists /stacks only while the page exists', async ({ page, request }) => {
     const exists = await hasStack(page)
     const sitemap = await (await request.get('/pages-sitemap.xml')).text()
-    for (const path of ['/stack', '/ja/stack', '/zh/stack']) {
+    for (const path of ['/stacks', '/ja/stacks', '/zh/stacks']) {
       expect(sitemap.includes(`${path}</loc>`)).toBe(exists)
     }
     if (!exists) {
@@ -59,7 +59,7 @@ test.describe('Stack', () => {
       if (/(^|\.)(google|gstatic)\.com$/.test(host)) outside.push(request.url())
     })
     test.skip(!(await hasStack(page)), 'No tools in the CMS Stack global')
-    await open(page, '/stack', { view: 'modern' })
+    await open(page, '/stacks', { view: 'modern' })
     const links = await page
       .locator('a.stack-row')
       .evaluateAll((els) => els.map((el) => new URL((el as HTMLAnchorElement).href).host))
@@ -81,9 +81,9 @@ test.describe('Stack', () => {
 
   for (const width of [320, 390]) {
     for (const [view, theme, path] of [
-      ['cli', 'light', '/ja/stack'],
-      ['modern', 'dark', '/stack'],
-      ['modern', 'light', '/zh/stack'],
+      ['cli', 'light', '/ja/stacks'],
+      ['modern', 'dark', '/stacks'],
+      ['modern', 'light', '/zh/stacks'],
     ] as const) {
       test(`TC-E-52 no horizontal scroll at ${width}px (${view}, ${theme}, ${path})`, async ({
         page,
