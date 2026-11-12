@@ -58,6 +58,8 @@ reviews:
         Public section paths (`/notes`, `/builds`, `/stacks`, `/about`) come from
         `ROUTES` in `packages/shared/src/constants.ts`; flag new hard-coded
         section paths, including the pre-1.2.0 `/posts`, `/work` and `/stack`.
+        The E2E specs in `apps/web/e2e/` are exempt: they spell the public
+        URLs out on purpose, so a `ROUTES` change that moves a URL fails them.
         Their 308s keep the query string only because
         `apps/web/scripts/route-legacy-redirects.mjs` routes them off the ISR
         function (which drops the query and caches by path); keep that

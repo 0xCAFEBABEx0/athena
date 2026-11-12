@@ -158,7 +158,8 @@ rm -rf apps/cms/.next
   type-only imports for Payload generated types.
 - Path alias `@/*` → `./src/*` in both apps: use it for imports from another
   folder, `./` only within the same folder. Payload's generated files under
-  `apps/cms/src/app/(payload)/` keep their relative imports.
+  `apps/cms/src/app/(payload)/` keep their relative imports, and imports of
+  files outside `src/` stay relative (the alias only reaches `src/`).
 - Never edit `packages/shared/src/payload-types.ts` — regenerate it.
 - CMS uses Server Components by default; add `'use client'` only when needed.
 - Dark mode is driven by `data-theme="dark"` (stored under the `payload-theme`
