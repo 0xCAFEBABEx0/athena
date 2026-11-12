@@ -204,8 +204,15 @@ test('TC-E-58 h/l go to the previous / next header section, in both views and la
       .locator('[data-section-nav] a[href^="/"]')
       .evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).pathname))
     test.skip(hrefs.length < 2, 'Fewer than two header links')
-    const at = hrefs.findIndex((href) => href === new URL(page.url()).pathname)
-    expect(at, `${view}: the start page is a header section`).toBeGreaterThanOrEqual(0)
+    let at = hrefs.findIndex((href) => href === new URL(page.url()).pathname)
+    if (at === -1) {
+      // A start page outside the nav (no home link in the header): l goes to the first section.
+      await Promise.all([
+        page.waitForURL((url) => url.pathname === hrefs[0]),
+        page.keyboard.press('l'),
+      ])
+      at = 0
+    }
     const next = hrefs[at + 1]
     if (!next) continue
     await Promise.all([page.waitForURL((url) => url.pathname === next), page.keyboard.press('l')])
