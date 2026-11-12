@@ -2,6 +2,36 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## About page — 2026-11-12
+
+**CMS**
+
+- New global `about` (`About/config.ts`): `heading`, `lead`,
+  `portraitCaption` and `body` (rich text) localized, `portrait` (upload →
+  Media). Saving invalidates `/about` and the sitemap.
+
+**Web**
+
+- `pages/about.astro` at `/about` (`ROUTES.about`), from `lib/about.ts`.
+  Answers 404 and stays out of the sitemap until the lead or the story has
+  text. A CMS page with the slug `about` is no longer reachable (none exists
+  in production).
+
+**Database (manual, schema push is off)**
+
+Run [`docs/sql/2026-11-12-about.sql`](./sql/2026-11-12-about.sql) (tables
+`about` and `about_locales`) on the preview Neon branch and then production,
+before the CMS deploys. Checked: applied twice to a copy of the schema with
+the GitHub graph columns, it gives the same schema as a push of the new
+config.
+
+**After deploying (content)**
+
+- Globals → About: write the heading, lead and story (English first, then
+  switch the locale for 日本語 and 中文), optionally upload a portrait.
+- Globals → Header: add an `/about` link to the nav if it should be in the
+  menu.
+
 ## GitHub contribution graph on the home page — 2026-11-12
 
 **CMS**

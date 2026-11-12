@@ -2,7 +2,16 @@ import { stringify } from 'qs-esm'
 
 import { DEFAULT_LOCALE, type Locale } from '@athena/shared/constants'
 
-import type { Footer, Header, Page, Post, Redirect, Site, Stack } from '@athena/shared/payload-types'
+import type {
+  About,
+  Footer,
+  Header,
+  Page,
+  Post,
+  Redirect,
+  Site,
+  Stack,
+} from '@athena/shared/payload-types'
 
 import { cachedCms } from './cms-cache'
 import { cmsProtectionBypass, cmsURL, env } from './env'
@@ -279,8 +288,8 @@ export const getArchivePosts = async (
   return result.docs
 }
 
-export const getGlobal = async <T extends Header | Footer | Site | Stack>(
-  slug: 'header' | 'footer' | 'site' | 'stack',
+export const getGlobal = async <T extends Header | Footer | Site | Stack | About>(
+  slug: 'header' | 'footer' | 'site' | 'stack' | 'about',
   opts: FetchOptions = {},
 ): Promise<T> => cmsFetch<T>(`/globals/${slug}`, { depth: 1 }, opts)
 

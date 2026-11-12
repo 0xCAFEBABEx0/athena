@@ -225,6 +225,18 @@ Hooks: `beforeChange` fills the X picks (`Site/hooks/fillXPicks.ts`, `x/oembed.t
 
 Hooks: `beforeChange` fills the `icon` of each item that has a link but no icon (`Stack/hooks/fillStackIcons.ts`, `Stack/favicon.ts`): the site's own declared icon (SVG, then the largest PNG/WebP, then apple-touch-icon; `.ico` skipped), else Google's favicon service, converted with sharp to a 64×64 PNG and stored once per host in Media as `favicon-<host>.png` (outside the save's transaction). Only public http(s) hosts are fetched, redirects are re-checked, pages are capped at 1 MB and images at 512 KB, 8 s each. A hand-picked icon is kept; changing the link to another site replaces an icon that was fetched for the old site. No readable icon is not an error: the web app shows the name's initials. `afterChange` invalidates `/stack` with the `global_stack` and `sitemap` tags.
 
+`about` is the profile shown on `/about` (`About/config.ts`). The page answers 404, and the sitemap leaves it out, until `lead` or `body` has text.
+
+| Field | Type | Used for |
+|---|---|---|
+| `heading` | text, localized | The page's `h1`; empty = "About" |
+| `lead` | textarea, localized | Opening paragraph and the page's meta description |
+| `portrait` | upload → `media` | Optional picture beside the lead (its `alt` is read aloud) |
+| `portraitCaption` | text, localized | Line under the portrait |
+| `body` | richText (Lexical: paragraphs, H2/H3, lists, quotes, rules, links), localized | The story below the lead |
+
+Hooks: `afterChange` invalidates `/about` with the `global_about` and `sitemap` tags.
+
 `header` and `footer` share the same shape:
 
 | Field | Type |
@@ -313,6 +325,7 @@ both apps, plus `bun run generate:types`.
 | `revalidateSite` | Global | Paths `/`, `/notes`; tag `global_site`. |
 | `fillStackIcons` | Stack `beforeChange` | Fetches a favicon into Media for items with a link and no icon. |
 | `revalidateStack` | Global | Path `/stacks`; tags `global_stack`, `sitemap`. |
+| `revalidateAbout` | Global | Path `/about`; tags `global_about`, `sitemap`. |
 | `revalidateHeader` / `revalidateFooter` | Globals | Tag `global_header` / `global_footer`. |
 | `revalidateRedirects` | Redirects | Tag `redirects`. |
 | `formatSlugHook` | slug field | Formats slug before validation. |

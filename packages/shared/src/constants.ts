@@ -38,6 +38,7 @@ export const CACHE_TAGS = {
   header: 'global_header',
   footer: 'global_footer',
   stack: 'global_stack',
+  about: 'global_about',
   redirects: 'redirects',
   sitemap: 'sitemap',
 } as const
@@ -65,6 +66,8 @@ export const ROUTES = {
   work: '/builds',
   /** Stack global. */
   stack: '/stacks',
+  /** About global. */
+  about: '/about',
 } as const
 
 /** Section paths used before 1.2.0, each permanently redirected to its route. */

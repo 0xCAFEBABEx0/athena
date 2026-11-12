@@ -108,6 +108,7 @@ export interface Config {
   globals: {
     site: Site;
     stack: Stack;
+    about: About;
     header: Header;
     footer: Footer;
     'payload-jobs-stats': PayloadJobsStat;
@@ -115,6 +116,7 @@ export interface Config {
   globalsSelect: {
     site: SiteSelect<false> | SiteSelect<true>;
     stack: StackSelect<false> | StackSelect<true>;
+    about: AboutSelect<false> | AboutSelect<true>;
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
@@ -289,6 +291,7 @@ export interface Media {
     };
     [k: string]: unknown;
   } | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -1297,6 +1300,7 @@ export interface ProjectsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1868,6 +1872,48 @@ export interface Stack {
   createdAt?: string | null;
 }
 /**
+ * Your profile on /about. Add an /about link to the Header nav to show the page in the menu. The links at the end of the page are Site → Social links.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about".
+ */
+export interface About {
+  id: number;
+  /**
+   * Page heading. Empty = “About”.
+   */
+  heading?: string | null;
+  /**
+   * Two or three sentences under the heading: who you are and what you build. Also the page’s search-result snippet.
+   */
+  lead?: string | null;
+  /**
+   * Optional photo or drawing beside the lead. Its Alt text is read aloud.
+   */
+  portrait?: (number | null) | Media;
+  portraitCaption?: string | null;
+  /**
+   * The longer story: background, what you work on now, what you are looking for. Use H2 headings for sections (e.g. Background, Now).
+   */
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "header".
  */
@@ -2031,6 +2077,20 @@ export interface StackSelect<T extends boolean = true> {
             };
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about_select".
+ */
+export interface AboutSelect<T extends boolean = true> {
+  heading?: T;
+  lead?: T;
+  portrait?: T;
+  portraitCaption?: T;
+  body?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

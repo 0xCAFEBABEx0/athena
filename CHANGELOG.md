@@ -14,6 +14,13 @@ section of each new version as a GitHub Release.
   Globals → Site → GitHub contributions; the CMS reads the graph from GitHub
   when you save and every 6 hours after, and visitors load nothing from
   GitHub. On phones the graph shows the last 6 months (4 below 360 px).
+- An **About** page (`/about`, `/ja/about`, `/zh/about`): a greeting, a short
+  lead, an optional portrait with a caption, and the longer story in rich
+  text, followed by the social links from Site. The CLI view prints it as
+  `cat about.md`; the ADE view puts the lead and portrait in a card. Write
+  it in the CMS under Globals → About; the page stays hidden until it has a
+  lead or a story. Add an `/about` link to the Header nav to show it in the
+  menu.
 
 ### Changed
 

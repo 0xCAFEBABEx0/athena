@@ -6,7 +6,12 @@ import { linkHref } from './links'
 
 describe('TC-U-45 renamed sections', () => {
   test('old section paths map to the new routes; other paths stay', () => {
-    expect(ROUTES).toEqual({ posts: '/notes', work: '/builds', stack: '/stacks' })
+    expect(ROUTES).toEqual({
+      posts: '/notes',
+      work: '/builds',
+      stack: '/stacks',
+      about: '/about',
+    })
     expect(currentRoute('/posts')).toBe('/notes')
     expect(currentRoute('/posts/hello')).toBe('/notes/hello')
     expect(currentRoute('/posts/page/2')).toBe('/notes/page/2')

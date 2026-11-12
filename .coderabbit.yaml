@@ -53,7 +53,7 @@ reviews:
         `undefined` cases. Imports of Payload generated types must be
         type-only (`import type`). Use the `@/*` path alias rather than long
         relative paths. Unused variables must be prefixed with `_`.
-        Public section paths (`/notes`, `/builds`, `/stacks`) come from
+        Public section paths (`/notes`, `/builds`, `/stacks`, `/about`) come from
         `ROUTES` in `packages/shared/src/constants.ts`; flag new hard-coded
         section paths, including the pre-1.2.0 `/posts`, `/work` and `/stack`.
     - path: 'apps/cms/src/collections/**'

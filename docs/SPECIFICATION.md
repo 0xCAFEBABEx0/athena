@@ -42,8 +42,16 @@ all managed by editors without code changes.
   GraphQL API when the username is saved and every 6 hours (`syncGitHub`);
   visitors load nothing from GitHub. Below 640 px only the last 26 weeks are
   drawn, below 360 px the last 17, with no horizontal scroll.
-- **F-PAGE-1** A published page with slug `s` is served at `/s` (e.g. `/about`).
-  The CMS page with slug `home` is no longer routed.
+- **F-ABOUT-1** `/about` (and `/ja/about`, `/zh/about`) shows the About
+  global: the heading (default "About") as the page's `h1` under a
+  `cat about.md` prompt, the lead, the portrait with its caption (beside the
+  lead from 640 px, below it on phones), the story as rich text, then the
+  Site social links (`rel="me"`). It answers 404, and the sitemap leaves it
+  out, until the lead or the story has text; when the CMS cannot answer it is
+  the uncached 500 page. The lead is the meta description.
+- **F-PAGE-1** A published page with slug `s` is served at `/s` (e.g.
+  `/contact`). The CMS page with slug `home` is no longer routed, and a page
+  with slug `about` is shadowed by F-ABOUT-1.
 - **F-PAGE-2** A page shows its hero (none / low / medium / high impact) then
   its layout blocks in order: Call to Action, Content (1–4 columns), Media,
   Archive, Form.

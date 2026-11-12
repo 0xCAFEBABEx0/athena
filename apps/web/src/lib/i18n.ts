@@ -199,6 +199,10 @@ const en = {
   stackTrying: 'trying',
   stackSince: (year: number) => `since ${year}`,
   stackFormer: 'Former',
+  aboutTitle: 'About',
+  askAbout: 'Tell me about yourself.',
+  aboutDescription: (who: string) => `About ${who}: background, work and how to get in touch.`,
+  aboutLinks: 'Elsewhere',
   keepReading: 'Keep reading',
 }
 
@@ -354,6 +358,10 @@ const ja: Dictionary = {
   stackTrying: 'お試し中',
   stackSince: (year: number) => `${year}年〜`,
   stackFormer: '以前使っていた',
+  aboutTitle: 'About',
+  askAbout: 'あなたについて教えて。',
+  aboutDescription: (who: string) => `${who} について：経歴、取り組んでいること、連絡先。`,
+  aboutLinks: 'リンク',
   keepReading: '続けて読む',
 }
 
@@ -504,6 +512,10 @@ const zh: Dictionary = {
   stackTrying: '试用中',
   stackSince: (year: number) => `${year} 年起`,
   stackFormer: '曾经使用',
+  aboutTitle: '关于',
+  askAbout: '介绍一下你自己。',
+  aboutDescription: (who: string) => `关于 ${who}：经历、正在做的事和联系方式。`,
+  aboutLinks: '在别处',
   keepReading: '继续阅读',
 }
 
