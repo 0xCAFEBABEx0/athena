@@ -5,15 +5,22 @@
  * PNG and stores it in Media (Vercel Blob). Visitors' browsers then load our
  * copy and never contact the tool's site or Google.
  *
- * Links come from signed-in editors only; still, only public http(s) hosts
- * are fetched, redirects are re-checked, and every response is size-capped.
+ * Links come from signed-in editors only, but icon URLs come from the tool's
+ * own HTML: only public http(s) hosts whose DNS answers are all public
+ * addresses are fetched, redirects are re-checked, every response is
+ * size-capped, and a whole lookup ends after LOOKUP_BUDGET_MS so the save
+ * finishes well inside the CMS function's time limit.
  */
+
+import { lookup as dnsLookup } from 'node:dns/promises'
 
 export const ICON_SIZE = 64
 
 const MAX_HTML_BYTES = 1_000_000
 const MAX_IMAGE_BYTES = 512_000
 const TIMEOUT_MS = 8_000
+/** Whole lookup (page, candidates, redirects); the API function may run 60 s. */
+export const LOOKUP_BUDGET_MS = 20_000
 const MAX_REDIRECTS = 3
 const MAX_CANDIDATES = 4
 
@@ -31,10 +38,17 @@ export const publicHost = (input: string | null | undefined): string | null => {
   if (!host || !host.includes('.')) return null
   if (host.startsWith('[')) return null // IPv6 literals are never needed for a tool's site
   if (/(^|\.)(localhost|local|internal|lan|home\.arpa)$/.test(host)) return null
-  const v4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host) && isPrivateAddress(host)) return null
+  return host
+}
+
+/** True for loopback, private, link-local, CGNAT, multicast and reserved IPv4/IPv6 addresses. */
+export const isPrivateAddress = (address: string): boolean => {
+  const ip = address.toLowerCase()
+  const v4 = ip.replace(/^::ffff:/, '').match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
   if (v4) {
     const [a, b] = [Number(v4[1]), Number(v4[2])]
-    if (
+    return (
       a === 0 ||
       a === 10 ||
       a === 127 ||
@@ -43,11 +57,33 @@ export const publicHost = (input: string | null | undefined): string | null => {
       (a === 172 && b >= 16 && b <= 31) ||
       (a === 192 && b === 168) ||
       a >= 224
-    ) {
-      return null
-    }
+    )
   }
-  return host
+  if (!ip.includes(':')) return true // not an IP address at all
+  return (
+    ip === '::' ||
+    ip === '::1' ||
+    /^f[cd]/.test(ip) || // fc00::/7 unique local
+    /^fe[89ab]/.test(ip) || // fe80::/10 link-local
+    /^ff/.test(ip) || // multicast
+    ip.startsWith('::ffff:') // mapped, non-dotted form
+  )
+}
+
+export type Resolve = (host: string) => Promise<string[]>
+
+const resolveAll: Resolve = async (host) =>
+  (await dnsLookup(host, { all: true, verbatim: true })).map((entry) => entry.address)
+
+/** True when the host resolves, and only to public addresses (`127.0.0.1.nip.io` does not). */
+const resolvesPublic = async (host: string, resolve: Resolve): Promise<boolean> => {
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return !isPrivateAddress(host)
+  try {
+    const addresses = await resolve(host)
+    return addresses.length > 0 && addresses.every((address) => !isPrivateAddress(address))
+  } catch {
+    return false
+  }
 }
 
 const attr = (tag: string, name: string): string | null => {
@@ -106,19 +142,20 @@ export const googleFaviconUrl = (host: string): string =>
 
 type Fetch = typeof fetch
 
-/** GET that refuses non-public hosts, also after a redirect. */
-const safeGet = async (
-  input: string,
-  accept: string,
-  fetchImpl: Fetch,
-): Promise<Response | null> => {
+type Lookup = { fetch: Fetch; resolve: Resolve; deadline: number }
+
+/** GET that refuses non-public hosts and addresses, also after a redirect, within the lookup's deadline. */
+const safeGet = async (input: string, accept: string, ctx: Lookup): Promise<Response | null> => {
   let url = input
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    if (!publicHost(url)) return null
-    const res = await fetchImpl(url, {
+    const host = publicHost(url)
+    if (!host || !(await resolvesPublic(host, ctx.resolve))) return null
+    const left = ctx.deadline - Date.now()
+    if (left <= 0) return null
+    const res = await ctx.fetch(url, {
       headers: { Accept: accept, 'User-Agent': 'athena-cms (favicon)' },
       redirect: 'manual',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(Math.min(TIMEOUT_MS, left)),
     })
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get('location')
@@ -178,13 +215,20 @@ export const fetchFavicon = async (
   siteUrl: string,
   toPng: ToPng,
   fetchImpl: Fetch = fetch,
+  {
+    resolve = resolveAll,
+    budgetMs = LOOKUP_BUDGET_MS,
+  }: { resolve?: Resolve; budgetMs?: number } = {},
 ): Promise<Favicon | null> => {
   const host = publicHost(siteUrl)
   if (!host) return null
+  const ctx: Lookup = { fetch: fetchImpl, resolve, deadline: Date.now() + budgetMs }
+  // A site that resolves to a private address gets no lookup at all, not even via Google.
+  if (!(await resolvesPublic(host, resolve))) return null
 
   let candidates: string[] = []
   try {
-    const page = await safeGet(siteUrl, 'text/html', fetchImpl)
+    const page = await safeGet(siteUrl, 'text/html', ctx)
     if (page && (page.headers.get('content-type') ?? '').includes('html')) {
       const body = await readCapped(page, MAX_HTML_BYTES)
       if (body) candidates = iconCandidates(new TextDecoder().decode(body), page.url || siteUrl)
@@ -194,8 +238,9 @@ export const fetchFavicon = async (
   }
 
   for (const url of [...candidates, googleFaviconUrl(host)]) {
+    if (Date.now() >= ctx.deadline) break
     try {
-      const res = await safeGet(url, 'image/*', fetchImpl)
+      const res = await safeGet(url, 'image/*', ctx)
       if (!res || !(res.headers.get('content-type') ?? '').startsWith('image/')) continue
       const image = await readCapped(res, MAX_IMAGE_BYTES)
       if (!image) continue

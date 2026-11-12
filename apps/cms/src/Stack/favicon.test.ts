@@ -6,6 +6,7 @@ import {
   fetchFavicon,
   googleFaviconUrl,
   iconCandidates,
+  isPrivateAddress,
   publicHost,
   readCapped,
   type Favicon,
@@ -102,6 +103,8 @@ describe('TC-U-39 fetchFavicon', () => {
   })
 
   const okPng = async () => Buffer.from('png')
+  // Every test host resolves to a public address; DNS answers are tested below.
+  const dns = { resolve: async () => ['93.184.215.14'] }
 
   test("uses the site's declared icon", async () => {
     const asked: string[] = []
@@ -118,7 +121,7 @@ describe('TC-U-39 fetchFavicon', () => {
         return respond(PNG_1PX, { headers: { 'content-type': 'image/png' } })
       return respond(null, { status: 404 })
     }) as typeof fetch
-    const icon = await fetchFavicon('https://tool.example/', okPng, fetchImpl)
+    const icon = await fetchFavicon('https://tool.example/', okPng, fetchImpl, dns)
     expect(icon?.host).toBe('tool.example')
     expect(asked).toEqual(['https://tool.example/', 'https://tool.example/i.png'])
   })
@@ -135,7 +138,7 @@ describe('TC-U-39 fetchFavicon', () => {
         headers: { 'content-type': 'text/html' },
       })
     }) as typeof fetch
-    const icon = await fetchFavicon('https://tool.example/', okPng, fetchImpl)
+    const icon = await fetchFavicon('https://tool.example/', okPng, fetchImpl, dns)
     expect(icon?.host).toBe('tool.example')
     expect(asked.at(-1)).toBe('https://www.google.com/s2/favicons?sz=64&domain=tool.example')
   })
@@ -150,20 +153,130 @@ describe('TC-U-39 fetchFavicon', () => {
       }
       return respond('<html>', { headers: { 'content-type': 'text/html' } })
     }) as typeof fetch
-    expect(await fetchFavicon('https://tool.example/', okPng, fetchImpl)).toBeNull()
+    expect(await fetchFavicon('https://tool.example/', okPng, fetchImpl, dns)).toBeNull()
     expect(asked).not.toContain('http://169.254.169.254/')
 
     const failing = (async () => {
       throw new Error('network down')
     }) as unknown as typeof fetch
-    expect(await fetchFavicon('https://tool.example/', okPng, failing)).toBeNull()
-    expect(await fetchFavicon('http://localhost/', okPng, failing)).toBeNull()
+    expect(await fetchFavicon('https://tool.example/', okPng, failing, dns)).toBeNull()
+    expect(await fetchFavicon('http://localhost/', okPng, failing, dns)).toBeNull()
   })
 
   test('an image sharp cannot read is skipped', async () => {
     const fetchImpl = (async () =>
       respond(PNG_1PX, { headers: { 'content-type': 'image/png' } })) as unknown as typeof fetch
-    expect(await fetchFavicon('https://tool.example/', async () => null, fetchImpl)).toBeNull()
+    expect(await fetchFavicon('https://tool.example/', async () => null, fetchImpl, dns)).toBeNull()
+  })
+})
+
+describe('TC-U-37 / TC-U-39 favicon lookup: resolved addresses and time budget', () => {
+  const okPng = async () => Buffer.from('png')
+  const png = () => respond(PNG_1PX, { headers: { 'content-type': 'image/png' } })
+
+  test('private, loopback, link-local and mapped addresses are recognised', () => {
+    for (const ip of [
+      '127.0.0.1',
+      '10.1.2.3',
+      '172.20.0.1',
+      '192.168.1.1',
+      '169.254.169.254',
+      '100.64.0.1',
+      '0.0.0.0',
+      '::',
+      '::1',
+      'fd00::1',
+      'fe80::1',
+      'ff02::1',
+      '::ffff:127.0.0.1',
+      '::ffff:7f00:1',
+    ]) {
+      expect(isPrivateAddress(ip), ip).toBe(true)
+    }
+    for (const ip of ['93.184.215.14', '8.8.8.8', '2606:4700::6810:84e5', '::ffff:8.8.8.8']) {
+      expect(isPrivateAddress(ip), ip).toBe(false)
+    }
+  })
+
+  test('a name that resolves to a private address is never fetched', async () => {
+    const asked: string[] = []
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      asked.push(String(input))
+      return png()
+    }) as typeof fetch
+    const resolve = async (host: string) =>
+      host === '127.0.0.1.nip.io' ? ['127.0.0.1'] : ['93.184.215.14']
+    expect(await fetchFavicon('http://127.0.0.1.nip.io/', okPng, fetchImpl, { resolve })).toBeNull()
+    // Not even through Google: the lookup stops at the site itself.
+    expect(asked).toEqual([])
+
+    // One private answer among public ones is enough to refuse.
+    const mixed = async () => ['93.184.215.14', '10.0.0.5']
+    expect(
+      await fetchFavicon('https://tool.example/', okPng, fetchImpl, { resolve: mixed }),
+    ).toBeNull()
+    expect(asked).toEqual([])
+
+    // A name that does not resolve is not fetched either.
+    const missing = async () => {
+      throw new Error('ENOTFOUND')
+    }
+    expect(
+      await fetchFavicon('https://tool.example/', okPng, fetchImpl, { resolve: missing }),
+    ).toBeNull()
+    expect(asked).toEqual([])
+  })
+
+  test('a redirect to a name that resolves privately is not followed', async () => {
+    const asked: string[] = []
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const url = String(input)
+      asked.push(url)
+      if (url === 'https://tool.example/')
+        return respond(null, { status: 302, headers: { location: 'http://internal.example/' } })
+      return respond('<html>', { headers: { 'content-type': 'text/html' } })
+    }) as typeof fetch
+    const resolve = async (host: string) =>
+      host === 'internal.example' ? ['192.168.0.10'] : ['93.184.215.14']
+    expect(await fetchFavicon('https://tool.example/', okPng, fetchImpl, { resolve })).toBeNull()
+    expect(asked).not.toContain('http://internal.example/')
+  })
+
+  test('the whole lookup stops when its time budget is spent', async () => {
+    const asked: string[] = []
+    const signals: AbortSignal[] = []
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      asked.push(String(input))
+      if (init?.signal) signals.push(init.signal)
+      await new Promise((resolve) => setTimeout(resolve, 40))
+      if (String(input) === 'https://tool.example/') {
+        return respond(
+          '<link rel="icon" href="/a.svg"><link rel="icon" href="/b.svg"><link rel="icon" href="/c.svg">',
+          { headers: { 'content-type': 'text/html' }, url: 'https://tool.example/' },
+        )
+      }
+      return respond('not an image', { headers: { 'content-type': 'text/plain' } })
+    }) as typeof fetch
+    const started = Date.now()
+    const icon = await fetchFavicon('https://tool.example/', okPng, fetchImpl, {
+      resolve: async () => ['93.184.215.14'],
+      budgetMs: 100,
+    })
+    expect(icon).toBeNull()
+    // Page + 3 candidates + Google would be 5 requests; the budget allows about 3.
+    expect(asked.length).toBeLessThan(5)
+    expect(Date.now() - started).toBeLessThan(1000)
+    expect(signals.length).toBe(asked.length)
+
+    // No budget left: nothing is requested at all.
+    asked.length = 0
+    expect(
+      await fetchFavicon('https://tool.example/', okPng, fetchImpl, {
+        resolve: async () => ['93.184.215.14'],
+        budgetMs: 0,
+      }),
+    ).toBeNull()
+    expect(asked).toEqual([])
   })
 })
 
