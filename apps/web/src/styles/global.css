@@ -778,10 +778,14 @@ html:not([data-theme='dark']) .theme-when-dark {
     font-family: var(--font-mono);
   }
 
-  &:hover,
-  &:focus-visible {
+  &:is(button):hover,
+  &:is(button):focus-visible {
     background-color: var(--color-base-200);
     color: var(--color-base-content);
+  }
+
+  &:not(button) {
+    cursor: default;
   }
 }
 

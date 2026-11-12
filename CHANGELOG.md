@@ -9,8 +9,9 @@ section of each new version as a GitHub Release.
 ### Added
 
 - `h` / `l` go to the previous / next section of the header nav (home,
-  notes, builds, stacks, about), in both views. The Keys tab in `/status`
-  and the shortcut hints list them.
+  notes, builds, stacks, about), in both views. The Keys tab in `/status`,
+  the shortcut hints and the home banner's "Tips for getting started" list
+  them, with `j` / `k`.
 
 ### Fixed
 
