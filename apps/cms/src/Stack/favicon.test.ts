@@ -2,8 +2,15 @@ import { describe, expect, test } from 'bun:test'
 
 import type { PayloadRequest } from 'payload'
 
-import { fetchFavicon, googleFaviconUrl, iconCandidates, publicHost, type Favicon } from './favicon'
-import { fillStackIcons, toPng } from './hooks/fillStackIcons'
+import {
+  fetchFavicon,
+  googleFaviconUrl,
+  iconCandidates,
+  publicHost,
+  readCapped,
+  type Favicon,
+} from './favicon'
+import { fillStackIcons, isFetchedIconOf, toPng } from './hooks/fillStackIcons'
 
 const PNG_1PX = Uint8Array.from(
   atob(
@@ -75,6 +82,25 @@ describe('TC-U-38 iconCandidates', () => {
 })
 
 describe('TC-U-39 fetchFavicon', () => {
+  test('a body without Content-Length stops being read past the limit', async () => {
+    let pulled = 0
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1
+        if (pulled > 100) controller.close()
+        else controller.enqueue(new Uint8Array(1000))
+      },
+    })
+    expect(await readCapped(new Response(stream), 2500)).toBeNull()
+    expect(pulled).toBeLessThan(10)
+    const small = await readCapped(new Response(new Uint8Array([1, 2, 3])), 2500)
+    expect(small && Array.from(small)).toEqual([1, 2, 3])
+    expect(await readCapped(new Response(''), 2500)).toBeNull()
+    expect(
+      await readCapped(new Response('x', { headers: { 'content-length': '9999' } }), 2500),
+    ).toBeNull()
+  })
+
   const okPng = async () => Buffer.from('png')
 
   test("uses the site's declared icon", async () => {
@@ -162,6 +188,8 @@ describe('TC-U-40 toPng', () => {
 describe('TC-U-41 Stack hook', () => {
   const req = { payload: { logger: { warn: () => {} } } } as unknown as PayloadRequest
   const icon: Favicon = { data: Buffer.from('png'), host: 'astro.build' }
+  // Media 3 was fetched for old.example; media 9 was picked by hand.
+  const filenames: Record<string, string> = { '3': 'favicon-old.example.png', '9': 'my-logo.png' }
   const run = async (
     data: unknown,
     originalDoc: unknown,
@@ -174,6 +202,7 @@ describe('TC-U-41 Stack hook', () => {
         return lookup(url)
       },
       async (_req, found) => `media-${found.host}`,
+      async (_req, id) => filenames[String(id)] ?? null,
     )
     const result = (await hook({ data, originalDoc, req } as never)) as {
       groups: { items: { icon: unknown }[] }[]
@@ -217,6 +246,37 @@ describe('TC-U-41 Stack hook', () => {
     )
     expect(same.icons).toEqual([3])
     expect(same.asked).toEqual([])
+
+    // Link removed: the old site's icon goes too.
+    const removed = await run(
+      { groups: [{ items: [{ id: 'a', name: 'Astro', icon: 3 }] }] },
+      original,
+    )
+    expect(removed.icons).toEqual([null])
+    expect(removed.asked).toEqual([])
+  })
+
+  test('a hand-picked icon stays when the link moves to another site or is removed', async () => {
+    const original = { groups: [{ items: [{ id: 'a', url: 'https://old.example/', icon: 9 }] }] }
+    const moved = await run(
+      { groups: [{ items: [{ id: 'a', name: 'Astro', url: 'https://astro.build/', icon: 9 }] }] },
+      original,
+    )
+    expect(moved.icons).toEqual([9])
+    expect(moved.asked).toEqual([])
+    const removed = await run(
+      { groups: [{ items: [{ id: 'a', name: 'Astro', icon: 9 }] }] },
+      original,
+    )
+    expect(removed.icons).toEqual([9])
+  })
+
+  test('fetched icons are recognised by their Media filename', () => {
+    expect(isFetchedIconOf('favicon-astro.build.png', 'astro.build')).toBe(true)
+    expect(isFetchedIconOf('favicon-astro.build-1.png', 'astro.build')).toBe(true)
+    expect(isFetchedIconOf('favicon-astroXbuild.png', 'astro.build')).toBe(false)
+    expect(isFetchedIconOf('favicon-astro.build.png', 'bun.sh')).toBe(false)
+    expect(isFetchedIconOf(null, 'astro.build')).toBe(false)
   })
 
   test('items on the same site share one lookup and one stored icon', async () => {

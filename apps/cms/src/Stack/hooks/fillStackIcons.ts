@@ -16,6 +16,26 @@ type Group = { id?: string | null; items?: Item[] | null; [key: string]: unknown
 const iconId = (icon: Item['icon']): number | string | null =>
   icon && typeof icon === 'object' ? icon.id : (icon ?? null)
 
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** True when the filename is the one `saveFavicon` gives this host's icon (Payload may add `-1`). */
+export const isFetchedIconOf = (filename: string | null | undefined, host: string): boolean =>
+  Boolean(filename) &&
+  new RegExp(`^favicon-${escapeRegExp(host)}(-\\d+)?\\.png$`).test(filename ?? '')
+
+/** The Media filename of an icon, or null when it cannot be read. */
+export const mediaFilename = async (
+  req: PayloadRequest,
+  id: number | string,
+): Promise<string | null> => {
+  try {
+    const doc = await req.payload.findByID({ collection: 'media', id, depth: 0, req })
+    return doc.filename ?? null
+  } catch {
+    return null
+  }
+}
+
 /** Any image sharp can read, as a transparent 64×64 PNG. */
 export const toPng = async (image: Uint8Array): Promise<Buffer | null> => {
   try {
@@ -62,6 +82,10 @@ export const fillStackIcons =
   (
     lookup: (url: string) => Promise<Favicon | null> = (url) => fetchFavicon(url, toPng),
     save: (req: PayloadRequest, icon: Favicon) => Promise<number | string> = saveFavicon,
+    filenameOf: (
+      req: PayloadRequest,
+      id: number | string,
+    ) => Promise<string | null> = mediaFilename,
   ): GlobalBeforeChangeHook =>
   async ({ data, originalDoc, req }) => {
     const groups = (data as { groups?: Group[] | null }).groups
@@ -77,15 +101,28 @@ export const fillStackIcons =
 
     // Decide which items need an icon, then look each site up once (in
     // parallel) and store the icons one at a time.
-    const plan = groups.map((group) =>
-      (group.items ?? []).map((item) => {
-        const host = publicHost(item.url)
-        const old = item.id ? before.get(item.id) : undefined
-        let icon = iconId(item.icon)
-        // The link moved to another site and the icon is still the one fetched for the old site.
-        if (icon && old && old.host !== host && old.icon === icon) icon = null
-        return { item, host, icon, fetch: !icon && Boolean(host) }
-      }),
+    const plan = await Promise.all(
+      groups.map((group) =>
+        Promise.all(
+          (group.items ?? []).map(async (item) => {
+            const host = publicHost(item.url)
+            const old = item.id ? before.get(item.id) : undefined
+            let icon = iconId(item.icon)
+            // The link moved to another site (or was removed) and the icon is
+            // still the one fetched for the old site; a hand-picked one stays.
+            if (
+              icon &&
+              old?.host &&
+              old.host !== host &&
+              old.icon === icon &&
+              isFetchedIconOf(await filenameOf(req, icon), old.host)
+            ) {
+              icon = null
+            }
+            return { item, host, icon, fetch: !icon && Boolean(host) }
+          }),
+        ),
+      ),
     )
     const wanted = new Map<string, string>()
     for (const entry of plan.flat()) {

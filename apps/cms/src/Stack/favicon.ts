@@ -131,11 +131,38 @@ const safeGet = async (
   return null
 }
 
-const readCapped = async (res: Response, max: number): Promise<Uint8Array | null> => {
+/**
+ * The body, or null when it is empty or larger than `max`. Reads the stream
+ * and stops as soon as it passes `max`, so a response without
+ * `Content-Length` (chunked) is never buffered whole.
+ */
+export const readCapped = async (res: Response, max: number): Promise<Uint8Array | null> => {
   const declared = Number(res.headers.get('content-length') ?? 0)
-  if (declared > max) return null
-  const body = new Uint8Array(await res.arrayBuffer())
-  return body.byteLength > 0 && body.byteLength <= max ? body : null
+  if (declared > max || !res.body) {
+    await res.body?.cancel().catch(() => {})
+    return null
+  }
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > max) {
+      await reader.cancel().catch(() => {})
+      return null
+    }
+    chunks.push(value)
+  }
+  if (size === 0) return null
+  const body = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    body.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return body
 }
 
 export type Favicon = { data: Buffer; host: string }
