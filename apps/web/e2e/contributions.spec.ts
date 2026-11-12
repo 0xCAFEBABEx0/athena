@@ -45,11 +45,12 @@ test.describe('GitHub contributions', () => {
     }
     expect(await visibleWeeks(page)).toBeGreaterThanOrEqual(52)
     await expect(section.locator('[data-contrib-total]')).toHaveText(/^[\d,]+ contributions$/)
-    await expect(section.locator('[role="img"]')).toHaveAttribute(
-      'aria-label',
-      /contributions in the last year/,
-    )
-    await expect(section.locator('a[href^="https://github.com/"]')).toHaveCount(1)
+    // The whole block is one link to the profile, named by the graph's label.
+    const link = section.locator('a[href^="https://github.com/"]')
+    await expect(link).toHaveCount(1)
+    await expect(link).toHaveAttribute('aria-label', /contributions in the last year/)
+    await expect(link.locator('.contrib-grid')).toHaveCount(1)
+    await expect(link.locator('[data-contrib-total]')).toHaveCount(1)
 
     await open(page, '/ja', { view: 'modern' })
     await expect(page.locator('[data-contrib-total]')).toHaveText(

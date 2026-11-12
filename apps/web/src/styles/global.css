@@ -1744,8 +1744,20 @@ html:not([data-view='modern']) {
    Weeks are columns of 7 days, shaded with the accent like GitHub's own
    calendar. CLI: a plain block of squares under `gh contributions`. ADE: a
    card with rounded squares. Below 640 px only the last 26 weeks show,
-   below 360 px the last 17.
+   below 360 px the last 17. The whole box is one link to the GitHub
+   profile: hovering it tints the total and the label with the accent.
    ------------------------------------------------------------------------ */
+.contrib-box {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
+  }
+}
+
 .contrib-head {
   display: flex;
   flex-wrap: wrap;
@@ -1754,8 +1766,17 @@ html:not([data-view='modern']) {
   gap: 0 1rem;
 }
 
+.contrib-label,
 .contrib-total {
   color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  transition: color 0.2s ease;
+}
+
+.contrib-box:hover {
+  .contrib-label,
+  .contrib-total {
+    color: var(--color-primary);
+  }
 }
 
 .contrib-grid {

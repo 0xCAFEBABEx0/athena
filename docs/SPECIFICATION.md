@@ -37,8 +37,8 @@ all managed by editors without code changes.
   Photos and videos are not shown (text only; the card links to the post).
 - **F-HOME-3** GitHub contribution graph: when `site.github.username` is
   set, `/` shows that user's last year of GitHub contributions (one square
-  per day, shaded 0–4 like GitHub's calendar, the yearly total, a link to the
-  profile) below the projects. The CMS reads the calendar from GitHub's
+  per day, shaded 0–4 like GitHub's calendar, the yearly total; the whole
+  block is one link to the profile) below the projects. The CMS reads the calendar from GitHub's
   GraphQL API when the username is saved and every 6 hours (`syncGitHub`);
   visitors load nothing from GitHub. Below 640 px only the last 26 weeks are
   drawn, below 360 px the last 17, with no horizontal scroll.
