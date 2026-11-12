@@ -113,7 +113,8 @@ all managed by editors without code changes.
   open Stacks rows, the home project list), `h`/`l` go to the previous / next
   section of the header nav (on a page outside the nav, `l` goes to the first
   and `h` to the last; no wrap-around), `t` toggles the theme, `v` switches
-  between the CLI and ADE views, `s` opens the `/status` panel.
+  between the CLI and ADE views, `s` opens the `/status` panel. Inside an open
+  dialog (search, `/status`) these keys belong to the dialog.
 - **F-NAV-4** The site version (`docs/VERSIONING.md`) is shown next to the
   site name and in the footer. Clicking it, pressing `s`, or running
   `/status` in the popup search opens a `/status` panel: version, commit,

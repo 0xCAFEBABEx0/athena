@@ -245,6 +245,9 @@ if (draft) {
             if (event.key === 'Escape' && target.blur) target.blur()
             return
           }
+          // An open dialog (search, /status) has keys of its own, such as
+          // type-to-search on the Config list: no page shortcuts there.
+          if (target && target.closest && target.closest('dialog[open]')) return
 
           if (event.key === '/') {
             event.preventDefault()

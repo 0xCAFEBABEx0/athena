@@ -17,6 +17,8 @@ section of each new version as a GitHub Release.
 - `j` / `k` now move through the tools on `/stacks`, including tools without
   a link, and through the home project list. The hints say "move through the
   list" instead of "move between notes".
+- Typing in the `/status` panel's Config list no longer triggers page
+  shortcuts (for example `t` toggling the theme while searching for it).
 
 ## [1.2.0] - 2026-11-12
 
