@@ -180,7 +180,8 @@ export const fillStackIcons =
         const left = lookupUntil - Date.now()
         if (left <= 0) return [host, null] as const
         try {
-          return [host, await lookup(url, left)] as const
+          // The lookup keeps its own budget; this bounds anything it still waits on.
+          return [host, await withinDeadline(lookup(url, left), lookupUntil)] as const
         } catch (error) {
           req.payload.logger.warn(`Stack: no icon for ${host}: ${String(error)}`)
           return [host, null] as const
