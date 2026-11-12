@@ -212,6 +212,16 @@ review each language and publish. See `src/translation/`.
 
 Hooks: `beforeChange` fills the X picks (`Site/hooks/fillXPicks.ts`, `x/oembed.ts`; a pick X cannot read and that has no text rejects the save with a message); `afterChange` invalidates `/` and `/posts` with the `global_site` tag.
 
+`stack` lists the tools shown on `/stack` (`Stack/config.ts`). The page answers 404, and the sitemap leaves it out, until at least one tool exists.
+
+| Field | Type | Used for |
+|---|---|---|
+| `intro` | text, localized | Line under the title and the page's meta description; empty = built-in line |
+| `groups` | array (max 12) of `title` (required, localized), `description` (localized), `items` | Sections of the page, in order |
+| `groups.items` | array (max 40) of `name` (required, not localized), `url` (http(s)), `note` (localized), `since` (year), `status` (`current` / `trying` / `former`, default `current`), `icon` (upload → `media`) | One row per tool. `trying` adds a small label; `former` tools of every group are folded together at the end of the page |
+
+Hooks: `beforeChange` fills the `icon` of each item that has a link but no icon (`Stack/hooks/fillStackIcons.ts`, `Stack/favicon.ts`): the site's own declared icon (SVG, then the largest PNG/WebP, then apple-touch-icon; `.ico` skipped), else Google's favicon service, converted with sharp to a 64×64 PNG and stored once per host in Media as `favicon-<host>.png` (outside the save's transaction). Only public http(s) hosts are fetched, redirects are re-checked, pages are capped at 1 MB and images at 512 KB, 8 s each. A hand-picked icon is kept; changing the link to another site replaces an icon that was fetched for the old site. No readable icon is not an error: the web app shows the name's initials. `afterChange` invalidates `/stack` with the `global_stack` and `sitemap` tags.
+
 `header` and `footer` share the same shape:
 
 | Field | Type |
@@ -298,6 +308,8 @@ both apps, plus `bun run generate:types`.
 | `fillFromGitHub` | Projects `beforeChange` | Normalizes `repo`, sets `slug`, fetches the GitHub snapshot for new or re-pointed entries. |
 | `revalidateProject` / delete | Projects | Invalidates `/`, `/work`, `/work/{slug}` (old slug too) with tag `projects`. |
 | `revalidateSite` | Global | Paths `/`, `/posts`; tag `global_site`. |
+| `fillStackIcons` | Stack `beforeChange` | Fetches a favicon into Media for items with a link and no icon. |
+| `revalidateStack` | Global | Path `/stack`; tags `global_stack`, `sitemap`. |
 | `revalidateHeader` / `revalidateFooter` | Globals | Tag `global_header` / `global_footer`. |
 | `revalidateRedirects` | Redirects | Tag `redirects`. |
 | `formatSlugHook` | slug field | Formats slug before validation. |

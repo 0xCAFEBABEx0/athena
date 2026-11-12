@@ -37,6 +37,7 @@ export const CACHE_TAGS = {
   site: 'global_site',
   header: 'global_header',
   footer: 'global_footer',
+  stack: 'global_stack',
   redirects: 'redirects',
   sitemap: 'sitemap',
 } as const

@@ -1,0 +1,44 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import Prompt from '@/components/Prompt.astro'
+import SearchPrompt from '@/components/SearchPrompt.astro'
+import StackList from '@/components/stack/StackList.astro'
+import { dict, localeOf, localizePath } from '@/lib/i18n'
+import { routeMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
+import { getStack } from '@/lib/stack'
+
+const locale = localeOf(Astro)
+const t = dict(locale)
+const [site, stack] = await Promise.all([getSite(Astro.locals, locale), getStack(locale)])
+
+// Hidden until the CMS has a tool (and while the CMS cannot answer).
+if (!stack || stack.groups.length + stack.former.length === 0) {
+  return Astro.rewrite('/404')
+}
+
+const intro = stack.intro || t.stackIntro
+const meta = routeMeta(
+  t.stackTitle,
+  localizePath(locale, '/stack'),
+  site,
+  stack.intro || t.stackDescription(site.authorName || site.siteName),
+)
+---
+
+<Layout meta={meta}>
+  <div class="container">
+    <Prompt
+      class="mt-8"
+      command="stack --tree"
+      question={t.askStack}
+      heading={t.stackTitle}
+      count={stack.count}
+      as="h1"
+      id="stack"
+    />
+    <p class="stack-intro">{intro}</p>
+    <StackList class="mt-2" groups={stack.groups} former={stack.former} />
+    <SearchPrompt class="modern-only mt-11" />
+  </div>
+</Layout>

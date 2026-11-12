@@ -51,9 +51,12 @@ production build in `apps/web/.vercel/output`.
 | TC-U-30 | Site global | X picks: only `https://x.com/<handle>/status/<id>` links with text reach the page; fields trimmed, `@` dropped from the handle, day in Japan time, odd `lang` values dropped |
 | TC-U-35 | CMS cache | A published CMS response is loaded once and then served from the Runtime Cache (tag `cms-data`, with a TTL); a failed load is not cached; a cache that errors falls back to the CMS; fresh reads (re-renders after a CMS change) skip the cache and refresh it; `expireCmsData` drops everything; a CMS read that started before an expiry and finishes after the re-render does not bring the old data back (the next read reloads); with no cache (local dev) every call reads the CMS |
 | TC-U-36 | Form forwarding | `/api/form-submissions` keeps only `form` (an id) and `submissionData` (at most 50 string fields) and refuses other bodies with 400 and bodies over 32 KB with 413, without calling the CMS; it posts to `${CMS_URL}/api/form-submissions` with `x-vercel-protection-bypass` and no redirect following; Payload's status and JSON errors come back as they are; a redirect (Vercel login), a network failure, a body that fails mid-read or any non-JSON answer (even a 200) becomes 502; a body without `Content-Length` stops being read past 32 KB |
+| TC-U-42 | Stack | No stack (CMS unreachable) or groups without tools give no groups, so `/stack` answers 404 |
+| TC-U-43 | Stack | Names and notes trimmed; links only absolute http(s); years only whole numbers 1970–2100; the icon is the Media URL with its `updatedAt`; former tools of every group are gathered at the end and not counted; groups left with no tools are dropped |
+| TC-U-44 | Stack | Initials for the icon tile: first letters of up to two words (`Claude Code` → `CC`, `TypeScript` → `T`, `cal.com` → `CC`) |
 | (14 more) | i18n, cms | Existing `i18n.test.ts` and `cms.test.ts` |
 
-CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
+CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed and the favicon fetches are mocked, so no network):
 
 | ID | Area | Case |
 |---|---|---|
@@ -61,6 +64,11 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
 | TC-U-27 | oEmbed | Text (line breaks kept, entities decoded, `pic.twitter.com` links dropped), author, handle, day and language read from the oEmbed HTML; `zxx` / unparsable dates give null; no text gives null |
 | TC-U-28 | oEmbed | Asks `publish.twitter.com/oembed` for the canonical link with `omit_script=1&dnt=true`; a bad link, an error status or a network failure gives null |
 | TC-U-29 | Site hook | A new pick is filled and its link normalized; edited text is kept without asking X; a changed link replaces the old post; no answer and no text rejects the save with a message; no answer with typed text keeps it |
+| TC-U-37 | Favicon | Only public http(s) hosts are fetched: localhost, `.local` / `.internal`, private and reserved IPv4, IPv6 literals and links with credentials are refused |
+| TC-U-38 | Favicon | Icons declared in the page's `<link>` tags, best first (SVG, then the largest PNG, then apple-touch-icon), `.ico` skipped, relative links resolved |
+| TC-U-39 | Favicon | The site's own icon is used when it converts; otherwise Google's favicon service for the host; a redirect to a private host is not followed; a page or image that fails gives null, never an error |
+| TC-U-40 | Favicon | PNG and SVG become a 64×64 PNG; unreadable data gives null |
+| TC-U-41 | Stack hook | A tool saved with a link and no icon gets one; a hand-picked icon is kept; a link moved to another site replaces an icon fetched for the old one; two tools on one host share one fetch and one Media file; no icon or a failed upload leaves the icon empty and the save goes through |
 | TC-U-31 | Invalidation | A missing `REVALIDATE_SECRET` / `WEB_URL` logs a warning; the request carries the bearer secret and `x-vercel-protection-bypass`, does not follow redirects, and a 302 is logged as a failure with its target; paths the web app reports in `failed` are logged as a warning, not as `Web invalidated`; outside a request (no Next `after()` scope) the call runs right away |
 
 ## End-to-end tests (`apps/web/e2e`)
@@ -115,6 +123,10 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed is mocked, so no network):
 | TC-E-41 | picks | Home "Picks from X": ≤ 6 cards, count in the heading, each with text, `@handle`, a `YYYY-MM-DD` date when known and a link to `https://x.com/<handle>/status/<id>`; no request to x.com / twitter.com / twimg.com / t.co, no widget script or iframe (section absent without picks) |
 | TC-E-42 | picks | 320px (CLI light, ADE dark): no horizontal scroll, cards inside the viewport, one column; two columns at 1024px |
 | TC-E-43 | picks | `/ja`: heading and link text in Japanese; each text keeps the post's own `lang` |
+| TC-E-49 | stack | `/pages-sitemap.xml` lists `/stack`, `/ja/stack` and `/zh/stack` only while the page answers 200 (404 with no tools; the other cases then skip) |
+| TC-E-50 | stack | CLI: each group's rows start with `├─` and the last with `└─`; the heading count is the number of current and trying tools; links are absolute http(s), open in a new tab with `noopener`; the former group starts folded |
+| TC-E-51 | stack | ADE: every tool has an icon tile, either an image that loads from Media (never the tool's own host) or one or two letters; no request to google.com / gstatic.com |
+| TC-E-52 | stack | 320 and 390px (CLI light ja, ADE dark en, ADE light zh): no horizontal scroll and every row inside the viewport |
 
 ## Deployment checks (Preview, then Production)
 
@@ -135,12 +147,14 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 | TC-P-11 | CMS on the deployment: select three posts in the list and publish or unpublish them at once | athena-cms logs `Web invalidated` once per post and no `Web invalidation unreachable`; `/`, `/posts` and the sidebar no longer list unpublished posts (or list newly published ones) on the first request. Preview needs `WEB_PROTECTION_BYPASS` on athena-cms (else `Web invalidation failed: 401`) |
 | TC-P-12 | After a few pages have been viewed, `GET /no-such-page-<random>`, `/posts/no-such-post-<random>` and `/posts/page/9999` | 404 page; athena-cms runtime logs show no `/api/*` request for them (layout data and the slug lists come from the Runtime Cache) |
 | TC-P-13 | CMS on the deployment: change a header link (or publish a post) and save | The new link shows on `/` and on a page not visited since, on the first request (the Runtime Cache was expired by `/api/invalidate`) |
+| TC-P-15 | CMS on the deployment: Globals → Stack, add a group and a tool with only a name and a link (e.g. `https://astro.build`), save; add a second tool on the same site, save | The tool's Icon shows the site's favicon (Media `favicon-<host>.png`, 64×64); the second save adds no Media file; `/stack` (and `/ja/stack`) show the tool with its icon in the ADE view on the first request; `/pages-sitemap.xml` lists `/stack` |
 | TC-P-14 | Send the `/contact` form on the deployment (en, then `/ja/contact`) | The confirmation message shows; the browser's only request is `POST /api/form-submissions` on the web origin (none to the CMS origin); the submission is listed in the admin under Form Submissions. With athena-cms protected, this needs `CMS_PROTECTION_BYPASS` on athena-web (else the form shows an error and athena-web logs `CMS redirected 302`) |
 
 ## Results
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-12 | local dev (mock CMS with 3 groups, 13 tools incl. trying, former, no link and no icon; local Postgres 16 for the CMS hook), local builds | web 68/68, cms 32/32 | 72/72 (4 skipped) | `/stack` (TC-U-37–44, TC-E-49–52). The hook against a real Payload + Postgres (favicon lookup stubbed): two tools on astro.build got one `favicon-astro.build.png` (64×64), one Media row, and the second save made no fetch. `docs/sql/2026-11-12-stack.sql` applied twice to a copy of the previous schema gives the same schema as a push of the new config. Checked by eye: CLI and ADE at 1440 / 768 / 390 / 320px, en/ja/zh, light and dark, no horizontal scroll. Real favicons are not reachable from the test container, so the fetch on save is checked on Preview (TC-P-15). |
 | 2026-11-12 | local dev (mock CMS that answers `/api/form-submissions` with a Vercel-login 302 unless `x-vercel-protection-bypass` matches) | web 62/62 | 61/61 (6 skipped) | Form forwarding (TC-U-36): in Chromium, `/contact` and `/ja/contact` showed the confirmation and the browser's only POST went to the web origin; the mock CMS received the cleaned body with the bypass header; a submission without the required email came back as Payload's 400 message. |
 | 2026-11-11 | local dev (mock CMS) | web 47/47 | 61/61 (6 skipped) | Switch order unified (TC-E-48) after a survey of 9 sites (Vue, Astro, VitePress, Docusaurus, React, Nuxt, MDN, GitHub Docs, Svelte): language and theme always sit side by side, search comes first, and the language/theme order is split 3–3, so view → theme → language (the status panel order) was tried first; Master found the theme tabs between view and language odd, so the order is view → language → theme everywhere, status panel included. Opened the CLI language menu at every 5px from 320 to 800px and every 40px to 1440px (en/ja/zh): with `dropdown-end` only it ran 13px off the left edge where `[en]` wraps to a row start (320–355px); with start alignment only it ran off the right edge at 360–370px and 535–785px. The menu now picks its side on the click that opens it: no overflow at any width. |
 | 2026-11-11 | local dev (mock CMS) | web 47/47 | 56/56 (6 skipped) | ADE top bar sun \| moon tabs (TC-E-47; an icon button first, then tabs like CLI \| ADE as Master asked). Checked by eye at 320 / 375 / 390 / 768 / 1023 / 1280px, light and dark: below 640px the top bar tabs use 6px side padding (4px and 4px gaps at 320px) so the bar stays on one row. |

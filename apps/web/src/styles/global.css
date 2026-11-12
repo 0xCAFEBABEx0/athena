@@ -1739,6 +1739,353 @@ html:not([data-view='modern']) {
   }
 }
 
+/* ------------------------------------------------------------------------
+   /stack (components/stack/StackList.astro). CLI: a `stack --tree` print
+   (group dirs, ├─ └─ rows, year and ↗ on the right). ADE: /work-like list
+   with the tool's favicon in a tile, "Name — note" and "since 2025".
+   ------------------------------------------------------------------------ */
+.stack-intro {
+  margin-top: 0.5rem;
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+}
+
+.stack-rows {
+  list-style: none;
+  padding: 0;
+}
+
+.stack-group-heading {
+  display: flex;
+  flex-wrap: wrap;
+  cursor: pointer;
+  list-style: none;
+  align-items: baseline;
+  gap: 0 0.375rem;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+}
+
+.stack-row {
+  display: flex;
+  align-items: flex-start;
+  text-decoration: none;
+}
+
+.stack-main {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.stack-note,
+.stack-since,
+.stack-arrow,
+.stack-group-desc {
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+}
+
+.stack-end {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.stack-trying {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+}
+
+/* CLI ------------------------------------------------------------------- */
+html:not([data-view='modern']) {
+  .stack-icon,
+  .stack-dash,
+  .stack-group-count,
+  .stack-group-chevron {
+    display: none;
+  }
+
+  .stack-group {
+    margin-top: 1rem;
+  }
+
+  .stack-group-heading {
+    gap: 0 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .stack-group-title {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-transform: lowercase;
+
+    &::after {
+      content: '/';
+    }
+  }
+
+  /* "› former (3)", folded like /work's done group. */
+  .stack-former .stack-group-heading {
+    gap: 0 0.375rem;
+  }
+
+  .stack-former .stack-group-title {
+    font-weight: 400;
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+
+    &::before {
+      content: '⌄ ';
+    }
+
+    &::after {
+      content: none;
+    }
+  }
+
+  .stack-former:not([open]) .stack-group-title::before {
+    content: '› ';
+  }
+
+  .stack-former .stack-group-count {
+    display: inline;
+    font-family: var(--font-mono);
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+
+    &::before {
+      content: '(';
+    }
+
+    &::after {
+      content: ')';
+    }
+  }
+
+  .stack-rows {
+    margin-top: 0.25rem;
+  }
+
+  .stack-row {
+    align-items: baseline;
+    gap: 0 0.625rem;
+    margin-inline: -0.375rem;
+    border-radius: var(--radius-selector);
+    padding: 0.3125rem 0.375rem;
+  }
+
+  .stack-tree {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  }
+
+  .stack-name {
+    font-family: var(--font-mono);
+    font-size: 0.90625rem;
+    font-weight: 600;
+  }
+
+  .stack-note {
+    display: block;
+    font-size: 0.875rem;
+  }
+
+  .stack-trying {
+    font-family: var(--font-mono);
+  }
+
+  .stack-end {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stack-arrow {
+    width: 0.75rem;
+  }
+
+  .stack-former .stack-name {
+    font-weight: 400;
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  }
+
+  a.stack-row:hover .stack-name,
+  a.stack-row:focus-visible .stack-name,
+  a.stack-row:hover .stack-arrow,
+  a.stack-row:focus-visible .stack-arrow {
+    color: var(--color-primary);
+  }
+
+  a.stack-row:focus-visible {
+    outline: none;
+    background-color: color-mix(in oklab, var(--color-primary) 10%, var(--color-base-100));
+  }
+
+  /* Name and note side by side once there is room for a column of names. */
+  @media (min-width: 40rem) {
+    .stack-main {
+      display: grid;
+      grid-template-columns: 17ch minmax(0, 1fr);
+      column-gap: 1rem;
+      align-items: baseline;
+    }
+
+    .stack-note {
+      font-size: 0.9375rem;
+    }
+  }
+}
+
+/* ADE ------------------------------------------------------------------- */
+[data-view='modern'] {
+  .stack-tree {
+    display: none;
+  }
+
+  .stack-intro {
+    margin-top: 0.75rem;
+    font-size: 0.9375rem;
+  }
+
+  .stack-group {
+    margin-top: 1.25rem;
+  }
+
+  .stack-group-heading {
+    font-size: 0.875rem;
+    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  }
+
+  .stack-group-count::before {
+    content: '· ';
+  }
+
+  .stack-group-chevron::before {
+    content: '⌄';
+    display: inline-block;
+    font-size: 0.8125rem;
+    line-height: 1;
+    transform: translateY(-0.125rem);
+  }
+
+  .stack-group:not([open]) .stack-group-chevron::before {
+    content: '›';
+    transform: none;
+  }
+
+  .stack-group-desc {
+    flex-basis: 100%;
+    font-size: 0.8125rem;
+  }
+
+  .stack-rows {
+    margin-top: 0.375rem;
+  }
+
+  .stack-row {
+    gap: 0 0.875rem;
+    margin-inline: -0.625rem;
+    border-radius: 0.625rem;
+    padding: 0.5rem 0.625rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+
+    &:is(a):hover,
+    &:is(a):focus-visible {
+      background-color: var(--modern-sel);
+      outline: none;
+    }
+  }
+
+  .stack-icon {
+    display: grid;
+    flex: 0 0 1.75rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid var(--color-base-300);
+    border-radius: 0.5rem;
+    /* Paper in both themes: many favicons are black and would vanish on the dark tile. */
+    background-color: #faf9f5;
+    color: #1f1e1b;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+
+    img {
+      width: 1.125rem;
+      height: 1.125rem;
+      object-fit: contain;
+    }
+  }
+
+  .stack-main {
+    padding-top: 0.0625rem;
+  }
+
+  .stack-head,
+  .stack-note {
+    display: inline;
+  }
+
+  .stack-name {
+    font-weight: 500;
+  }
+
+  .stack-trying {
+    display: inline-block;
+    border: 1px solid var(--color-base-300);
+    border-radius: 9999px;
+    padding: 0 0.4375rem;
+    font-size: 0.6875rem;
+    line-height: 1.25rem;
+    vertical-align: 0.0625rem;
+  }
+
+  .stack-note {
+    margin-left: 0.375rem;
+  }
+
+  .stack-end {
+    padding-top: 0.1875rem;
+    padding-left: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .stack-arrow {
+    display: none;
+  }
+
+  .stack-former .stack-row {
+    opacity: 0.7;
+  }
+
+  /* Phones: the year moves under the note, so the note keeps the width. */
+  @media (max-width: 39.99rem) {
+    .stack-row {
+      display: grid;
+      grid-template-columns: 1.75rem minmax(0, 1fr);
+    }
+
+    .stack-end {
+      grid-column: 2;
+      padding: 0;
+      font-size: 0.75rem;
+    }
+
+    .stack-end:not(:has(.stack-since)) {
+      display: none;
+    }
+  }
+}
+
 /* Thread page ---------------------------------------------------------- */
 .work-head {
   display: flex;

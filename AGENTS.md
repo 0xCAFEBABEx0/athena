@@ -56,7 +56,7 @@ bun run deploy:production     # Open a preview -> main PR and enable auto-merge
 apps/cms/src/
 ├── app/(payload)/            # Payload admin panel + API routes
 ├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only; rendering lives in apps/web
-├── Site/ Header/ Footer/     # globals (Site = name, intro, links, projects shown by the web app)
+├── Site/ Stack/ Header/ Footer/  # globals (Site = name, intro, links, projects; Stack = /stack tools + favicon fetch)
 ├── github/                   # sync.ts: GitHub snapshot for the projects (/work) collection
 ├── x/                        # oembed.ts: reads posts on X for the Site global picks
 ├── utilities/                # invalidateWeb.ts, generatePreviewPath.ts, env.ts, getURL.ts
@@ -67,7 +67,7 @@ apps/cms/config/next.config.mjs   # Real Next.js config (root next.config.mjs re
 apps/web/src/
 ├── pages/                    # [...slug], posts/*, search, sitemaps, 404, api/* endpoints
 ├── components/               # Block/hero renderers (blocks/, heros/, ...)
-├── lib/                      # cms.ts (REST client), site.ts (site global), work.ts (/work entries), richtext.ts, draft.ts, seo.ts, media.ts
+├── lib/                      # cms.ts (REST client), site.ts (site global), work.ts (/work entries), stack.ts (/stack), richtext.ts, draft.ts, seo.ts, media.ts
 ├── layouts/Layout.astro      # Theme init, meta tags, Header/Footer
 └── middleware.ts             # Redirects-collection handling
 
