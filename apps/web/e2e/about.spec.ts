@@ -20,8 +20,10 @@ test.describe('About', () => {
   }) => {
     const exists = await hasAbout(page)
     const sitemap = await (await request.get('/pages-sitemap.xml')).text()
+    // Each language on its own: listed exactly when that page answers 200.
     for (const path of ['/about', '/ja/about', '/zh/about']) {
-      expect(sitemap.includes(`${path}</loc>`), path).toBe(exists)
+      const answers = (await request.get(path, { maxRedirects: 0 })).status() === 200
+      expect(sitemap.includes(`${path}</loc>`), path).toBe(answers)
     }
     test.skip(!exists, 'Nothing in the CMS About global')
 

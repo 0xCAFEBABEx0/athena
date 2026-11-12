@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro'
 import { aboutHasContent, getAbout } from '@/lib/about'
 import { getAllSlugs } from '@/lib/cms'
 import { webURL } from '@/lib/env'
-import { DEFAULT_LOCALE } from '@/lib/i18n'
+import { DEFAULT_LOCALE, LOCALES, localizePath } from '@/lib/i18n'
 import { localizedEntries, sitemapResponse, sitemapXML, type SitemapEntry } from '@/lib/sitemap'
 import { getStack } from '@/lib/stack'
 import { getWork } from '@/lib/work'
@@ -15,11 +15,13 @@ export const GET: APIRoute = async ({ url }) => {
   try {
     // getWork, getStack and getAbout never throw (a CMS outage just leaves
     // /builds, /stacks or /about out).
-    const [docs, work, stack, about] = await Promise.all([
+    const [docs, work, stack, abouts] = await Promise.all([
       getAllSlugs('pages'),
       getWork({}, DEFAULT_LOCALE),
       getStack(DEFAULT_LOCALE),
-      getAbout(DEFAULT_LOCALE),
+      // Each language on its own: /ja/about can have a lead while English
+      // has none (or the reverse), and only pages that answer 200 belong here.
+      Promise.all(LOCALES.map((locale) => getAbout(locale))),
     ])
 
     // Fixed routes carry no <lastmod>: Google uses it only when it is
@@ -39,7 +41,10 @@ export const GET: APIRoute = async ({ url }) => {
       ...(stack && stack.groups.length + stack.former.length > 0
         ? localizedEntries(base, ROUTES.stack)
         : []),
-      ...(about && aboutHasContent(about) ? localizedEntries(base, ROUTES.about) : []),
+      ...LOCALES.filter((_, i) => {
+        const about = abouts[i]
+        return about ? aboutHasContent(about) : false
+      }).map((locale) => ({ loc: `${base}${localizePath(locale, ROUTES.about)}` })),
     ]
 
     return sitemapResponse(sitemapXML(entries))
