@@ -82,7 +82,8 @@ all managed by editors without code changes.
 - **F-FORM-1** A Form block renders the selected form's fields (text, email,
   number, textarea, select, checkbox, country, state, message) with their
   widths, labels, defaults and required flags.
-- **F-FORM-2** Submitting posts the values to the CMS and then shows the
+- **F-FORM-2** Submitting posts the values to the web app, which forwards them
+  to the CMS server-side, and then shows the
   form's confirmation message or redirects to its redirect URL.
 - **F-FORM-3** Submissions are stored in `form-submissions` and visible in the
   admin. No email is sent.
@@ -201,6 +202,7 @@ all managed by editors without code changes.
 | NF-OBS-1 | Errors are reported. | Sentry in the CMS (client, server, edge); Vercel Analytics and Speed Insights on the web. |
 | NF-MAINT-1 | Both apps agree on types and constants. | `packages/shared`, regenerated with `bun run generate:types`. |
 | NF-COMPAT-1 | Runtime | Node.js 24.x LTS (24.22.1 locally and in CI), Bun 1.4.x. |
+| NF-COMPAT-2 | Browsers | Works in every browser with Baseline Widely available features (floor: Safari 16.4, Chrome 111, Firefox 128 for Tailwind v4); newer features only as progressive enhancement. See `docs/BASELINE.md`. |
 
 ## 5. Environments
 

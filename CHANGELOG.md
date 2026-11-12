@@ -4,6 +4,19 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.0.8] - 2026-11-12
+
+### Changed
+
+- Contact forms now send to the site itself (`/api/form-submissions`), which
+  passes the submission on to the CMS. Visitors' browsers no longer talk to
+  cms.whoa.me at all, so the CMS can be closed to the public with Vercel
+  Authentication (pages and forms keep working as long as athena-web has
+  `CMS_PROTECTION_BYPASS`). The forwarder only accepts a form id and up to 50
+  text fields (32 KB), and keeps showing the CMS's own messages, such as a
+  missing required field. This also fixes the form on the Preview site,
+  where the CMS is already protected.
+
 ## [1.0.7] - 2026-11-11
 
 ### Changed

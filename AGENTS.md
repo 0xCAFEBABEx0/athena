@@ -23,7 +23,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 ## Tech Stack
 
 - **CMS**: Payload CMS 3 + Next.js 16 (App Router); admin styling is Payload's own SCSS (no Tailwind)
-- **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (terminal-inspired light/dark themes in `src/styles/global.css`: warm paper, one orange accent, mono for dates/nav/labels)
+- **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (themes in `src/styles/global.css`; design rules in [`docs/BASELINE.md`](./docs/BASELINE.md))
 - **Language**: TypeScript (strict mode). `apps/cms` is on TypeScript 7 (native `tsc`); `apps/web` stays on 6 until `astro check` supports 7
 - **Runtime**: Vercel Functions of both apps run on **Bun 1.4** (`"bunVersion": "1.4.x"` in each `vercel.json`, Vercel's Bun runtime, beta), and both production builds run under Bun (`bun --bun next build` / `bun --bun astro build`; the Astro adapter derives `bun1.x` from the build process, which Vercel maps to Bun 1.3, so `apps/web/scripts/pin-bun-runtime.mjs` rewrites it to `bunVersion` after the build). Do not add `engines.node` to the app `package.json` files: it overrides `bunVersion` and puts functions back on Node. Node.js 24 LTS (pinned to 24.22.1 via `.nvmrc`, Vercel project setting 24.x) still runs tooling (`astro check`, Payload CLI, CI) and the CMS dev server (`next dev` under Bun fails to resolve Turbopack's hashed externals)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
@@ -82,7 +82,7 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 
 - **Cache invalidation**: on publish/unpublish, `apps/cms/src/utilities/invalidateWeb.ts` POSTs `{ paths, tags }` to `${WEB_URL}/api/invalidate` with `Authorization: Bearer ${REVALIDATE_SECRET}`. The Astro endpoint marks the Vercel cache tag `content` stale (every cached page, feed, sitemap and `/search-index.json` carries it, added in `middleware.ts`) and re-renders the affected paths right away. ISR expiration is 7 days, only a safety net. A new deployment starts with an empty cache, so `.github/workflows/warm-cache.yml` (on Vercel's `deployment_status`) runs `scripts/warm-cache.sh` to request every sitemap URL once on the preview or production domain (repository variables `PREVIEW_WEB_URL` / `PRODUCTION_WEB_URL`; update the defaults there when the domain moves). The preview domain is behind Vercel Authentication, so warming it needs the athena-web Protection Bypass for Automation secret as the repository secret `VERCEL_AUTOMATION_BYPASS_SECRET`; without it the run ends early with a warning. On a miss, `middleware.ts` starts the layout's CMS requests together (memos keyed by `Astro.locals`), so pass `Astro.locals`, not `Astro.request`, to `getSite`/`getWork`/nav helpers. Published CMS responses are also kept in the Vercel Runtime Cache (`apps/web/src/lib/cms-cache.ts`, tag `cms-data`, 1-day TTL, Vercel only): `/api/invalidate` expires it before anything re-renders, and the re-renders it requests (`x-prerender-revalidate`) skip cache reads. Page routes 404 an unknown slug from the cached `getPublishedSlugs()` list (not in draft mode), so a crawler's made-up URLs never reach the CMS or wake Neon. Hovered links are prerendered (speculation rules in `Layout.astro`): scripts that must only run when a page is shown wait for `prerenderingchange`. The ISR bypass token is derived from `REVALIDATE_SECRET` (`apps/web/src/lib/isr-bypass.mjs`); draft preview sets it as the `__prerender_bypass` cookie.
 - **Draft preview**: the admin Preview button targets `${WEB_URL}/api/preview?slug&collection&path&previewSecret` (`generatePreviewPath.ts`). The endpoint validates `PREVIEW_SECRET`, sets the HttpOnly `athena-draft` and `__prerender_bypass` cookies, and redirects (only to a path on the site, `isLocalPath`); `isDraft` needs both cookies, the second equal to the ISR bypass token, so `athena-draft` alone shows no drafts; draft-aware pages then fetch with `draft=true` using the `web-frontend` service account's API key (`PAYLOAD_API_KEY`). Create/rotate that account with `apps/cms/src/scripts/create-web-service-account.ts`.
-- **Forms**: the web `FormBlock` posts JSON to `${CMS_URL}/api/form-submissions`; CMS CORS already allows the web origin.
+- **Forms**: the web `FormBlock` posts JSON to its own `/api/form-submissions`, which forwards it server-side to `${CMS_URL}/api/form-submissions` with the protection bypass (`apps/web/src/lib/form-submission.ts`); browsers never call the CMS.
 
 `PREVIEW_SECRET` and `REVALIDATE_SECRET` must be identical in both deployments — drift shows up as silent 401s (`invalidateWeb` logs errors but never throws; a missing secret logs `Web invalidation skipped`, a redirect to the Vercel login `Web invalidation failed: 302`).
 
@@ -92,9 +92,8 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 - **Path alias**: `@/*` maps to `./src/*` in both apps - use consistently
 - **Never edit** `packages/shared/src/payload-types.ts` - regenerate with `bun run generate:types`
 - **CMS**: Server Components by default; add `'use client'` only when needed
-- **Dark mode**: Controlled by `data-theme="dark"` attribute, not OS media query (theme stored under the `payload-theme` localStorage key in both apps)
+- **Front-end design and browser support** (`apps/web`): read [`docs/BASELINE.md`](./docs/BASELINE.md) before changing UI, CSS or client-side JS. It holds the Baseline target (Widely available freely; Newly available and Limited only as progressive enhancement), the features in use and their fallbacks, and the design rules: themes and dark mode (`data-theme`, not the OS media query), the daisyUI `include:` list, motion, switches, narrow widths
 - **Prefix unused vars** with `_` to suppress lint warnings
-- **daisyUI** ships only the components in the `include:` list in `apps/web/src/styles/global.css`; add a component there before using it
 - **Links from data**: a URL from the CMS, GitHub or a query string becomes an `href` or redirect only through `safeHref` / `httpUrl` / `isLocalPath` (`apps/web/src/lib/safe-url.ts`)
 - **Search** (`/search`) is one ISR page per language filtered in the browser; never read `?q=` on the server
 - **Tests**: add or update a case in `docs/TESTING.md` with each behavior change, and run both web suites before pushing
@@ -250,11 +249,13 @@ CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automati
     a schema change (see pitfall 12). The web app passes `locale` +
     `fallback-locale=en` on every CMS fetch and must keep `/ja`/`/zh` links
     via `localizePath` (`apps/web/src/lib/i18n.ts`).
-14. **Never enable Vercel Deployment Protection on athena-cms Production.** It
-    302s `/api/*` to Vercel SSO, and athena-web HTML routes 500. Protect
-    Preview only; Payload already gates `/admin`. If Production must stay
-    protected, set `CMS_PROTECTION_BYPASS` on athena-web (server-side fetches
-    only — browser form posts to the CMS still fail).
+14. **Before protecting athena-cms Production with Vercel Deployment
+    Protection, set `CMS_PROTECTION_BYPASS` on athena-web Production** (the
+    athena-cms Protection Bypass for Automation secret). Without it the CMS
+    302s `/api/*` to Vercel SSO and athena-web HTML routes 500. With it, every
+    web → CMS call (page reads, form forwarding) passes; nothing in the browser
+    calls the CMS. Check `/api/payload-jobs/run` in the athena-cms logs after
+    switching: Vercel does not document whether Schedules pass protection.
 15. **Bun runtime caveats**: Vercel's automatic source maps and bytecode
     caching are Node-only; `engines.node` in an app `package.json` silently
     switches its functions back to Node. To roll back, remove `bunVersion`

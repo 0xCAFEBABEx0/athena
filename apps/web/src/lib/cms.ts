@@ -65,7 +65,7 @@ export const isVercelSsoLocation = (location: string | null | undefined): boolea
 const ssoError = (path: string, status: number): CmsRequestError =>
   new CmsRequestError(
     `CMS is blocked by Vercel Deployment Protection (${path}). ` +
-      'Disable Production protection on the athena-cms project, or set CMS_PROTECTION_BYPASS on athena-web.',
+      'Set CMS_PROTECTION_BYPASS on athena-web (athena-cms Protection Bypass for Automation), or switch athena-cms back to Standard Protection.',
     { status, path },
   )
 

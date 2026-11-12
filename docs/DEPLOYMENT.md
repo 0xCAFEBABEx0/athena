@@ -160,11 +160,12 @@ Typical causes:
    (`Vercel Authentication` / SSO) intercepts `/api/*` with a 302 to
    `vercel.com/sso-api`. `fetch` follows it, gets login HTML, and used to
    crash in `res.json()`. **Fix:** Vercel → athena-cms → Settings →
-   Deployment Protection → set **Production** to **None**. Keep protection
-   on Preview if you want. Payload already authenticates `/admin`.
-   Alternatively set **Protection Bypass for Automation** on athena-cms and
-   copy the secret to athena-web as `CMS_PROTECTION_BYPASS` (server-side
-   reads only; browser form POSTs to the CMS still need a public API).
+   Deployment Protection → **Protection Bypass for Automation**, and copy
+   that secret to athena-web as `CMS_PROTECTION_BYPASS` for every
+   environment where athena-cms is protected, then redeploy athena-web.
+   Every web → CMS request (page reads and form forwarding) sends it, and
+   browsers never call the CMS. Or switch protection back to
+   **Standard Protection** (production domains public).
 2. **Missing `CMS_URL` on athena-web.** Without it the app used to call
    `http://localhost:3000` inside the serverless function (`ECONNREFUSED`).
    Set `CMS_URL` to the public CMS origin (e.g. `https://cms.whoa.me`).

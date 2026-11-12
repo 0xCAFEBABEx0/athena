@@ -127,6 +127,16 @@ reviews:
         CMS per query. global.css lists the daisyUI components it ships
         (`include:`); a component used without being listed renders
         unstyled.
+    - path: 'apps/web/src/**/*.{astro,css}'
+      instructions: |
+        Front-end rules live in `docs/BASELINE.md`. Flag a web platform
+        feature that is not Baseline Widely available unless the page still
+        works and reads correctly without it (progressive enhancement, with
+        feature detection when it carries behavior); flag polyfills loaded
+        for every visitor. Dark mode is the `data-theme` attribute, never
+        the OS media query alone. New animations must stop under
+        `prefers-reduced-motion: reduce` and `[data-motion='reduce']`.
+        Switches keep the order view -> language -> theme.
     - path: '**/vercel.json'
       instructions: |
         `git.deploymentEnabled` is a whitelist: keep `"**": false` with only

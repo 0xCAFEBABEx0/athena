@@ -27,7 +27,8 @@ graph LR
 
     Web -->|REST: content reads| CMS
     CMS -->|POST /api/invalidate| Web
-    Visitor -.->|form POST /api/form-submissions| CMS
+    Visitor -.->|form POST /api/form-submissions| Web
+    Web -->|forwards form submissions| CMS
 
     CMS --> DB[(Neon PostgreSQL)]
     CMS --> Blob[(Vercel Blob<br/>media files)]
@@ -214,16 +215,18 @@ cookie. See [ADR 0003](./adr/0003-draft-preview-service-account.md).
 
 Form definitions live in the Form Builder plugin's `forms` collection and are
 placed on pages through the **Form** block. The web app renders the fields as
-HTML and a small inline script submits them from the browser:
+HTML and a small inline script submits them to the web app itself:
 
 ```
-POST ${CMS_URL}/api/form-submissions
+POST /api/form-submissions
 Content-Type: application/json
 { "form": "<form id>", "submissionData": [{ "field": "email", "value": "..." }] }
 ```
 
-The CMS accepts the cross-origin request because `cors` and `csrf` in
-`payload.config.ts` list both `CMS_URL` and `WEB_URL`. After success the form
+The web app checks the body and forwards it server-side to
+`${CMS_URL}/api/form-submissions` with the `x-vercel-protection-bypass`
+header (`apps/web/src/lib/form-submission.ts`), so no browser ever calls the
+CMS and the CMS can sit behind Vercel Deployment Protection. After success the form
 shows its confirmation message or redirects, depending on `confirmationType`.
 No email adapter is configured, so submissions are stored only.
 
@@ -296,8 +299,9 @@ a second hourly wake-up to the shared CU-hour budget.
 `PREVIEW_SECRET` and `REVALIDATE_SECRET` must be identical in both Vercel
 projects. A mismatch produces silent `401`s.
 
-Never enable Vercel Deployment Protection on athena-cms Production: it turns
-`/api/*` into SSO redirects and every web page fails.
+Vercel Deployment Protection on athena-cms Production turns `/api/*` into SSO
+redirects for any request without the bypass. Set `CMS_PROTECTION_BYPASS` on
+athena-web Production before enabling it, or every web page fails.
 
 ## 5. Build and Deployment
 
