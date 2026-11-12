@@ -108,6 +108,54 @@ describe('forwardFormSubmission', () => {
     expect(calls).toBe(0)
   })
 
+  test('a non-JSON answer, even a 200, is a 502 (no confirmation)', async () => {
+    const fetchImpl = (async () =>
+      new Response('<html>login</html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      })) as unknown as typeof fetch
+
+    expect((await forwardFormSubmission(post(valid), fetchImpl)).status).toBe(502)
+  })
+
+  test('a CMS body that fails mid-read gives a 502', async () => {
+    const body = new ReadableStream({
+      start(controller) {
+        controller.error(new Error('socket closed'))
+      },
+    })
+    const fetchImpl = (async () =>
+      new Response(body, {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      })) as unknown as typeof fetch
+
+    expect((await forwardFormSubmission(post(valid), fetchImpl)).status).toBe(502)
+  })
+
+  test('stops reading a body without Content-Length once it passes the limit', async () => {
+    let pulls = 0
+    const chunk = new Uint8Array(8 * 1024).fill(97)
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls++
+        if (pulls > 100) controller.close()
+        else controller.enqueue(chunk)
+      },
+    })
+    const request = new Request('https://web.example/api/form-submissions', {
+      body,
+      method: 'POST',
+      // @ts-expect-error duplex is required for a streamed body
+      duplex: 'half',
+    })
+
+    const res = await forwardFormSubmission(request, (async () => Response.json({})) as unknown as typeof fetch)
+
+    expect(res.status).toBe(413)
+    expect(pulls).toBeLessThan(10)
+  })
+
   test('a network failure gives a 502', async () => {
     const fetchImpl = (async () => {
       throw new Error('ECONNRESET')

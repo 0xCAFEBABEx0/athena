@@ -166,7 +166,7 @@ Content-Type: application/json
 `${CMS_URL}/api/form-submissions` with `x-vercel-protection-bypass` when
 `CMS_PROTECTION_BYPASS` is set, without following redirects. Payload's status
 and JSON errors are passed back; a redirect (the Vercel login), a network
-failure or a non-JSON error becomes `502`. There is no captcha, honeypot or
+failure or any non-JSON answer (even a 2xx) becomes `502`. There is no captcha, honeypot or
 rate limit.
 
 ## 3. Other CMS Endpoints

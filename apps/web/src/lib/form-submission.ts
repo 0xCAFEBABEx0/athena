@@ -55,8 +55,8 @@ export const forwardFormSubmission = async (
   const length = Number(request.headers.get('content-length') ?? 0)
   if (length > MAX_BODY_BYTES) return errorResponse(413, 'Submission is too large.')
 
-  const raw = await request.text()
-  if (raw.length > MAX_BODY_BYTES) return errorResponse(413, 'Submission is too large.')
+  const raw = await readLimited(request, MAX_BODY_BYTES)
+  if (raw === null) return errorResponse(413, 'Submission is too large.')
 
   const submission = parseFormSubmission(raw)
   if (!submission) return errorResponse(400, 'Invalid submission.')
@@ -65,41 +65,65 @@ export const forwardFormSubmission = async (
   const bypass = cmsProtectionBypass()
   if (bypass) headers['x-vercel-protection-bypass'] = bypass
 
-  let res: Response
+  let status: number
+  let text: string
+  let isJson: boolean
   try {
-    res = await fetchImpl(`${cmsURL()}/api/form-submissions`, {
+    const res = await fetchImpl(`${cmsURL()}/api/form-submissions`, {
       body: JSON.stringify(submission),
       headers,
       method: 'POST',
       redirect: 'manual',
       signal: AbortSignal.timeout(10_000),
     })
+    // A redirect here is the Vercel login page (protection without a bypass).
+    if (res.status >= 300 && res.status < 400) {
+      console.error(
+        `[form-submissions] CMS redirected ${res.status} -> ${res.headers.get('location') ?? 'unknown'}; ` +
+          'set CMS_PROTECTION_BYPASS on athena-web',
+      )
+      return errorResponse(502, 'Something went wrong.')
+    }
+    status = res.status
+    isJson = (res.headers.get('content-type') ?? '').toLowerCase().includes('json')
+    text = await res.text()
   } catch (error) {
     console.error('[form-submissions] CMS request failed:', error)
     return errorResponse(502, 'Something went wrong.')
   }
 
-  // A redirect here is the Vercel login page (protection without a bypass).
-  if (res.status >= 300 && res.status < 400) {
-    console.error(
-      `[form-submissions] CMS redirected ${res.status} -> ${res.headers.get('location') ?? 'unknown'}; ` +
-        'set CMS_PROTECTION_BYPASS on athena-web',
-    )
+  // Anything but JSON is not Payload answering (a proxy or login page), even
+  // with a 2xx status: the browser must not show the confirmation for it.
+  if (!isJson) {
+    console.error(`[form-submissions] CMS answered ${status} without JSON`)
     return errorResponse(502, 'Something went wrong.')
   }
+  if (status >= 500) console.error(`[form-submissions] CMS answered ${status}`)
+  // Pass Payload's status and JSON (validation errors) through; never its other headers.
+  return new Response(text, { status, headers: { 'Content-Type': 'application/json' } })
+}
 
-  // Pass Payload's validation errors through; never its other headers.
-  const text = await res.text()
-  const isJson = (res.headers.get('content-type') ?? '').includes('json')
-  if (!isJson) {
-    if (!res.ok) console.error(`[form-submissions] CMS answered ${res.status} without JSON`)
-    return res.ok
-      ? Response.json({}, { status: res.status })
-      : errorResponse(502, 'Something went wrong.')
+/** The request body as text, or null once it passes `limit` bytes (stops reading). */
+const readLimited = async (request: Request, limit: number): Promise<string | null> => {
+  if (!request.body) return ''
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > limit) {
+      await reader.cancel().catch(() => {})
+      return null
+    }
+    chunks.push(value)
   }
-  if (res.status >= 500) console.error(`[form-submissions] CMS answered ${res.status}`)
-  return new Response(text, {
-    status: res.status,
-    headers: { 'Content-Type': 'application/json' },
-  })
+  const bytes = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return new TextDecoder().decode(bytes)
 }
