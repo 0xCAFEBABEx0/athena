@@ -253,6 +253,24 @@ describe('TC-U-37 / TC-U-39 favicon lookup: resolved addresses and time budget',
     expect(asked).not.toContain('http://internal.example/')
   })
 
+  test('a stalled DNS lookup ends with the budget, and nothing is fetched', async () => {
+    const asked: string[] = []
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      asked.push(String(input))
+      return png()
+    }) as typeof fetch
+    const started = Date.now()
+    const stalled = () => new Promise<string[]>(() => {})
+    expect(
+      await fetchFavicon('https://tool.example/', okPng, fetchImpl, {
+        resolve: stalled,
+        budgetMs: 80,
+      }),
+    ).toBeNull()
+    expect(Date.now() - started).toBeLessThan(1000)
+    expect(asked).toEqual([])
+  })
+
   test('the whole lookup stops when its time budget is spent', async () => {
     const asked: string[] = []
     const signals: AbortSignal[] = []
@@ -443,6 +461,53 @@ describe('TC-U-41 Stack hook', () => {
       },
     )
     expect(failedUpload.icons).toEqual([null])
+  })
+
+  test('all lookups of one save share one deadline; later sites wait for the next save', async () => {
+    const budgets: number[] = []
+    const hook = fillStackIcons(
+      async (_url, budgetMs) => {
+        budgets.push(budgetMs)
+        await new Promise((resolve) => setTimeout(resolve, 60))
+        return icon
+      },
+      async (_req, found) => `media-${found.host}`,
+      async () => null,
+      { lookupMs: 90, storeMs: 10_000 },
+    )
+    const items = Array.from({ length: 12 }, (_, i) => ({
+      id: `t${i}`,
+      name: `T${i}`,
+      url: `https://site${i}.example/`,
+    }))
+    const started = Date.now()
+    const result = (await hook({ data: { groups: [{ items }] }, req } as never)) as {
+      groups: { items: { icon: unknown }[] }[]
+    }
+    // 4 at a time: the first two rounds start before the 90 ms deadline, the third after it.
+    expect(budgets.length).toBe(8)
+    expect(budgets.every((b) => b > 0 && b <= 90)).toBe(true)
+    expect(Date.now() - started).toBeLessThan(1000)
+    const icons = result.groups[0]?.items.map((i) => i.icon) ?? []
+    expect(icons.filter(Boolean).length).toBe(8)
+    expect(icons.slice(8)).toEqual([null, null, null, null])
+
+    // No time left to store: the icons found are not saved, the save still goes through.
+    const late = fillStackIcons(
+      async () => icon,
+      async () => {
+        throw new Error('should not upload')
+      },
+      async () => null,
+      { lookupMs: 10_000, storeMs: 0 },
+    )
+    const out = (await late({
+      data: { groups: [{ items: items.slice(0, 2) }] },
+      req,
+    } as never)) as {
+      groups: { items: { icon: unknown }[] }[]
+    }
+    expect(out.groups[0]?.items.map((i) => i.icon)).toEqual([null, null])
   })
 
   test('sites are looked up a few at a time, results kept in order', async () => {

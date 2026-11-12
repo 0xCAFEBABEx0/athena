@@ -2,7 +2,7 @@ import type { GlobalBeforeChangeHook, PayloadRequest } from 'payload'
 
 import sharp from 'sharp'
 
-import { fetchFavicon, ICON_SIZE, publicHost, type Favicon } from '../favicon'
+import { fetchFavicon, ICON_SIZE, LOOKUP_BUDGET_MS, publicHost, type Favicon } from '../favicon'
 
 type Item = {
   id?: string | null
@@ -13,8 +13,16 @@ type Item = {
 }
 type Group = { id?: string | null; items?: Item[] | null; [key: string]: unknown }
 
-/** Sites looked up at once; each lookup is time-bounded (LOOKUP_BUDGET_MS). */
+/** Sites looked up at once. */
 const LOOKUP_CONCURRENCY = 4
+/**
+ * Time for all of a save's lookups together (DNS included), then for storing
+ * the icons found. The API function may run 60 s; what is left over is the
+ * save itself. A site not looked up or not stored in time gets no icon now
+ * and is tried again on the next save.
+ */
+export const SAVE_LOOKUP_BUDGET_MS = 25_000
+export const SAVE_STORE_BUDGET_MS = 15_000
 
 /** `task` over `items`, at most `limit` at a time, results in input order. */
 export const mapLimit = async <T, R>(
@@ -101,16 +109,22 @@ export const saveFavicon = async (req: PayloadRequest, icon: Favicon): Promise<n
  */
 export const fillStackIcons =
   (
-    lookup: (url: string) => Promise<Favicon | null> = (url) => fetchFavicon(url, toPng),
+    lookup: (url: string, budgetMs: number) => Promise<Favicon | null> = (url, budgetMs) =>
+      fetchFavicon(url, toPng, fetch, { budgetMs: Math.min(budgetMs, LOOKUP_BUDGET_MS) }),
     save: (req: PayloadRequest, icon: Favicon) => Promise<number | string> = saveFavicon,
     filenameOf: (
       req: PayloadRequest,
       id: number | string,
     ) => Promise<string | null> = mediaFilename,
+    budgets: { lookupMs: number; storeMs: number } = {
+      lookupMs: SAVE_LOOKUP_BUDGET_MS,
+      storeMs: SAVE_STORE_BUDGET_MS,
+    },
   ): GlobalBeforeChangeHook =>
   async ({ data, originalDoc, req }) => {
     const groups = (data as { groups?: Group[] | null }).groups
     if (!Array.isArray(groups) || groups.length === 0) return data
+    const lookupUntil = Date.now() + budgets.lookupMs
 
     const before = new Map<string, { host: string | null; icon: number | string | null }>()
     for (const group of ((originalDoc as { groups?: Group[] | null } | undefined)?.groups ??
@@ -121,7 +135,7 @@ export const fillStackIcons =
     }
 
     // Decide which items need an icon, then look each site up once (a few
-    // at a time, each within its time budget) and store the icons one by one.
+    // at a time, all within one shared deadline) and store the icons one by one.
     const plan = await Promise.all(
       groups.map((group) =>
         Promise.all(
@@ -152,8 +166,10 @@ export const fillStackIcons =
     }
     const found = new Map<string, Favicon | null>(
       await mapLimit([...wanted], LOOKUP_CONCURRENCY, async ([host, url]) => {
+        const left = lookupUntil - Date.now()
+        if (left <= 0) return [host, null] as const
         try {
-          return [host, await lookup(url)] as const
+          return [host, await lookup(url, left)] as const
         } catch (error) {
           req.payload.logger.warn(`Stack: no icon for ${host}: ${String(error)}`)
           return [host, null] as const
@@ -161,8 +177,15 @@ export const fillStackIcons =
       }),
     )
     const saved = new Map<string, number | string | null>()
+    const storeUntil = Date.now() + budgets.storeMs
     for (const [host, favicon] of found) {
       if (!favicon) continue
+      if (Date.now() >= storeUntil) {
+        req.payload.logger.warn(
+          `Stack: out of time, the icon for ${host} is stored on a later save`,
+        )
+        continue
+      }
       try {
         saved.set(host, await save(req, favicon))
       } catch (error) {

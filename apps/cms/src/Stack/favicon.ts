@@ -19,7 +19,7 @@ export const ICON_SIZE = 64
 const MAX_HTML_BYTES = 1_000_000
 const MAX_IMAGE_BYTES = 512_000
 const TIMEOUT_MS = 8_000
-/** Whole lookup (page, candidates, redirects); the API function may run 60 s. */
+/** One site's whole lookup (DNS, page, candidates, redirects); the API function may run 60 s. */
 export const LOOKUP_BUDGET_MS = 20_000
 const MAX_REDIRECTS = 3
 const MAX_CANDIDATES = 4
@@ -88,14 +88,31 @@ export type Resolve = (host: string) => Promise<string[]>
 const resolveAll: Resolve = async (host) =>
   (await dnsLookup(host, { all: true, verbatim: true })).map((entry) => entry.address)
 
-/** True when the host resolves, and only to public addresses (`127.0.0.1.nip.io` does not). */
-const resolvesPublic = async (host: string, resolve: Resolve): Promise<boolean> => {
+/**
+ * True when the host resolves before `deadline`, and only to public addresses
+ * (`127.0.0.1.nip.io` does not). A stalled resolver counts as not public.
+ */
+const resolvesPublic = async (
+  host: string,
+  resolve: Resolve,
+  deadline: number,
+): Promise<boolean> => {
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return !isPrivateAddress(host)
+  const left = deadline - Date.now()
+  if (left <= 0) return false
+  let timer: ReturnType<typeof setTimeout> | undefined
   try {
-    const addresses = await resolve(host)
+    const addresses = await Promise.race([
+      resolve(host),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('DNS timeout')), left)
+      }),
+    ])
     return addresses.length > 0 && addresses.every((address) => !isPrivateAddress(address))
   } catch {
     return false
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -162,7 +179,7 @@ const safeGet = async (input: string, accept: string, ctx: Lookup): Promise<Resp
   let url = input
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     const host = publicHost(url)
-    if (!host || !(await resolvesPublic(host, ctx.resolve))) return null
+    if (!host || !(await resolvesPublic(host, ctx.resolve, ctx.deadline))) return null
     const left = ctx.deadline - Date.now()
     if (left <= 0) return null
     const res = await ctx.fetch(url, {
@@ -237,7 +254,7 @@ export const fetchFavicon = async (
   if (!host) return null
   const ctx: Lookup = { fetch: fetchImpl, resolve, deadline: Date.now() + budgetMs }
   // A site that resolves to a private address gets no lookup at all, not even via Google.
-  if (!(await resolvesPublic(host, resolve))) return null
+  if (!(await resolvesPublic(host, resolve, ctx.deadline))) return null
 
   let candidates: string[] = []
   try {
