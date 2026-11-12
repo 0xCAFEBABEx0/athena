@@ -34,7 +34,8 @@ export const publicHost = (input: string | null | undefined): string | null => {
   }
   if (url.protocol !== 'https:' && url.protocol !== 'http:') return null
   if (url.username || url.password) return null
-  const host = url.hostname.toLowerCase()
+  // `localhost.` is localhost: drop the root dot before any name check.
+  const host = url.hostname.toLowerCase().replace(/\.+$/, '')
   if (!host || !host.includes('.')) return null
   if (host.startsWith('[')) return null // IPv6 literals are never needed for a tool's site
   if (/(^|\.)(localhost|local|internal|lan|home\.arpa)$/.test(host)) return null
@@ -42,21 +43,30 @@ export const publicHost = (input: string | null | undefined): string | null => {
   return host
 }
 
-/** True for loopback, private, link-local, CGNAT, multicast and reserved IPv4/IPv6 addresses. */
+/**
+ * True for every address that is not globally routable: loopback, private,
+ * link-local, CGNAT, documentation, benchmarking, multicast and reserved
+ * IPv4 (IANA special-purpose registry), and their IPv6 counterparts.
+ */
 export const isPrivateAddress = (address: string): boolean => {
   const ip = address.toLowerCase()
   const v4 = ip.replace(/^::ffff:/, '').match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
   if (v4) {
-    const [a, b] = [Number(v4[1]), Number(v4[2])]
+    const [a, b, c] = [Number(v4[1]), Number(v4[2]), Number(v4[3])]
     return (
-      a === 0 ||
-      a === 10 ||
-      a === 127 ||
-      (a === 100 && b >= 64 && b <= 127) ||
-      (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      a >= 224
+      a === 0 || // "this network"
+      a === 10 || // private
+      a === 127 || // loopback
+      (a === 100 && b >= 64 && b <= 127) || // CGNAT
+      (a === 169 && b === 254) || // link-local, cloud metadata
+      (a === 172 && b >= 16 && b <= 31) || // private
+      (a === 192 && b === 0 && (c === 0 || c === 2)) || // IETF assignments, TEST-NET-1
+      (a === 192 && b === 88 && c === 99) || // 6to4 relay anycast
+      (a === 192 && b === 168) || // private
+      (a === 198 && (b === 18 || b === 19)) || // benchmarking
+      (a === 198 && b === 51 && c === 100) || // TEST-NET-2
+      (a === 203 && b === 0 && c === 113) || // TEST-NET-3
+      a >= 224 // multicast, reserved, broadcast
     )
   }
   if (!ip.includes(':')) return true // not an IP address at all
@@ -66,7 +76,10 @@ export const isPrivateAddress = (address: string): boolean => {
     /^f[cd]/.test(ip) || // fc00::/7 unique local
     /^fe[89ab]/.test(ip) || // fe80::/10 link-local
     /^ff/.test(ip) || // multicast
-    ip.startsWith('::ffff:') // mapped, non-dotted form
+    ip.startsWith('::ffff:') || // mapped, non-dotted form
+    ip.startsWith('64:ff9b:') || // NAT64 (wraps an IPv4 address)
+    ip.startsWith('2001:db8:') || // documentation
+    ip.startsWith('2002:') // 6to4 (wraps an IPv4 address)
   )
 }
 

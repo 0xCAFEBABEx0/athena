@@ -8,6 +8,8 @@ import { open, overflowX } from './helpers'
 
 const hasStack = async (page: Page, path = '/stack') => {
   const response = await open(page, path, { view: 'cli' })
+  // 404 = no tools yet (cases skip); anything else but 200 is a failure.
+  expect([200, 404], path).toContain(response?.status())
   return response?.status() === 200
 }
 
@@ -88,6 +90,7 @@ test.describe('Stack', () => {
       }) => {
         await page.setViewportSize({ width, height: 800 })
         const response = await open(page, path, { view, theme })
+        expect([200, 404], path).toContain(response?.status())
         test.skip(response?.status() !== 200, 'No tools in the CMS Stack global')
         expect(await overflowX(page)).toBeLessThanOrEqual(0)
         for (const box of await page

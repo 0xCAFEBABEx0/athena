@@ -2465,7 +2465,8 @@ html:not([data-view='modern']) .work-page-list {
   }
 
   /* Group headings and footer links are small text but still tap targets. */
-  .work-group-heading {
+  .work-group-heading,
+  .stack-group-heading {
     min-height: 2.5rem;
   }
 

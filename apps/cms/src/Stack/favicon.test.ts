@@ -11,7 +11,7 @@ import {
   readCapped,
   type Favicon,
 } from './favicon'
-import { fillStackIcons, isFetchedIconOf, toPng } from './hooks/fillStackIcons'
+import { fillStackIcons, isFetchedIconOf, mapLimit, toPng } from './hooks/fillStackIcons'
 
 const PNG_1PX = Uint8Array.from(
   atob(
@@ -31,6 +31,11 @@ describe('TC-U-37 publicHost', () => {
     expect(publicHost('https://astro.build/')).toBe('astro.build')
     expect(publicHost(' http://Example.COM/path ')).toBe('example.com')
     expect(publicHost('https://8.8.8.8/')).toBe('8.8.8.8')
+    expect(publicHost('https://example.com./')).toBe('example.com')
+    // Neighbours of the refused special-purpose ranges stay public.
+    for (const ip of ['198.17.255.255', '198.20.0.1', '192.0.3.1', '203.0.114.1', '172.32.0.1']) {
+      expect(publicHost(`http://${ip}/`), ip).toBe(ip)
+    }
   })
 
   test('refuses other schemes, credentials, local names and private addresses', () => {
@@ -39,8 +44,14 @@ describe('TC-U-37 publicHost', () => {
       'javascript:alert(1)',
       'https://user:pw@example.com/',
       'http://localhost:3000/',
+      'http://localhost./',
       'http://intranet/',
       'http://printer.local/',
+      'http://printer.local./',
+      'http://198.18.0.1/',
+      'http://198.19.255.255/',
+      'http://192.0.2.10/',
+      'http://203.0.113.5/',
       'http://127.0.0.1/',
       'http://10.0.0.5/',
       'http://172.20.1.1/',
@@ -307,6 +318,8 @@ describe('TC-U-41 Stack hook', () => {
     data: unknown,
     originalDoc: unknown,
     lookup = async (_url: string) => icon,
+    save = async (_req: PayloadRequest, found: Favicon): Promise<number | string> =>
+      `media-${found.host}`,
   ) => {
     const asked: string[] = []
     const hook = fillStackIcons(
@@ -314,7 +327,7 @@ describe('TC-U-41 Stack hook', () => {
         asked.push(url)
         return lookup(url)
       },
-      async (_req, found) => `media-${found.host}`,
+      save,
       async (_req, id) => filenames[String(id)] ?? null,
     )
     const result = (await hook({ data, originalDoc, req } as never)) as {
@@ -421,5 +434,29 @@ describe('TC-U-41 Stack hook', () => {
       },
     )
     expect(broken.icons).toEqual([null])
+    const failedUpload = await run(
+      { groups: [{ items: [{ id: 'a', name: 'X', url: 'https://x.example/' }] }] },
+      undefined,
+      undefined,
+      async () => {
+        throw new Error('blob down')
+      },
+    )
+    expect(failedUpload.icons).toEqual([null])
+  })
+
+  test('sites are looked up a few at a time, results kept in order', async () => {
+    let running = 0
+    let peak = 0
+    const out = await mapLimit([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 4, async (n) => {
+      running += 1
+      peak = Math.max(peak, running)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      running -= 1
+      return n * 2
+    })
+    expect(out).toEqual([2, 4, 6, 8, 10, 12, 14, 16, 18, 20])
+    expect(peak).toBe(4)
+    expect(await mapLimit([], 4, async (n: number) => n)).toEqual([])
   })
 })

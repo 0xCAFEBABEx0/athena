@@ -13,6 +13,27 @@ type Item = {
 }
 type Group = { id?: string | null; items?: Item[] | null; [key: string]: unknown }
 
+/** Sites looked up at once; each lookup is time-bounded (LOOKUP_BUDGET_MS). */
+const LOOKUP_CONCURRENCY = 4
+
+/** `task` over `items`, at most `limit` at a time, results in input order. */
+export const mapLimit = async <T, R>(
+  items: readonly T[],
+  limit: number,
+  task: (item: T) => Promise<R>,
+): Promise<R[]> => {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next++
+      results[index] = await task(items[index] as T)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
+
 const iconId = (icon: Item['icon']): number | string | null =>
   icon && typeof icon === 'object' ? icon.id : (icon ?? null)
 
@@ -99,8 +120,8 @@ export const fillStackIcons =
       }
     }
 
-    // Decide which items need an icon, then look each site up once (in
-    // parallel) and store the icons one at a time.
+    // Decide which items need an icon, then look each site up once (a few
+    // at a time, each within its time budget) and store the icons one by one.
     const plan = await Promise.all(
       groups.map((group) =>
         Promise.all(
@@ -130,16 +151,14 @@ export const fillStackIcons =
         wanted.set(entry.host, entry.item.url ?? '')
     }
     const found = new Map<string, Favicon | null>(
-      await Promise.all(
-        [...wanted].map(async ([host, url]) => {
-          try {
-            return [host, await lookup(url)] as const
-          } catch (error) {
-            req.payload.logger.warn(`Stack: no icon for ${host}: ${String(error)}`)
-            return [host, null] as const
-          }
-        }),
-      ),
+      await mapLimit([...wanted], LOOKUP_CONCURRENCY, async ([host, url]) => {
+        try {
+          return [host, await lookup(url)] as const
+        } catch (error) {
+          req.payload.logger.warn(`Stack: no icon for ${host}: ${String(error)}`)
+          return [host, null] as const
+        }
+      }),
     )
     const saved = new Map<string, number | string | null>()
     for (const [host, favicon] of found) {

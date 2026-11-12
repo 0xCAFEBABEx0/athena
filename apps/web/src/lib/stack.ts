@@ -92,12 +92,16 @@ export const normalizeStack = (stack: Partial<Stack> | null | undefined): StackD
 }
 
 /**
- * The Stack global, or null when the CMS cannot answer (including a database
- * without the `stack` tables yet). The page answers 404 then.
+ * The Stack global; throws when the CMS cannot answer, so `/stack` shows the
+ * 500 page (never cached) instead of a 404 the CDN would keep for a day.
  */
+export const loadStack = async (locale: Locale): Promise<StackData> =>
+  normalizeStack(await getGlobal<Stack>('stack', { locale }))
+
+/** The Stack global, or null when the CMS cannot answer (the sitemap then leaves `/stack` out). */
 export const getStack = async (locale: Locale): Promise<StackData | null> => {
   try {
-    return normalizeStack(await getGlobal<Stack>('stack', { locale }))
+    return await loadStack(locale)
   } catch (error) {
     console.error('[stack] failed to load the stack', error)
     return null
