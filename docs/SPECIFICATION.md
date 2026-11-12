@@ -160,6 +160,11 @@ all managed by editors without code changes.
 - **F-REDIR-2** A redirect change invalidates the `content` cache tag, so
   cached pages pick it up on their next request; a function instance keeps
   the redirect list for at most 5 s.
+- **F-REDIR-3** The pre-1.2.0 section paths `/posts`, `/work`, `/stack`
+  (with `/ja`, `/zh` and any subpath) answer `308` to `/notes`, `/builds`,
+  `/stacks` with the same language, subpath and query string. On Vercel
+  they are served by the plain function, not ISR, so the query reaches the
+  redirect and the CDN caches each full URL separately.
 
 ### 2.8 SEO and crawlers
 
