@@ -102,3 +102,26 @@ test.describe('Stack', () => {
     }
   }
 })
+
+test('TC-E-57 j/k move through the open Stack rows in both views, skipping folded Former', async ({
+  page,
+}) => {
+  test.skip(!(await hasStack(page)), 'No tools in the CMS Stack global')
+  for (const view of ['cli', 'modern'] as const) {
+    await open(page, '/stacks', { view })
+    const rows = page.locator('.stack-group[open] .stack-row')
+    const count = await rows.count()
+    const names = await rows.locator('.stack-name').allTextContents()
+    const focused = () => page.evaluate(() => document.activeElement?.querySelector('.stack-name')?.textContent)
+    await page.keyboard.press('j')
+    expect(await focused(), view).toBe(names[0])
+    if (count > 1) {
+      await page.keyboard.press('j')
+      expect(await focused(), view).toBe(names[1])
+      await page.keyboard.press('k')
+      expect(await focused(), view).toBe(names[0])
+    }
+    for (let i = 0; i < count + 2; i += 1) await page.keyboard.press('j')
+    expect(await focused(), view).toBe(names.at(-1))
+  }
+})

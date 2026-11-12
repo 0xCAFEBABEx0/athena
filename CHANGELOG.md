@@ -4,6 +4,25 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.3.0] - 2026-11-12
+
+### Added
+
+- `h` / `l` go to the previous / next section of the header nav (home,
+  notes, builds, stacks, about), in both views. The Keys tab in `/status`,
+  the shortcut hints and the home banner's "Tips for getting started" list
+  them, with `j` / `k`.
+- `g` then `h` goes to the home page (in the page's language) from anywhere
+  on the site. It is listed in the same places.
+
+### Fixed
+
+- `j` / `k` now move through the tools on `/stacks`, including tools without
+  a link, and through the home project list. The hints say "move through the
+  list" instead of "move between notes".
+- Typing in the `/status` panel's Config list no longer triggers page
+  shortcuts (for example `t` toggling the theme while searching for it).
+
 ## [1.2.0] - 2026-11-12
 
 ### Added

@@ -68,7 +68,9 @@ const crumbs = current.split('/').filter(Boolean)
     </button>
   </span>
   <nav class="flex flex-wrap items-center" aria-label={t.nav}>
-    {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
+    <span class="contents" data-section-nav>
+      {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
+    </span>
     <ViewToggle />
     <details class="dropdown dropdown-end" data-language-menu>
       <summary

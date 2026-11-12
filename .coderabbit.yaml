@@ -51,11 +51,15 @@ reviews:
         TypeScript runs in strict mode with `noUncheckedIndexedAccess`.
         Flag non-null assertions or unchecked index access that hide real
         `undefined` cases. Imports of Payload generated types must be
-        type-only (`import type`). Use the `@/*` path alias rather than long
-        relative paths. Unused variables must be prefixed with `_`.
+        type-only (`import type`). Imports from another folder under `src/` use the
+        `@/*` path alias, not `../` (`./` within the same folder is fine);
+        Payload's generated files under `apps/cms/src/app/(payload)/` are
+        exempt. Unused variables must be prefixed with `_`.
         Public section paths (`/notes`, `/builds`, `/stacks`, `/about`) come from
         `ROUTES` in `packages/shared/src/constants.ts`; flag new hard-coded
         section paths, including the pre-1.2.0 `/posts`, `/work` and `/stack`.
+        The E2E specs in `apps/web/e2e/` are exempt: they spell the public
+        URLs out on purpose, so a `ROUTES` change that moves a URL fails them.
         Their 308s keep the query string only because
         `apps/web/scripts/route-legacy-redirects.mjs` routes them off the ISR
         function (which drops the query and caches by path); keep that

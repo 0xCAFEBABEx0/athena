@@ -191,3 +191,43 @@ test.describe('TC-E-48 switches in one order in both views: view, language, them
     })
   }
 })
+
+test('TC-E-58 h/l go to the previous / next header section, in both views and languages', async ({
+  page,
+}) => {
+  for (const [view, start] of [
+    ['cli', '/'],
+    ['modern', '/ja/notes'],
+  ] as const) {
+    await open(page, start, { view })
+    const hrefs = await page
+      .locator('[data-section-nav] a[href^="/"]')
+      .evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).pathname))
+    test.skip(hrefs.length < 2, 'Fewer than two header links')
+    const at = hrefs.findIndex((href) => href === new URL(page.url()).pathname)
+    expect(at, `${view}: the start page is a header section`).toBeGreaterThanOrEqual(0)
+    const next = hrefs[at + 1]
+    if (!next) continue
+    await Promise.all([page.waitForURL((url) => url.pathname === next), page.keyboard.press('l')])
+    await Promise.all([
+      page.waitForURL((url) => url.pathname === hrefs[at]),
+      page.keyboard.press('h'),
+    ])
+  }
+})
+
+test('TC-E-60 g then h goes to the home page of the current language, in both views', async ({
+  page,
+}) => {
+  for (const [view, start, home] of [
+    ['cli', '/builds', '/'],
+    ['modern', '/ja/stacks', '/ja'],
+  ] as const) {
+    await open(page, start, { view })
+    await page.keyboard.press('g')
+    await Promise.all([
+      page.waitForURL((url) => url.pathname.replace(/\/$/, '') === home.replace(/\/$/, '')),
+      page.keyboard.press('h'),
+    ])
+  }
+})

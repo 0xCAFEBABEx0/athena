@@ -20,3 +20,18 @@ test('TC-E-28 the status panel stays open after changing the language', async ({
   await expect(page.locator('[data-status-dialog]')).toHaveAttribute('open', '')
   await expect(page.locator('[data-config="language"]')).toBeFocused()
 })
+
+test('TC-E-59 page shortcuts stay off inside the status panel: typing on Config searches', async ({
+  page,
+}) => {
+  await open(page, '/', { view: 'cli' })
+  const theme = await page.evaluate(() => document.documentElement.dataset.theme)
+  await page.keyboard.press('s')
+  await page.locator('[data-status-tab="config"]').click()
+  await page.locator('[data-config="theme"]').focus()
+  for (const key of ['l', 't', 'j', 'h']) await page.keyboard.press(key)
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.locator('[data-status-dialog]')).toHaveAttribute('open', '')
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(theme)
+  await expect(page.locator('[data-config-search]')).toBeFocused()
+})

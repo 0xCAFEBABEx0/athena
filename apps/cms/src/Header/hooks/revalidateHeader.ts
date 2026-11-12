@@ -2,7 +2,7 @@ import type { GlobalAfterChangeHook } from 'payload'
 
 import { CACHE_TAGS } from '@athena/shared/constants'
 
-import { invalidateWeb } from '../../utilities/invalidateWeb'
+import { invalidateWeb } from '@/utilities/invalidateWeb'
 
 export const revalidateHeader: GlobalAfterChangeHook = async ({
   doc,

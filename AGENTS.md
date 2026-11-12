@@ -89,12 +89,15 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 ## Code Conventions
 
 - **TypeScript strict mode** with `noUncheckedIndexedAccess` and `strictNullChecks`
-- **Path alias**: `@/*` maps to `./src/*` in both apps - use consistently
+- **Path alias**: `@/*` maps to `./src/*` in both apps. Import anything outside the
+  file's own folder through `@/` (`@/utilities/invalidateWeb`, not `../../utilities/...`);
+  `./` is for files in the same folder. Exceptions: the files Payload generates under
+  `apps/cms/src/app/(payload)/` (kept as generated) and imports of files outside `src/`
 - **Never edit** `packages/shared/src/payload-types.ts` - regenerate with `bun run generate:types`
 - **CMS**: Server Components by default; add `'use client'` only when needed
 - **Front-end design and browser support** (`apps/web`): read [`docs/BASELINE.md`](./docs/BASELINE.md) before changing UI, CSS or client-side JS. It holds the Baseline target (Widely available freely; Newly available and Limited only as progressive enhancement), the features in use and their fallbacks, and the design rules: themes and dark mode (`data-theme`, not the OS media query), the daisyUI `include:` list, motion, switches, narrow widths
 - **Prefix unused vars** with `_` to suppress lint warnings
-- **Section paths**: posts live under `/notes`, projects under `/builds`, the Stack global at `/stacks` (renamed in 1.2.0), the About global at `/about`. Build them from `ROUTES` in `packages/shared/src/constants.ts`, never as string literals; `middleware.ts` answers the old `/posts`, `/work`, `/stack` (every language) with a 308 to the new path (query kept; `apps/web/scripts/route-legacy-redirects.mjs` routes those paths to the plain function after the build, because the ISR function never sees the query and caches by path), and CMS links typed with an old path are mapped by `currentRoute`
+- **Section paths**: posts live under `/notes`, projects under `/builds`, the Stack global at `/stacks` (renamed in 1.2.0), the About global at `/about`. Build them from `ROUTES` in `packages/shared/src/constants.ts`, never as string literals (the E2E specs in `apps/web/e2e/` are the exception: they spell the public URLs out, so a change to `ROUTES` that moves a public URL fails them); `middleware.ts` answers the old `/posts`, `/work`, `/stack` (every language) with a 308 to the new path (query kept; `apps/web/scripts/route-legacy-redirects.mjs` routes those paths to the plain function after the build, because the ISR function never sees the query and caches by path), and CMS links typed with an old path are mapped by `currentRoute`
 - **Links from data**: a URL from the CMS, GitHub or a query string becomes an `href` or redirect only through `safeHref` / `httpUrl` / `isLocalPath` (`apps/web/src/lib/safe-url.ts`)
 - **Search** (`/search`) is one ISR page per language filtered in the browser; never read `?q=` on the server
 - **Tests**: add or update a case in `docs/TESTING.md` with each behavior change, and run both web suites before pushing

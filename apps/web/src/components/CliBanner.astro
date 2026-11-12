@@ -38,6 +38,10 @@ const commands = [
   { cmd: 'status', key: '/status', label: t.bannerCmdStatus },
   { cmd: 'view', key: 'v', label: t.bannerCmdView },
   { cmd: 'theme', key: 't', label: t.bannerCmdTheme },
+  // Keys only: nothing to run on a click.
+  { cmd: null, key: 'j k', label: t.shortcutMove },
+  { cmd: null, key: 'h l', label: t.shortcutSection },
+  { cmd: null, key: 'g h', label: t.shortcutHome },
 ] as const
 ---
 
@@ -119,10 +123,17 @@ const commands = [
         {
           commands.map((command) => (
             <li>
-              <button type="button" class="cli-banner-cmd" data-banner-cmd={command.cmd}>
-                <kbd class="kbd kbd-sm">{command.key}</kbd>
-                <span>{command.label}</span>
-              </button>
+              {command.cmd ? (
+                <button type="button" class="cli-banner-cmd" data-banner-cmd={command.cmd}>
+                  <kbd class="kbd kbd-sm">{command.key}</kbd>
+                  <span>{command.label}</span>
+                </button>
+              ) : (
+                <span class="cli-banner-cmd">
+                  <kbd class="kbd kbd-sm">{command.key}</kbd>
+                  <span>{command.label}</span>
+                </span>
+              )}
             </li>
           ))
         }

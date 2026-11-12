@@ -2,7 +2,7 @@ import type { GlobalBeforeChangeHook } from 'payload'
 
 import { APIError } from 'payload'
 
-import { fetchXPost, normalizeXUrl, type XPost } from '../../x/oembed'
+import { fetchXPost, normalizeXUrl, type XPost } from '@/x/oembed'
 
 type Pick = {
   id?: string | null
