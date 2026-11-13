@@ -34,6 +34,9 @@ section of each new version as a GitHub Release.
 - The Notes list shows each note as one row with its image (none, and no
   empty box, when it has no hero image, as in Ghost), title,
   author, how long ago it changed, and Draft or Published.
+- The note and page editors show the title big and without a label, with
+  a `Title` placeholder on a new one; other forms (Builds) keep a labelled
+  title field.
 - The sidebar is grouped into Content, Site, Forms and System; Posts are
   called Notes and Projects Builds, like the site's sections.
 - The admin's own components use daisyUI (Tailwind with a `tw:` prefix),

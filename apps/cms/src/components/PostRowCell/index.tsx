@@ -2,11 +2,13 @@ import type { DefaultServerCellComponentProps } from 'payload'
 import type React from 'react'
 import { publishState, thumbnailURL, timeAgo } from '@/utilities/adminFormat'
 import '@/admin-ui/index.css'
+import { RowLink } from './RowLink'
 
 /**
  * Title cell for the Notes list (field admin.components.Cell, a public API in
  * Payload 3 and 4): thumbnail, title, byline and Draft/Published in one row,
- * like Ghost's post list. A custom cell renders its own link to the document.
+ * like Ghost's post list. A custom cell renders its own link to the document;
+ * RowLink turns it into a select button inside list drawers.
  */
 export const PostRowCell: React.FC<DefaultServerCellComponentProps> = async ({
   cellData,
@@ -31,12 +33,14 @@ export const PostRowCell: React.FC<DefaultServerCellComponentProps> = async ({
   const state = publishState(doc._status)
 
   return (
-    <a
+    <RowLink
       className={`whoa-ui tw:grid tw:items-center tw:gap-3 tw:md:gap-4 tw:min-w-0 tw:text-inherit tw:no-underline ${
         // Like Ghost: no hero image, no box; the title starts at the left edge.
         thumb ? 'tw:grid-cols-[64px_minmax(0,1fr)] tw:md:grid-cols-[100px_minmax(0,1fr)]' : 'tw:grid-cols-1'
       }`}
+      collectionSlug={collectionSlug}
       href={`/admin/collections/${collectionSlug}/${doc.id}`}
+      rowData={doc}
     >
       {thumb ? (
         <span className="tw:block tw:aspect-[16/10] tw:rounded-field tw:bg-base-200 tw:overflow-hidden">
@@ -56,7 +60,7 @@ export const PostRowCell: React.FC<DefaultServerCellComponentProps> = async ({
           {state === 'draft' ? 'Draft' : 'Published'}
         </span>
       </span>
-    </a>
+    </RowLink>
   )
 }
 

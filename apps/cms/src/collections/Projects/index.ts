@@ -109,7 +109,7 @@ export const Projects: CollectionConfig<'projects'> = {
     useAsTitle: 'repo',
     defaultColumns: ['repo', 'status', 'pinned', 'hidden', 'order', 'syncedAt'],
     description:
-      'Repositories shown at /work. Only entries added here appear; tick Hidden to take one off the site.',
+      'Repositories shown at /builds. Only entries added here appear; tick Hidden to take one off the site.',
   },
   fields: [
     {

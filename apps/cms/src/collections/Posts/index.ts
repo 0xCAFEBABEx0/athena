@@ -78,7 +78,8 @@ export const Posts: CollectionConfig<'posts'> = {
       type: 'text',
       localized: true,
       required: true,
-      admin: { components: { Cell: '@/components/PostRowCell' } },
+      // The editor shows the title without its label (custom.scss), so the placeholder names it.
+      admin: { components: { Cell: '@/components/PostRowCell' }, placeholder: 'Title' },
     },
     {
       type: 'tabs',
