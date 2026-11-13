@@ -62,6 +62,8 @@ export const Pages: CollectionConfig<'pages'> = {
     {
       name: 'title',
       type: 'text',
+      // The editor shows the title without its label (custom.scss), so the placeholder names it.
+      admin: { placeholder: 'Title' },
       localized: true,
       required: true,
     },

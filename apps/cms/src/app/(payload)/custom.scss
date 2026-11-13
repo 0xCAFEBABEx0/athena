@@ -178,20 +178,25 @@ body {
   }
 }
 
-/* Editor: big borderless title, calmer labels. */
+/* Editor: big borderless title for notes and pages (Builds keep a normal
+   labelled title field), calmer labels. */
 .doc-header__title {
   font-size: 1rem;
   font-weight: 500;
   color: var(--whoa-muted);
 }
-.field-type.text:has(#field-title) .field-label {
+:is(.collection-edit--posts, .collection-edit--pages)
+  .field-type.text:has(#field-title)
+  .field-label {
   position: absolute;
   width: 1px;
   height: 1px;
   overflow: hidden;
   clip-path: inset(50%);
 }
-.field-type.text:has(#field-title) #field-title {
+:is(.collection-edit--posts, .collection-edit--pages)
+  .field-type.text:has(#field-title)
+  #field-title {
   font-size: 2.25rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -202,9 +207,24 @@ body {
   background: transparent;
   box-shadow: none;
 }
+:is(.collection-edit--posts, .collection-edit--pages)
+  .field-type.text:has(#field-title)
+  #field-title::-webkit-input-placeholder {
+  /* Payload sets placeholders to 1rem normal; keep the big title's size. */
+  font-size: inherit;
+  font-weight: inherit;
+}
+:is(.collection-edit--posts, .collection-edit--pages)
+  .field-type.text:has(#field-title)
+  #field-title::-moz-placeholder {
+  font-size: inherit;
+  font-weight: inherit;
+}
 @media (max-width: 768px) {
   /* The title is a one-line input: keep more of it visible on phones. */
-  .field-type.text:has(#field-title) #field-title {
+  :is(.collection-edit--posts, .collection-edit--pages)
+  .field-type.text:has(#field-title)
+  #field-title {
     font-size: 1.6rem;
   }
 }

@@ -55,7 +55,7 @@ tailwindcss#20668); the `tailwind` Dependabot group covers both apps.
 | `AdminBrand#Logo`, `#Icon` | login logo, sidebar icon | `admin.components.graphics` |
 | `BeforeLogin` | line above the login form | `admin.components.beforeLogin` |
 | `AdminHome` | dashboard header, counts, recent notes | `admin.components.beforeDashboard` (server component, `payload.find` / `count`) |
-| `PostRowCell` | Notes list row (thumbnail, title, author, time, state) | field `admin.components.Cell` on `title` |
+| `PostRowCell` | Notes list row (thumbnail, title, author, time, state) | field `admin.components.Cell` on `title`; its client `RowLink` reads `useListDrawerContext` from `@payloadcms/ui` so that inside a list drawer a click selects the note, as Payload's default cell does (re-check at 4.0) |
 | `TranslateButton` | Translate to ja/zh in the post sidebar | field UI component; plain `<button>` with daisyUI, not Payload's `Button` (its `size="small"` is gone in 4) |
 
 Shared helpers are in `apps/cms/src/utilities/adminFormat.ts` (`timeAgo`,
@@ -64,6 +64,11 @@ Shared helpers are in `apps/cms/src/utilities/adminFormat.ts` (`timeAgo`,
 change at the upgrade.
 
 `meta.titleSuffix` and the SVG favicon are in `payload.config.ts`.
+
+The big borderless title (part 3 of `custom.scss`) applies only to Notes and
+Pages (`.collection-edit--posts`, `.collection-edit--pages`); their title
+fields carry a `Title` placeholder because the label is hidden. Other
+collections keep Payload's labelled field.
 
 ## Payload 4.0 steps
 
