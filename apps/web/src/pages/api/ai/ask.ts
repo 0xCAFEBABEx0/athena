@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro'
 
 import {
-  aiSearchEnabled,
+  aiModeEnabled,
   clientAddress,
   isCrossSite,
   parseAiRequest,
@@ -37,7 +37,7 @@ const streamHeaders = {
 
 export const POST: APIRoute = async ({ request }) => {
   if (isCrossSite(request)) return error(403, 'forbidden', 'Cross-site request.')
-  if (!aiSearchEnabled()) return error(503, 'disabled', 'AI search is not set up.')
+  if (!aiModeEnabled('ask')) return error(503, 'disabled', 'AI search is not set up.')
 
   const raw = await request.text()
   if (raw.length > MAX_BODY) return error(413, 'too_large', 'Question is too long.')

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
 import {
   AiSearchError,
+  aiModes,
   type ChunkHit,
   clientAddress,
   isCrossSite,
@@ -18,7 +19,7 @@ import { allowToday, allowVisitor, dailyLimit, resetVisitorLimits } from './ai-l
 import { bumpCounter, peekCms, storeCms, type CmsCacheStore } from './cms-cache'
 
 /** Set environment variables for one test and put the old values back after it. */
-const envKeys = ['REVALIDATE_SECRET', 'CMS_URL', 'CMS_PROTECTION_BYPASS', 'AI_DAILY_LIMIT'] as const
+const envKeys = ['REVALIDATE_SECRET', 'CMS_URL', 'CMS_PROTECTION_BYPASS', 'AI_DAILY_LIMIT', 'AI_SEARCH', 'ANTHROPIC_API_KEY'] as const
 const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]))
 const restoreEnv = () => {
   for (const key of envKeys) {
@@ -167,6 +168,19 @@ describe('TC-U-58 AI search (web): asking the CMS', () => {
     expect(searchFailure(new AiSearchError('limit', 429, 'busy'))).toEqual({ status: 429, code: 'busy' })
     expect(searchFailure(new AiSearchError('x', 401))).toEqual({ status: 502, code: 'search' })
     expect(searchFailure(new Error('x'))).toEqual({ status: 502, code: 'search' })
+  })
+
+  test('By meaning needs only the CMS; Ask AI also needs ANTHROPIC_API_KEY; AI_SEARCH=off hides both', () => {
+    delete process.env.ANTHROPIC_API_KEY
+    delete process.env.AI_SEARCH
+    expect(aiModes()).toEqual(['meaning'])
+    process.env.ANTHROPIC_API_KEY = 'k'
+    expect(aiModes()).toEqual(['meaning', 'ask'])
+    process.env.AI_SEARCH = 'OFF'
+    expect(aiModes()).toEqual([])
+    delete process.env.AI_SEARCH
+    delete process.env.REVALIDATE_SECRET
+    expect(aiModes()).toEqual([])
   })
 
   test('the spending check runs before the CMS is asked and can stop it', async () => {

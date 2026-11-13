@@ -50,8 +50,20 @@ export const parseAiRequest = (body: unknown): AiRequest | null => {
   return { q: query, locale: isLocale(locale) ? locale : 'en' }
 }
 
-/** True when the web app can write answers (the switch for the whole AI search UI). */
-export const aiSearchEnabled = (): boolean => Boolean(env('ANTHROPIC_API_KEY'))
+export type AiMode = 'meaning' | 'ask'
+
+/**
+ * The AI modes this deployment offers. By meaning needs only the CMS (its
+ * VOYAGE_API_KEY and the ai.post_chunks table; this server reaches it with
+ * REVALIDATE_SECRET); Ask AI also needs ANTHROPIC_API_KEY here.
+ * AI_SEARCH=off hides both.
+ */
+export const aiModes = (): AiMode[] => {
+  if (env('AI_SEARCH')?.trim().toLowerCase() === 'off' || !env('REVALIDATE_SECRET')) return []
+  return env('ANTHROPIC_API_KEY') ? ['meaning', 'ask'] : ['meaning']
+}
+
+export const aiModeEnabled = (mode: AiMode): boolean => aiModes().includes(mode)
 
 /** `code` is what the page is told (busy, daily, building); anything else shows as `search`. */
 export class AiSearchError extends Error {

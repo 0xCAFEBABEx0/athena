@@ -26,6 +26,11 @@ const requireAi = async (page: Page) => {
   return slugs
 }
 
+/** Ask AI needs ANTHROPIC_API_KEY on the web deployment; By meaning does not. */
+const requireAsk = async (page: Page) => {
+  test.skip((await page.locator('[data-search-mode="ask"]').count()) === 0, 'Ask AI is off on this deployment')
+}
+
 const answerStream = (slugs: string[], prefix = '') => {
   const sources = slugs.slice(0, 2).map((slug, i) => ({
     n: i + 1,
@@ -56,16 +61,23 @@ test.describe('/search with AI (browser calls stubbed)', () => {
       if (request.url().includes('/api/ai/')) requests.push(request.url())
     })
     const tabs = page.locator('[data-search-mode]')
-    await expect(tabs).toHaveCount(3)
+    const count = await tabs.count()
+    expect(count).toBeGreaterThanOrEqual(2)
     await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
     await tabs.first().focus()
     await page.keyboard.press('ArrowRight')
     await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
     await expect(tabs.nth(1)).toBeFocused()
     await expect(page).toHaveURL(/[?&]mode=meaning/)
-    await page.keyboard.press('ArrowRight')
-    await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
-    await expect(page).toHaveURL(/[?&]mode=ask/)
+    if (count === 3) {
+      await page.keyboard.press('ArrowRight')
+      await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
+      await expect(page).toHaveURL(/[?&]mode=ask/)
+    } else {
+      // Without Ask AI, ?mode=ask opens the keyword search.
+      await open(page, '/search?mode=ask', { view: 'cli' })
+      await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+    }
     await tabs.first().click()
     await expect(page).not.toHaveURL(/mode=/)
     await page.locator('[data-search-input]').fill('zzzz-no-such-post')
@@ -116,6 +128,7 @@ test.describe('/search with AI (browser calls stubbed)', () => {
   }) => {
     await open(page, '/ja/search?mode=ask', { view: 'modern', theme: 'dark' })
     const slugs = await requireAi(page)
+    await requireAsk(page)
     await page.route('**/api/ai/ask', (route) =>
       route.fulfill({ contentType: 'application/x-ndjson', body: answerStream(slugs, '/ja') }),
     )
@@ -151,6 +164,7 @@ test.describe('/search with AI (browser calls stubbed)', () => {
       for (const view of ['cli', 'modern'] as const) {
         await open(page, '/search?mode=ask', { view })
         const slugs = await requireAi(page)
+        await requireAsk(page)
         await page.route('**/api/ai/ask', (route) =>
           route.fulfill({ contentType: 'application/x-ndjson', body: answerStream(slugs) }),
         )

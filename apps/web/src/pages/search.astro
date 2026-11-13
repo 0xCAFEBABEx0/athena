@@ -4,7 +4,7 @@ import Layout from '@/layouts/Layout.astro'
 import PostList from '@/components/PostList.astro'
 import Prompt from '@/components/Prompt.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
-import { aiSearchEnabled } from '@/lib/ai'
+import { aiModes } from '@/lib/ai'
 import { aiText } from '@/lib/ai-text'
 import { getSearchIndexDocs } from '@/lib/cms'
 import { categoryTitles } from '@/lib/format'
@@ -34,7 +34,8 @@ const haystack = posts.map((post) =>
 
 // AI search (by meaning, and questions answered from the notes) shows only
 // when the web deployment can write answers; see docs/AI_SEARCH.md.
-const withAi = aiSearchEnabled()
+const enabledModes = aiModes()
+const withAi = enabledModes.length > 0
 
 // One cached page for every query: ISR keys the cache by path and ignores
 // ?q= and ?mode=, so the server renders every post and the browser does the
@@ -71,7 +72,7 @@ const modes = [
   { id: 'keyword', label: ai.modeKeyword },
   { id: 'meaning', label: ai.modeMeaning },
   { id: 'ask', label: ai.modeAsk },
-] as const
+].filter((mode) => mode.id === 'keyword' || enabledModes.includes(mode.id as 'meaning' | 'ask'))
 ---
 
 <Layout meta={meta}>
@@ -206,7 +207,9 @@ const modes = [
 
     const params = new URLSearchParams(window.location.search)
     const requested = params.get('mode')
-    let mode: Mode = tabs.length && isMode(requested) ? requested : 'keyword'
+    // A mode this deployment does not offer (no tab for it) falls back to Keyword.
+    let mode: Mode =
+      isMode(requested) && tabs.some((tab) => tab.dataset.searchMode === requested) ? requested : 'keyword'
     /** Query last sent in each AI mode, so switching back does not ask again. */
     /** The mode and query whose results are on screen, so Enter or a tab click does not ask again. */
     let shown: string | undefined
@@ -563,6 +566,8 @@ const modes = [
       })
     }
     selectMode(mode)
+    // ?mode= for a mode this deployment does not offer: show the URL of what is shown.
+    if (requested && requested !== mode) syncUrl(query)
     // A hovered link is prerendered (speculation rules): do not spend an AI
     // request on a page that may never be shown.
     const doc = document as Document & { prerendering?: boolean }

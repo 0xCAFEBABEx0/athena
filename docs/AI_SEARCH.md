@@ -8,9 +8,11 @@
 | By meaning | Finds posts whose text is close in meaning to the query, best first, with the closest excerpt under each title | on Enter | 1 embedding request, 1 Neon query |
 | Ask AI | Writes a short answer from the posts' text, with numbered citations that link to the posts | on Enter | the above + 1 Claude request |
 
-The two AI modes appear only when the web deployment has
-`ANTHROPIC_API_KEY`. Without it `/search` is the keyword search it was
-before, and `/api/ai/*` answer 503.
+By meaning needs only the CMS side (`VOYAGE_API_KEY` and the table), so it
+shows on every deployment that has `REVALIDATE_SECRET`. Ask AI shows only when
+the web deployment also has `ANTHROPIC_API_KEY`. `AI_SEARCH=off` on athena-web
+hides both, and `/search` is the keyword search it was before; `/api/ai/*` then
+answer 503. A link with `?mode=` for a mode that is not offered opens Keyword.
 
 ## How it works
 

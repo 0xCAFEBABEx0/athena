@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro'
 
 import {
   AiSearchError,
-  aiSearchEnabled,
+  aiModeEnabled,
   clientAddress,
   isCrossSite,
   parseAiRequest,
@@ -29,7 +29,7 @@ const json = (body: unknown, status = 200) =>
 
 export const POST: APIRoute = async ({ request }) => {
   if (isCrossSite(request)) return json({ error: { code: 'forbidden' } }, 403)
-  if (!aiSearchEnabled()) return json({ error: { code: 'disabled' } }, 503)
+  if (!aiModeEnabled('meaning')) return json({ error: { code: 'disabled' } }, 503)
 
   const raw = await request.text()
   if (raw.length > MAX_BODY) return json({ error: { code: 'too_large' } }, 413)
