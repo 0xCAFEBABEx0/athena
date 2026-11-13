@@ -25,6 +25,7 @@ const en = {
   errorBusy: 'Too many searches. Try again in a few minutes.',
   errorDaily: 'The AI search limit for today is used up. Try again tomorrow, or use Keyword.',
   errorDisabled: 'AI search is not available yet. Use Keyword instead.',
+  errorBuilding: 'The notes are being indexed for AI search. Try again in a minute.',
   errorRefused: 'This question could not be answered.',
   errorFailed: 'Something went wrong. Try again, or use Keyword.',
 }
@@ -55,6 +56,7 @@ const ja: AiText = {
   errorBusy: '検索が多すぎます。数分おいてからもう一度お試しください。',
   errorDaily: '今日の AI 検索の上限に達しました。明日またお試しいただくか、キーワード検索をお使いください。',
   errorDisabled: 'AI 検索はまだ使えません。キーワード検索をお使いください。',
+  errorBuilding: 'AI 検索のために記事を読み込んでいます。1 分ほどしてからもう一度お試しください。',
   errorRefused: 'この質問には答えられませんでした。',
   errorFailed: 'うまくいきませんでした。もう一度試すか、キーワード検索をお使いください。',
 }
@@ -83,6 +85,7 @@ const zh: AiText = {
   errorBusy: '搜索次数过多，请几分钟后再试。',
   errorDaily: '今天的 AI 搜索次数已用完。请明天再试，或使用关键词搜索。',
   errorDisabled: 'AI 搜索暂不可用，请使用关键词搜索。',
+  errorBuilding: '正在为 AI 搜索建立笔记索引，请一分钟后再试。',
   errorRefused: '无法回答这个问题。',
   errorFailed: '出错了。请重试，或使用关键词搜索。',
 }

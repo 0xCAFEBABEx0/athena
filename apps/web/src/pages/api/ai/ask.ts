@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro'
 
 import {
-  AiSearchError,
   aiSearchEnabled,
   clientAddress,
   isCrossSite,
@@ -9,6 +8,7 @@ import {
   queryKey,
   relevantChunks,
   searchChunks,
+  searchFailure,
 } from '@/lib/ai'
 import { ANSWER_CHUNKS, type StoredAnswer, ndjson, replay, streamAnswer } from '@/lib/ai-answer'
 import { allowToday, allowVisitor } from '@/lib/ai-limits'
@@ -62,9 +62,9 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     chunks = relevantChunks(await searchChunks(ask, ANSWER_CHUNKS))
   } catch (cause) {
-    console.error('[ai/ask]', cause instanceof Error ? cause.message : cause)
-    const status = cause instanceof AiSearchError && cause.status === 503 ? 503 : 502
-    return error(status, 'search', 'Search is not available right now.')
+    const { status, code } = searchFailure(cause)
+    if (code !== 'building') console.error('[ai/ask]', cause instanceof Error ? cause.message : cause)
+    return error(status, code, code === 'building' ? 'The index is being built.' : 'Search is not available right now.')
   }
 
   const events = streamAnswer(ask.q, chunks, ask.locale, {

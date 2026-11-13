@@ -8,6 +8,7 @@ import {
   parseAiRequest,
   rankPosts,
   searchChunks,
+  searchFailure,
 } from '@/lib/ai'
 import { allowToday, allowVisitor } from '@/lib/ai-limits'
 
@@ -45,17 +46,16 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const chunks = await searchChunks(query, CHUNKS, {
       beforeLoad: async () => {
-        if (!allowVisitor(visitor)) throw new AiSearchError('busy', 429)
-        if (!(await allowToday())) throw new AiSearchError('daily', 429)
+        if (!allowVisitor(visitor)) throw new AiSearchError('Too many searches.', 429, 'busy')
+        if (!(await allowToday())) throw new AiSearchError('Daily limit reached.', 429, 'daily')
       },
     })
     return json({ posts: rankPosts(chunks, query.locale) })
   } catch (cause) {
-    if (cause instanceof AiSearchError && cause.status === 429) {
-      return json({ error: { code: cause.message } }, 429)
+    const { status, code } = searchFailure(cause)
+    if (status !== 429 && code !== 'building') {
+      console.error('[ai/search]', cause instanceof Error ? cause.message : cause)
     }
-    console.error('[ai/search]', cause instanceof Error ? cause.message : cause)
-    const status = cause instanceof AiSearchError && cause.status === 503 ? 503 : 502
-    return json({ error: { code: 'search' } }, status)
+    return json({ error: { code } }, status)
   }
 }

@@ -11,6 +11,7 @@ import {
   rankPosts,
   relevantChunks,
   searchChunks,
+  searchFailure,
   snippetOf,
 } from './ai'
 import { allowToday, allowVisitor, dailyLimit, resetVisitorLimits } from './ai-limits'
@@ -156,6 +157,16 @@ describe('TC-U-58 AI search (web): asking the CMS', () => {
     }).catch((error: unknown) => error)) as AiSearchError
     expect(noSecret.status).toBe(503)
     expect(calls).toHaveLength(0)
+  })
+
+  test('an index still being built is an error with its own code, so the empty answer is not cached', async () => {
+    const building = (await searchChunks({ q: 'x', locale: 'en' }, 8, {
+      fetchImpl: fakeFetch([], () => Response.json({ results: [], building: true })),
+    }).catch((error: unknown) => error)) as AiSearchError
+    expect(searchFailure(building)).toEqual({ status: 503, code: 'building' })
+    expect(searchFailure(new AiSearchError('limit', 429, 'busy'))).toEqual({ status: 429, code: 'busy' })
+    expect(searchFailure(new AiSearchError('x', 401))).toEqual({ status: 502, code: 'search' })
+    expect(searchFailure(new Error('x'))).toEqual({ status: 502, code: 'search' })
   })
 
   test('the spending check runs before the CMS is asked and can stop it', async () => {

@@ -51,7 +51,8 @@ POST /api/ai/search  ◄──────────────── Bearer 
   save.
 - **First run**: the index starts empty. The first search on a deployment
   whose index is empty answers `building: true` and indexes every public post
-  in the background; a later search finds them. To rebuild by hand, a logged-in
+  in the background; the page says the notes are being indexed (not cached),
+  and a search a minute later finds them. To rebuild by hand, a logged-in
   admin can `POST /api/ai/reindex` on the CMS (same cookie as the admin).
 - **Search** (`POST ${CMS_URL}/api/ai/search`, `{ q, locale, limit }`): embeds
   the query (`input_type: query`) and returns the nearest excerpts in that

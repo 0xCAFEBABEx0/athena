@@ -53,13 +53,24 @@ export const parseAiRequest = (body: unknown): AiRequest | null => {
 /** True when the web app can write answers (the switch for the whole AI search UI). */
 export const aiSearchEnabled = (): boolean => Boolean(env('ANTHROPIC_API_KEY'))
 
+/** `code` is what the page is told (busy, daily, building); anything else shows as `search`. */
 export class AiSearchError extends Error {
   readonly status: number
-  constructor(message: string, status: number) {
+  readonly code: string
+  constructor(message: string, status: number, code = 'search') {
     super(message)
     this.name = 'AiSearchError'
     this.status = status
+    this.code = code
   }
+}
+
+/** The error body the AI endpoints send for a failed search. */
+export const searchFailure = (cause: unknown): { status: number; code: string } => {
+  if (cause instanceof AiSearchError) {
+    if (cause.status === 429 || cause.status === 503) return { status: cause.status, code: cause.code }
+  }
+  return { status: 502, code: 'search' }
 }
 
 type SearchResponse = { results?: ChunkHit[]; building?: boolean }
@@ -109,13 +120,17 @@ export const searchChunks = async (
       const body = (await res.json().catch(() => ({}))) as { error?: string }
       throw new AiSearchError(body.error ?? 'AI search is not set up on the CMS.', 503)
     }
+    let body: SearchResponse
     try {
-      const body = await parseCmsResponse<SearchResponse>(res, path)
-      return Array.isArray(body.results) ? body.results : []
+      body = await parseCmsResponse<SearchResponse>(res, path)
     } catch (error) {
       // A login redirect, a 401 (secrets out of step) or a 500: the CMS side failed.
       throw new AiSearchError(error instanceof Error ? error.message : String(error), 502)
     }
+    // The CMS index was empty and is being filled now: an error, so the
+    // empty answer is not cached until the next publish.
+    if (body.building) throw new AiSearchError('The AI search index is being built.', 503, 'building')
+    return Array.isArray(body.results) ? body.results : []
   }
   return cachedCms(`ai:search:${limit}:${queryKey(locale, q)}`, load)
 }

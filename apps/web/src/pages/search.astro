@@ -63,6 +63,7 @@ const strings = {
   errorBusy: ai.errorBusy,
   errorDaily: ai.errorDaily,
   errorDisabled: ai.errorDisabled,
+  errorBuilding: ai.errorBuilding,
   errorRefused: ai.errorRefused,
   errorFailed: ai.errorFailed,
 }
@@ -160,6 +161,7 @@ const modes = [
     | 'errorBusy'
     | 'errorDaily'
     | 'errorDisabled'
+    | 'errorBuilding'
     | 'errorRefused'
     | 'errorFailed',
     string
@@ -278,6 +280,7 @@ const modes = [
     const errorFor = (code: string | undefined, status: number) => {
       if (code === 'busy') return strings.errorBusy
       if (code === 'daily') return strings.errorDaily
+      if (code === 'building') return strings.errorBuilding
       if (code === 'disabled' || code === 'search' || status === 503) return strings.errorDisabled
       if (code === 'refused') return strings.errorRefused
       return strings.errorFailed
