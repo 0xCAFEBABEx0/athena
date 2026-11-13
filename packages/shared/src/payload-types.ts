@@ -748,7 +748,7 @@ export interface Form {
   createdAt: string;
 }
 /**
- * Repositories shown at /work. Only entries added here appear; tick Hidden to take one off the site.
+ * Repositories shown at /builds. Only entries added here appear; tick Hidden to take one off the site.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "projects".
@@ -1802,6 +1802,19 @@ export interface Site {
       | null;
   };
   /**
+   * Writes the answers under "Ask AI" on /search. Takes effect on save, no deploy. Answers kept from another model are written again on their next ask.
+   */
+  aiModel?: ('claude-opus-5-5' | 'claude-sonnet-5-5' | 'claude-haiku-5-5') | null;
+  /**
+   * Offered under "Ask AI" on /search, in this language. Each answer is written once and kept until the notes it cites change. Empty: no suggestions.
+   */
+  aiPresets?:
+    | {
+        question: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
    * Home-page welcome box in the CLI view. Hoo, the owl, sits on the left; clicking it wakes it up and it says one of the tips.
    */
   banner?: {
@@ -2036,6 +2049,13 @@ export interface SiteSelect<T extends boolean = true> {
         syncedAt?: T;
         syncError?: T;
         contributions?: T;
+      };
+  aiModel?: T;
+  aiPresets?:
+    | T
+    | {
+        question?: T;
+        id?: T;
       };
   banner?:
     | T

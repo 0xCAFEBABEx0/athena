@@ -134,7 +134,12 @@ reviews:
         task) and must read posts as an anonymous visitor
         (`overrideAccess: false`), so drafts never reach the index or an
         answer. Indexing must never fail a save. Links shown to readers are
-        built from ROUTES, never from model output.
+        built from ROUTES, never from model output. A kept answer
+        (ai.answers) is reused only when its source_key matches the excerpts
+        the question would be answered from now, and its replay must look
+        exactly like a new answer: same events, paced, no `cached` flag or
+        header. The answer model comes from the Site global (`aiModel`),
+        then AI_ANSWER_MODEL.
     - path: 'apps/web/src/lib/cms.ts'
       instructions: |
         Payload REST defaults to `limit=10` and drafts require auth. Every

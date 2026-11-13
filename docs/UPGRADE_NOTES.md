@@ -11,29 +11,40 @@ A running log of notable dependency upgrades. Newest first.
   `afterDelete` hooks keep it in step after the commit; drafts and autosaves
   are skipped. New routes `POST /api/ai/search` (web server or a logged-in
   user) and `POST /api/ai/reindex` (logged-in user).
-- No Payload schema change: no new collection, field or job task, so no
-  `generate:types` and no Payload migration.
+- New route `POST /api/ai/answers` (web server only) keeps finished answers
+  in `ai.answers` for reuse.
+- No new collection or job task; the only Payload schema change is the two
+  Site fields above.
 
 **Web**
 
-- `/search` gets mode tabs (Keyword / By meaning / Ask AI) when
-  `ANTHROPIC_API_KEY` is set; `POST /api/ai/search` and `/api/ai/ask`
+- `/search` gets mode tabs (By meaning with `REVALIDATE_SECRET`, Ask AI
+  also with `ANTHROPIC_API_KEY`) and the suggested questions; `POST /api/ai/search` and `/api/ai/ask`
   (NDJSON stream). New dependency `@anthropic-ai/sdk`. daisyUI `include:`
   gains `alert`, `loading`, `link`.
+
+**Settings (Site global)**: `aiModel` (select: Opus 5.5 / Sonnet 5.5 /
+Haiku 5.5, takes effect on save) and `aiPresets` (localized array of
+suggested questions, up to 6). These are Payload fields, so they are in
+`payload-types.ts` and need the SQL below.
 
 **Database (manual, schema push is off)**
 
 Run [`docs/sql/2026-11-13-ai-search.sql`](./sql/2026-11-13-ai-search.sql)
-(pgvector, schema `ai`, table `ai.post_chunks`) on the preview Neon branch,
-then production. Order with the deploy does not matter; without the table
-publishing logs a warning and the AI modes show an error. Checked: runs twice
-on an empty database and on a copy of the current schema.
+(pgvector, schema `ai`, table `ai.post_chunks`), then
+[`docs/sql/2026-11-13-ai-answers.sql`](./sql/2026-11-13-ai-answers.sql)
+(enum `enum_site_ai_model`, column `site.ai_model`, table `site_ai_presets`,
+table `ai.answers`) on the preview Neon branch, then production. Deploy after
+the second file: the CMS reads the Site columns on every Site read. Order with the deploy does not matter; without the table
+publishing logs a warning and the AI modes show an error. Checked: both run twice
+on an empty database and on a copy of the current schema; the second gives
+exactly what Payload's push creates for the Site fields.
 
 **Environment**
 
 - athena-cms: `VOYAGE_API_KEY` (Preview + Production).
 - athena-web: `ANTHROPIC_API_KEY` (Preview + Production); optional
-  `AI_DAILY_LIMIT` (default 200 uncached questions a day), `AI_ANSWER_MODEL`.
+  `AI_DAILY_LIMIT` (default 100 uncached questions a day), `AI_ANSWER_MODEL`.
 
 **After deploying**
 

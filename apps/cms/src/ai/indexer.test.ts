@@ -5,7 +5,7 @@ import { Pool } from 'pg'
 
 import { EMBEDDING_DIMENSIONS } from './embeddings'
 import { indexPost, reindexAll, removePost } from './indexer'
-import { SCHEMA_SQL, nearestChunks } from './store'
+import { SCHEMA_SQL, nearestChunks, saveAnswer, storedAnswers } from './store'
 
 /**
  * Runs against a real Postgres with pgvector, given as AI_TEST_POSTGRES_URL
@@ -62,7 +62,7 @@ suite('TC-U-56 AI index: Postgres', () => {
   })
 
   beforeEach(async () => {
-    await pool.query('TRUNCATE ai.post_chunks')
+    await pool.query('TRUNCATE ai.post_chunks, ai.answers')
     embedded = []
   })
 
@@ -121,5 +121,30 @@ suite('TC-U-56 AI index: Postgres', () => {
 
     const hits = await nearestChunks(pool, vectorFor('Bravo'), 'ja', 'voyage:voyage-4-lite:1024', 5)
     expect(hits.map((hit) => [hit.slug, Math.round(hit.score)])).toEqual([['b', 1]])
+    expect(hits[0]?.hash).toMatch(/^[0-9a-f]{64}$/)
+  })
+
+  test('kept answers: found by the same wording or a question meaning nearly the same, per language and model', async () => {
+    const v = (dim: number, tilt = 0) => {
+      const x = new Array(EMBEDDING_DIMENSIONS).fill(0)
+      x[dim] = 1
+      x[dim + 1] = tilt
+      return x
+    }
+    const base = { locale: 'en', answerModel: 'claude-opus-5-5', model: 'voyage:voyage-4-lite:1024', sourceKey: 'k1' }
+    await saveAnswer(pool, { ...base, question: 'how do you deploy?', vector: v(10), answer: { parts: ['a'] } })
+    await saveAnswer(pool, { ...base, question: 'how do you deploy?', vector: v(10), sourceKey: 'k2', answer: { parts: ['b'] } })
+    await saveAnswer(pool, { ...base, question: 'what is the stack?', vector: v(20), answer: { parts: ['c'] } })
+
+    const ask = (question: string, vector: number[], extra: Partial<typeof base> = {}) =>
+      storedAnswers(pool, { ...base, ...extra, question, vector })
+    // Same wording: replaced, not duplicated.
+    expect((await ask('how do you deploy?', v(30))).map((r) => [r.question, r.sourceKey])).toEqual([['how do you deploy?', 'k2']])
+    // Nearly the same meaning (cosine ~0.995) is found; a different one is not.
+    expect((await ask('how are deploys done?', v(10, 0.1))).map((r) => r.question)).toEqual(['how do you deploy?'])
+    expect(await ask('who are you?', v(10, 1))).toEqual([])
+    // Other language or model: nothing.
+    expect(await ask('how do you deploy?', v(10), { locale: 'ja' })).toEqual([])
+    expect(await ask('how do you deploy?', v(10), { answerModel: 'claude-haiku-5-5' })).toEqual([])
   })
 })

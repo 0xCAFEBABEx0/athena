@@ -11,7 +11,9 @@ import {
   queryKey,
   rankPosts,
   relevantChunks,
+  saveAnswer,
   searchChunks,
+  searchCms,
   searchFailure,
   snippetOf,
 } from './ai'
@@ -34,6 +36,7 @@ const hit = (slug: string, score: number, content = `About ${slug}.`, heading: s
   title: slug.toUpperCase(),
   heading,
   content,
+  hash: `h-${slug}`,
   score,
 })
 
@@ -183,6 +186,27 @@ describe('TC-U-58 AI search (web): asking the CMS', () => {
     expect(aiModes()).toEqual([])
   })
 
+  test('Ask AI also asks for kept answers by its model (a cache entry of its own); answers are kept with the secret, failures only logged', async () => {
+    const calls: Call[] = []
+    const kept = { question: 'how?', sourceKey: 'k', answer: { sources: [], parts: [] }, similarity: 1 }
+    const result = await searchCms({ q: 'How?', locale: 'en' }, 8, {
+      answerModel: 'claude-opus-5-5',
+      fetchImpl: fakeFetch(calls, () => Response.json({ results: [hit('a', 0.5)], answers: [kept] })),
+    })
+    expect(result.answers).toEqual([kept])
+    expect(JSON.parse(String(calls[0]?.init.body))).toMatchObject({ answerModel: 'claude-opus-5-5' })
+
+    const saves: Call[] = []
+    const body = { q: 'How?', locale: 'en' as const, answerModel: 'm', sourceKey: 'k', answer: { sources: [], parts: [] } }
+    expect(await saveAnswer(body, fakeFetch(saves, () => Response.json({ ok: true })))).toBe(true)
+    expect(saves[0]?.url).toBe('https://cms.example/api/ai/answers')
+    expect(new Headers(saves[0]?.init.headers).get('authorization')).toBe('Bearer s3cret')
+    const quiet = console.error
+    console.error = () => {}
+    expect(await saveAnswer(body, fakeFetch([], () => new Response('no', { status: 503 })))).toBe(false)
+    console.error = quiet
+  })
+
   test('the spending check runs before the CMS is asked and can stop it', async () => {
     const calls: Call[] = []
     const refused = await searchChunks({ q: 'x', locale: 'en' }, 8, {
@@ -210,13 +234,13 @@ describe('TC-U-59 AI search (web): limits and stored answers', () => {
     expect(allowVisitor('a', t + 10 * 60 * 1000 + 1)).toBe(true)
   })
 
-  test('the daily cap defaults to 200; AI_DAILY_LIMIT sets it (0 turns uncached questions off)', async () => {
+  test('the daily cap defaults to 100; AI_DAILY_LIMIT sets it (0 turns uncached questions off)', async () => {
     delete process.env.AI_DAILY_LIMIT
-    expect(dailyLimit()).toBe(200)
+    expect(dailyLimit()).toBe(100)
     process.env.AI_DAILY_LIMIT = ''
-    expect(dailyLimit()).toBe(200)
+    expect(dailyLimit()).toBe(100)
     process.env.AI_DAILY_LIMIT = 'lots'
-    expect(dailyLimit()).toBe(200)
+    expect(dailyLimit()).toBe(100)
     process.env.AI_DAILY_LIMIT = '2'
     const day = new Date('2030-01-01T12:00:00Z')
     expect(await allowToday(day)).toBe(true)

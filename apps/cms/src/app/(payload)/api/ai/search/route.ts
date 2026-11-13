@@ -29,7 +29,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!query) return json({ error: 'q must be 1-300 characters.' }, 400)
 
   try {
-    const { results, indexEmpty } = await semanticSearch(payload, query)
+    const { results, indexEmpty, answers } = await semanticSearch(payload, query)
     if (indexEmpty) {
       // First search after the table was created or the embedding model
       // changed: build the index in the background, so the next search finds
@@ -42,7 +42,7 @@ export async function POST(request: Request): Promise<Response> {
         }
       })
     }
-    return json({ results, building: indexEmpty })
+    return json({ results, building: indexEmpty, ...(answers ? { answers } : {}) })
   } catch (error) {
     if (error instanceof SearchUnavailableError) return json({ error: error.message }, 503)
     if (isMissingTable(error)) {

@@ -13,12 +13,17 @@ section of each new version as a GitHub Release.
   typed, best first, with the closest passage under each title. **Ask AI**
   answers a question from the notes, in the page's language, with numbered
   citations that link to the notes it used. Both run when you press Enter.
-- Answers and results are kept until the next publish, so the same question
-  is answered again at once and costs nothing; uncached questions are
+- Suggested questions under Ask AI, set per language in the CMS (Site).
+- Answers are kept and reused for the same question, or one meaning nearly
+  the same, as long as the notes they came from have not changed, so common
+  questions cost nothing after the first time; uncached questions are
   limited per visitor and per day.
+- The answer model is chosen in the CMS (Site) and takes effect on save,
+  no deploy.
 - The CMS keeps an index of the published notes' text (pgvector, outside
   Payload's own tables), updated on publish. Needs
-  `docs/sql/2026-11-13-ai-search.sql` and the `VOYAGE_API_KEY` /
+  `docs/sql/2026-11-13-ai-search.sql`, `docs/sql/2026-11-13-ai-answers.sql`
+  and the `VOYAGE_API_KEY` /
   `ANTHROPIC_API_KEY` settings ([`docs/AI_SEARCH.md`](docs/AI_SEARCH.md));
   without them `/search` stays as it was.
 

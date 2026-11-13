@@ -69,8 +69,18 @@ POST /api/ai/search  ◄──────────────── Bearer 
   instructions. Citations come back as `search_result_location` and are shown
   as `[1]`, `[2]` badges linking to the posts. No relevant excerpt means no
   Claude request ("No note seems to be about this"). A refusal shows an alert.
-  Model `claude-opus-5-5` (override with `AI_ANSWER_MODEL`), `effort: low`,
-  `max_tokens` 4096, with the API's server-side fallback for declined requests.
+  At most 6 excerpts go to Claude (8 are searched), `effort: low`,
+  `max_tokens` 1024, with the API's server-side fallback for declined
+  requests (not for Haiku, which has none).
+- **Model**: chosen in the CMS, Site → "AI search: answer model" (Opus 5.5,
+  Sonnet 5.5 or Haiku 5.5). Saving the Site global expires the web's cache, so
+  the next question uses the new model with no deploy. `AI_ANSWER_MODEL` on
+  athena-web is used only while the Site has no value; the default is
+  `claude-opus-5-5`.
+- **Suggested questions**: Site → "AI search: suggested questions" (per
+  language, up to 6). They show under the tabs in Ask AI only; clicking one
+  fills the prompt and asks it. Since many visitors click the same ones, they
+  are the questions most often answered from a kept answer (below).
 
 ## Cost and free-tier guards
 
@@ -78,8 +88,24 @@ POST /api/ai/search  ◄──────────────── Bearer 
   under the `cms-data` tag, the same as other CMS reads: the same query in the
   same language costs nothing until the next publish expires the tag. A
   replayed answer does not count against the limits.
+- **Kept answers** (`ai.answers`): every finished answer is also saved in the
+  CMS database, per language, question (case and spacing ignored) and answer
+  model, with the question's embedding and a `source_key` (a hash of the
+  prompt version, the model and the excerpts it was written from). A later
+  question, also after a publish or on a new deployment, reuses it when it is
+  written the same or means nearly the same (cosine ≥ 0.95) **and** would be
+  answered from the very same excerpts. When a post it used changes, the key
+  no longer matches and Claude writes a new answer, which replaces the old
+  one. The lookup rides on the search request the question needs anyway (one
+  embedding, one more `SELECT` in the same round trip); saving runs after the
+  answer is sent (`waitUntil`) and embeds the question once more. Rows not
+  rewritten for 180 days are deleted.
+- **Replays look like new answers**: a reused answer is streamed with the
+  same events as a new one, paced like one (the sources after 0.35–0.8 s, the
+  text after 0.9–1.8 s, in small pieces over about 6 s), and nothing in the
+  response says it was reused. Do not add a `cached` flag or a header.
 - Uncached requests: 10 per visitor per 10 minutes (per function instance),
-  and `AI_DAILY_LIMIT` per UTC day for the whole site (default 200; `0` turns
+  and `AI_DAILY_LIMIT` per UTC day for the whole site (default 100; `0` turns
   uncached AI requests off). Beyond that the page shows "busy" or "daily
   limit" in an alert.
 - Only same-origin browsers may call `/api/ai/*` (Origin check); bodies over
@@ -102,7 +128,7 @@ clears it.
 | athena-cms (Preview + Production) | `VOYAGE_API_KEY` | Embeddings. Without it the CMS does not index and `/api/ai/search` answers 503 |
 | athena-cms | `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_BASE_URL` | Optional: `openai` (with `OPENAI_API_KEY`), another model, a gateway. Changing the model re-embeds everything on the next run |
 | athena-web (Preview + Production) | `ANTHROPIC_API_KEY` | Answers, and the switch for the whole AI UI |
-| athena-web | `AI_ANSWER_MODEL`, `AI_DAILY_LIMIT` | Optional |
+| athena-web | `AI_ANSWER_MODEL`, `AI_DAILY_LIMIT` | Optional; the model in the Site global wins over `AI_ANSWER_MODEL` |
 | both | `REVALIDATE_SECRET` | Already set; the web server authenticates to `/api/ai/search` with it |
 
 `@anthropic-ai/sdk` adds about 4 MB to the web server functions (12 MB in
@@ -110,8 +136,12 @@ all); only `/api/ai/ask` loads it, so other pages' cold starts do not change.
 
 Database: run [`docs/sql/2026-11-13-ai-search.sql`](./sql/2026-11-13-ai-search.sql)
 once on the preview Neon branch and on production (pgvector extension, schema
-`ai`, table `ai.post_chunks`). It is idempotent. Local dev creates the table
-on first use (needs pgvector in the local Postgres).
+`ai`, table `ai.post_chunks`), then
+[`docs/sql/2026-11-13-ai-answers.sql`](./sql/2026-11-13-ai-answers.sql)
+(the Site columns `ai_model` and table `site_ai_presets`, and `ai.answers`).
+Both are idempotent. Local dev creates the `ai` tables on first use (needs
+pgvector in the local Postgres) and Payload pushes the Site fields. Without
+`ai.answers`, search and answers still work, nothing is kept.
 
 ## Payload 4.0
 
@@ -131,9 +161,13 @@ The design keeps the index outside Payload so the 4.0 upgrade does not touch it:
   i.e. manual SQL now and a migration later); indexing runs in `after()`.
 - The hooks use only `afterChange` / `afterDelete` arguments that are the same
   in 3 and 4 (`doc`, `previousDoc`, `req`, `req.context`).
+- The settings (`aiModel`, `aiPresets`) are ordinary Site global fields (a
+  select and a localized array with one text field), so the 4.0 migration
+  carries them like the other Site fields. The web reads them through
+  `getSite`, never from table names.
 
 ## Checking it
 
-Unit: TC-U-52–60. E2E: TC-E-62–66 (the browser calls are stubbed, so they
-spend nothing on a deployment). Deployment: TC-P-19–21 in
+Unit: TC-U-52–61. E2E: TC-E-62–67 (the browser calls are stubbed, so they
+spend nothing on a deployment). Deployment: TC-P-19–23 in
 [`TESTING.md`](./TESTING.md).

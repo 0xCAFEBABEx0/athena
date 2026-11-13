@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { isServerCaller } from './auth'
 import { EMBEDDING_DIMENSIONS, EmbeddingError, embed, embeddingConfig, modelId } from './embeddings'
-import { parseSearchRequest } from './search'
+import { parseAnswerRequest, parseSearchRequest, questionKey } from './search'
 
 const configured = (env: NodeJS.ProcessEnv) => {
   const config = embeddingConfig(env)
@@ -75,6 +75,24 @@ describe('TC-U-55 AI search: request checks', () => {
     expect(parseSearchRequest({ q: '' })).toBeNull()
     expect(parseSearchRequest({ q: 'a'.repeat(301) })).toBeNull()
     expect(parseSearchRequest(null)).toBeNull()
+    expect(parseSearchRequest({ q: 'x', answerModel: 'claude-opus-5-5' })?.answerModel).toBe('claude-opus-5-5')
+    expect(parseSearchRequest({ q: 'x', answerModel: 'bad model; drop' })?.answerModel).toBeUndefined()
+    expect(questionKey('  How   DO you deploy? ')).toBe('how do you deploy?')
+  })
+
+  test('answers to keep: a model, a 64-hex source key, sources and parts, under 32 KB', () => {
+    const ok = {
+      q: 'How?',
+      locale: 'ja',
+      answerModel: 'claude-opus-5-5',
+      sourceKey: 'a'.repeat(64),
+      answer: { sources: [], parts: [{ text: 'Hi.' }] },
+    }
+    expect(parseAnswerRequest(ok)).toEqual({ ...ok, locale: 'ja' })
+    expect(parseAnswerRequest({ ...ok, answerModel: undefined })).toBeNull()
+    expect(parseAnswerRequest({ ...ok, sourceKey: 'xyz' })).toBeNull()
+    expect(parseAnswerRequest({ ...ok, answer: { parts: [] } })).toBeNull()
+    expect(parseAnswerRequest({ ...ok, answer: { sources: [], parts: [{ text: 'x'.repeat(40_000) }] } })).toBeNull()
   })
 
   test('only the shared REVALIDATE_SECRET as a bearer token counts as the web server', () => {

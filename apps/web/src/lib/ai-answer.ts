@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 import Anthropic from '@anthropic-ai/sdk'
 import type { BetaMessageStreamParams } from '@anthropic-ai/sdk/resources/beta/messages'
 
@@ -19,8 +21,25 @@ import { localizePath, type Locale } from './i18n'
 
 /** Override with AI_ANSWER_MODEL on the web deployment. */
 const DEFAULT_MODEL = 'claude-opus-5-5'
-/** Excerpts given to Claude per question. */
-export const ANSWER_CHUNKS = 8
+/** Excerpts asked from the CMS per question, and at most given to Claude. */
+export const SEARCH_CHUNKS = 8
+export const ANSWER_CHUNKS = 6
+/** Bump when the prompt or the request changes, so kept answers are written again. */
+const PROMPT_VERSION = 1
+
+/** The model chosen in the CMS (Site global, no deploy needed), else AI_ANSWER_MODEL, else Opus 5.5. */
+export const answerModel = (fromCms?: string | null): string => fromCms || env('AI_ANSWER_MODEL') || DEFAULT_MODEL
+
+/**
+ * What an answer depends on: the model, the prompt, and the excerpts given
+ * to Claude (their text, post and title, in order). A kept answer is reused
+ * only while this is unchanged, so editing a cited post writes it again,
+ * and publishing an unrelated one does not.
+ */
+export const sourceKey = (chunks: ChunkHit[], model: string): string =>
+  createHash('sha256')
+    .update(JSON.stringify([PROMPT_VERSION, model, chunks.map((c) => [c.hash, c.slug, c.title, c.heading])]))
+    .digest('hex')
 
 export type Source = { n: number; slug: string; title: string; href: string; heading: string | null }
 
@@ -30,7 +49,7 @@ export type AnswerEvent =
   | { type: 'sources'; sources: Source[] }
   | { type: 'text'; text: string }
   | { type: 'cite'; n: number }
-  | { type: 'done'; cached: boolean }
+  | { type: 'done' }
   | { type: 'error'; code: 'refused' | 'failed'; message: string }
 
 export type StoredAnswer = { sources: Source[]; parts: AnswerPart[] }
@@ -109,13 +128,97 @@ export const compactParts = (parts: AnswerPart[]): AnswerPart[] => {
   return out
 }
 
-/** Replay a stored answer as events. */
+const SLUG = /^[\w-]{1,200}$/
+
+/**
+ * A kept answer read back (Runtime Cache or ai.answers), checked, with its
+ * links built again for `locale` from the slugs; null when unusable.
+ */
+export const restoreAnswer = (value: unknown, locale: Locale): StoredAnswer | null => {
+  if (typeof value !== 'object' || value === null) return null
+  const { sources, parts } = value as { sources?: unknown; parts?: unknown }
+  if (!Array.isArray(sources) || !Array.isArray(parts)) return null
+  const restored: StoredAnswer = { sources: [], parts: [] }
+  for (const source of sources as Partial<Source>[]) {
+    if (typeof source?.n !== 'number' || typeof source.slug !== 'string' || !SLUG.test(source.slug)) return null
+    if (typeof source.title !== 'string') return null
+    restored.sources.push({
+      n: source.n,
+      slug: source.slug,
+      title: source.title,
+      href: localizePath(locale, `${ROUTES.posts}/${source.slug}`),
+      heading: typeof source.heading === 'string' ? source.heading : null,
+    })
+  }
+  for (const part of parts as Partial<{ text: unknown; cite: unknown }>[]) {
+    if (typeof part?.text === 'string') restored.parts.push({ text: part.text })
+    else if (typeof part?.cite === 'number' && restored.sources.some((s) => s.n === part.cite)) {
+      restored.parts.push({ cite: part.cite })
+    } else return null
+  }
+  return restored
+}
+
+/** Replay a kept answer as events, all at once (tests, and the order of events). */
 export function* replay(answer: StoredAnswer): Generator<AnswerEvent> {
   yield { type: 'sources', sources: answer.sources }
   for (const part of answer.parts) {
     yield 'text' in part ? { type: 'text', text: part.text } : { type: 'cite', n: part.cite }
   }
-  yield { type: 'done', cached: true }
+  yield { type: 'done' }
+}
+
+const CJK = '\u3000-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef'
+const PIECE = new RegExp(`[${CJK}]{1,3}|[^${CJK}\\s]+\\s*|\\s+`, 'g')
+
+/** Split text roughly the way the API streams it: a few words, or a few CJK characters, at a time. */
+export const streamPieces = (text: string, random: () => number = Math.random): string[] => {
+  const tokens = text.match(PIECE) ?? [text]
+  const pieces: string[] = []
+  for (let i = 0; i < tokens.length; ) {
+    const take = 1 + Math.floor(random() * 3)
+    pieces.push(tokens.slice(i, i + take).join(''))
+    i += take
+  }
+  return pieces
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Replay a kept answer at the pace of a written one: a moment to "search",
+ * a moment to "read", then the text a few words at a time with uneven gaps.
+ * The events are the same as for a new answer, so the reader (or the
+ * network panel) cannot tell the two apart. About 6 s at most for the text.
+ */
+export async function* pacedReplay(
+  answer: StoredAnswer,
+  { wait = sleep, random = Math.random }: { wait?: (ms: number) => Promise<unknown>; random?: () => number } = {},
+): AsyncGenerator<AnswerEvent> {
+  await wait(350 + random() * 450)
+  yield { type: 'sources', sources: answer.sources }
+  if (!answer.parts.length) {
+    yield { type: 'done' }
+    return
+  }
+  await wait(900 + random() * 900)
+  const steps: (string[] | number)[] = answer.parts.map((part) =>
+    'text' in part ? streamPieces(part.text, random) : part.cite,
+  )
+  let pieces = 0
+  for (const step of steps) if (Array.isArray(step)) pieces += step.length
+  const gap = Math.min(45, 6000 / Math.max(pieces, 1))
+  for (const step of steps) {
+    if (typeof step === 'number') {
+      yield { type: 'cite', n: step }
+      continue
+    }
+    for (const piece of step) {
+      yield { type: 'text', text: piece }
+      await wait(gap * (0.4 + random() * 1.2))
+    }
+  }
+  yield { type: 'done' }
 }
 
 type StreamLike = AsyncIterable<Anthropic.Beta.BetaRawMessageStreamEvent> & {
@@ -148,8 +251,9 @@ export async function* streamAnswer(
   locale: Locale,
   {
     client = anthropicClient(),
+    model = answerModel(),
     onDone,
-  }: { client?: AnswerClient; onDone?: (answer: StoredAnswer) => void } = {},
+  }: { client?: AnswerClient; model?: string; onDone?: (answer: StoredAnswer) => unknown } = {},
 ): AsyncGenerator<AnswerEvent> {
   const { sources, sourceOf } = numberSources(chunks, locale)
   yield { type: 'sources', sources }
@@ -157,21 +261,21 @@ export async function* streamAnswer(
 
   if (!chunks.length) {
     // Nothing in the index is near the question: no need to ask Claude.
-    onDone?.({ sources, parts })
-    yield { type: 'done', cached: false }
+    await onDone?.({ sources, parts })
+    yield { type: 'done' }
     return
   }
 
   try {
     const stream = client.stream({
-      model: env('AI_ANSWER_MODEL') || DEFAULT_MODEL,
-      // A cap on what one public question can cost (thinking included).
-      max_tokens: 4096,
+      model,
+      // A cap on what one public question can cost (thinking included); the
+      // prompt asks for two short paragraphs at most.
+      max_tokens: 1024,
       output_config: { effort: 'low' },
       // If the model declines (its safety classifiers), the API retries the
-      // same request on a fallback model inside this call.
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
+      // same request on a fallback model inside this call. Haiku has none.
+      ...(/haiku/.test(model) ? {} : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const }),
       system: systemPrompt(locale),
       messages: buildMessages(question, chunks, sources, sourceOf),
     })
@@ -206,8 +310,8 @@ export async function* streamAnswer(
       yield { type: 'error', code: 'refused', message: 'The question was declined.' }
       return
     }
-    onDone?.({ sources, parts: compactParts(parts) })
-    yield { type: 'done', cached: false }
+    if (message.stop_reason !== 'max_tokens') await onDone?.({ sources, parts: compactParts(parts) })
+    yield { type: 'done' }
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError) {
       console.error('[ai-answer] rate limited', error.message)

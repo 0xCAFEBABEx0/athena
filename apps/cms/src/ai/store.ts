@@ -28,6 +28,17 @@ CREATE TABLE IF NOT EXISTS ai.post_chunks (
   embedding    vector(1024) NOT NULL,
   updated_at   timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (post_id, locale, chunk)
+);
+CREATE TABLE IF NOT EXISTS ai.answers (
+  locale       text        NOT NULL,
+  question     text        NOT NULL,
+  answer_model text        NOT NULL,
+  model        text        NOT NULL,
+  embedding    vector(1024) NOT NULL,
+  source_key   text        NOT NULL,
+  answer       jsonb       NOT NULL,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (locale, question, answer_model)
 );`
 
 /** The one thing taken from the database adapter: a pg-style query function. */
@@ -184,6 +195,8 @@ export type ChunkHit = {
   title: string
   heading: string | null
   content: string
+  /** content_hash: changes when the excerpt's text (or the model) changes. */
+  hash: string
   /** Cosine similarity, 1 = same direction. */
   score: number
 }
@@ -200,7 +213,7 @@ export const nearestChunks = async (
   // millisecond, and an HNSW index combined with the locale filter can
   // return fewer than `limit` rows. Add one when the table reaches ~10k rows.
   const { rows } = await db.query(
-    `SELECT post_id, slug, title, heading, content, 1 - (embedding <=> $1::vector) AS score
+    `SELECT post_id, slug, title, heading, content, content_hash, 1 - (embedding <=> $1::vector) AS score
        FROM ai.post_chunks
       WHERE locale = $2 AND model = $3
       ORDER BY embedding <=> $1::vector
@@ -213,6 +226,55 @@ export const nearestChunks = async (
     title: String(row.title),
     heading: row.heading == null ? null : String(row.heading),
     content: String(row.content),
+    hash: String(row.content_hash),
     score: Number(row.score),
   }))
+}
+
+/**
+ * A question is the same as one answered before when it is written the same
+ * (case and spacing aside) or means nearly the same: at least this cosine
+ * similarity. The web app still reuses the answer only when it would be
+ * written from the same excerpts (source_key).
+ */
+export const SAME_QUESTION = 0.95
+
+export type StoredAnswerRow = { question: string; sourceKey: string; answer: unknown; similarity: number }
+
+/** Answers kept for this question or one that means nearly the same, the same wording first. */
+export const storedAnswers = async (
+  db: Db,
+  { vector, locale, question, answerModel, model }: { vector: number[]; locale: string; question: string; answerModel: string; model: string },
+): Promise<StoredAnswerRow[]> => {
+  const { rows } = await db.query(
+    `SELECT question, source_key, answer, 1 - (embedding <=> $1::vector) AS similarity
+       FROM ai.answers
+      WHERE locale = $2 AND answer_model = $3 AND model = $4
+        AND (question = $5 OR 1 - (embedding <=> $1::vector) >= $6)
+      ORDER BY (question = $5) DESC, embedding <=> $1::vector
+      LIMIT 3`,
+    [toVector(vector), locale, answerModel, model, question, SAME_QUESTION],
+  )
+  return rows.map((row) => ({
+    question: String(row.question),
+    sourceKey: String(row.source_key),
+    answer: row.answer,
+    similarity: Number(row.similarity),
+  }))
+}
+
+/** Keep an answer (replacing the one for the same question), and drop answers not written for half a year. */
+export const saveAnswer = async (
+  db: Db,
+  row: { locale: string; question: string; answerModel: string; model: string; vector: number[]; sourceKey: string; answer: unknown },
+): Promise<void> => {
+  await db.query(
+    `INSERT INTO ai.answers (locale, question, answer_model, model, embedding, source_key, answer, created_at)
+     VALUES ($1, $2, $3, $4, $5::vector, $6, $7::jsonb, now())
+     ON CONFLICT (locale, question, answer_model) DO UPDATE SET
+       model = EXCLUDED.model, embedding = EXCLUDED.embedding, source_key = EXCLUDED.source_key,
+       answer = EXCLUDED.answer, created_at = now()`,
+    [row.locale, row.question, row.answerModel, row.model, toVector(row.vector), row.sourceKey, JSON.stringify(row.answer)],
+  )
+  await db.query("DELETE FROM ai.answers WHERE created_at < now() - interval '180 days'")
 }

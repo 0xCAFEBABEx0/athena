@@ -16,7 +16,7 @@ import { env } from './env'
 
 const WINDOW_MS = 10 * 60 * 1000
 const PER_VISITOR = 10
-const DEFAULT_DAILY = 200
+const DEFAULT_DAILY = 100
 
 const recent = new Map<string, number[]>()
 

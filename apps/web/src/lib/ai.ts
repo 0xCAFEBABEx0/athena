@@ -22,8 +22,13 @@ export type ChunkHit = {
   title: string
   heading: string | null
   content: string
+  /** Changes when the excerpt's text changes. */
+  hash: string
   score: number
 }
+
+/** An answer the CMS kept (ai.answers) for this question or one meaning nearly the same. */
+export type KeptAnswer = { question: string; sourceKey: string; answer: unknown; similarity: number }
 
 export const MAX_QUERY_CHARS = 300
 
@@ -85,7 +90,9 @@ export const searchFailure = (cause: unknown): { status: number; code: string } 
   return { status: 502, code: 'search' }
 }
 
-type SearchResponse = { results?: ChunkHit[]; building?: boolean }
+type SearchResponse = { results?: ChunkHit[]; building?: boolean; answers?: KeptAnswer[] }
+
+export type CmsSearch = { results: ChunkHit[]; answers: KeptAnswer[] }
 
 /**
  * The excerpts nearest to `query`, from the CMS. Results are kept in the
@@ -93,21 +100,24 @@ type SearchResponse = { results?: ChunkHit[]; building?: boolean }
  * the same language) wakes neither the CMS nor its database until the next
  * content change.
  */
-export const searchChunks = async (
+export const searchCms = async (
   { q, locale }: AiRequest,
   limit: number,
   {
     beforeLoad,
+    answerModel,
     fetchImpl = fetch,
   }: {
     /** Runs only on a cache miss, before the CMS is asked (spending limits); may throw. */
     beforeLoad?: () => Promise<void>
+    /** Also ask for answers this Claude model wrote before (Ask AI). */
+    answerModel?: string
     fetchImpl?: typeof fetch
   } = {},
-): Promise<ChunkHit[]> => {
+): Promise<CmsSearch> => {
   const secret = env('REVALIDATE_SECRET')
   if (!secret) throw new AiSearchError('REVALIDATE_SECRET is not set on the web deployment.', 503)
-  const load = async (): Promise<ChunkHit[]> => {
+  const load = async (): Promise<CmsSearch> => {
     await beforeLoad?.()
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -121,7 +131,7 @@ export const searchChunks = async (
       res = await fetchImpl(`${cmsURL()}/api${path}`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ q, locale, limit }),
+        body: JSON.stringify({ q, locale, limit, ...(answerModel ? { answerModel } : {}) }),
         redirect: 'manual',
         signal: AbortSignal.timeout(20_000),
       })
@@ -142,10 +152,53 @@ export const searchChunks = async (
     // The CMS index was empty and is being filled now: an error, so the
     // empty answer is not cached until the next publish.
     if (body.building) throw new AiSearchError('The AI search index is being built.', 503, 'building')
-    return Array.isArray(body.results) ? body.results : []
+    return {
+      results: Array.isArray(body.results) ? body.results : [],
+      answers: Array.isArray(body.answers) ? body.answers : [],
+    }
   }
-  return cachedCms(`ai:search:${limit}:${queryKey(locale, q)}`, load)
+  const kind = answerModel ? `ask:${answerModel}` : 'search'
+  return cachedCms(`ai:${kind}:${limit}:${queryKey(locale, q)}`, load)
 }
+
+/** Keep an answer Claude wrote in ai.answers on the CMS; failures are logged, never thrown. */
+export const saveAnswer = async (
+  {
+    q,
+    locale,
+    answerModel,
+    sourceKey,
+    answer,
+  }: AiRequest & { answerModel: string; sourceKey: string; answer: unknown },
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> => {
+  const secret = env('REVALIDATE_SECRET')
+  if (!secret) return false
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` }
+  const bypass = cmsProtectionBypass()
+  if (bypass) headers['x-vercel-protection-bypass'] = bypass
+  try {
+    const res = await fetchImpl(`${cmsURL()}/api/ai/answers`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ q, locale, answerModel, sourceKey, answer }),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(20_000),
+    })
+    if (!res.ok) console.error(`[ai] answer not kept: CMS answered ${res.status}`)
+    return res.ok
+  } catch (error) {
+    console.error('[ai] answer not kept:', error instanceof Error ? error.message : error)
+    return false
+  }
+}
+
+/** The excerpts nearest to `query` (By meaning). */
+export const searchChunks = async (
+  query: AiRequest,
+  limit: number,
+  options: { beforeLoad?: () => Promise<void>; fetchImpl?: typeof fetch } = {},
+): Promise<ChunkHit[]> => (await searchCms(query, limit, options)).results
 
 export type PostHit = {
   slug: string

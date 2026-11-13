@@ -45,7 +45,7 @@ const answerStream = (slugs: string[], prefix = '') => {
     { type: 'cite', n: 1 },
     { type: 'text', text: ' The second part.' },
     ...(sources.length > 1 ? [{ type: 'cite', n: 2 }] : []),
-    { type: 'done', cached: false },
+    { type: 'done' },
   ]
   return `${events.map((event) => JSON.stringify(event)).join('\n')}\n`
 }
@@ -154,6 +154,30 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await page.locator('[data-search-input]').press('Enter')
     await expect(page.locator('[data-ai-error]')).toBeVisible()
     await expect(page.locator('[data-ai-answer]')).toBeHidden()
+  })
+
+  test('TC-E-67 a suggested question asks itself when clicked, shows only in Ask AI, and fits a phone', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 })
+    await open(page, '/search?mode=ask', { view: 'cli' })
+    const slugs = await requireAi(page)
+    await requireAsk(page)
+    const presets = page.locator('[data-ai-preset]')
+    test.skip((await presets.count()) === 0, 'no suggested questions in the Site settings')
+    await expect(page.locator('[data-ai-presets]')).toBeVisible()
+    expect(await overflowX(page)).toBeLessThanOrEqual(0)
+    const asked: string[] = []
+    await page.route('**/api/ai/ask', async (route) => {
+      asked.push(String(route.request().postDataJSON()?.q))
+      await route.fulfill({ contentType: 'application/x-ndjson', body: answerStream(slugs) })
+    })
+    const question = (await presets.first().getAttribute('data-ai-preset')) ?? ''
+    await presets.first().click()
+    await expect(page.locator('[data-search-input]')).toHaveValue(question)
+    await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
+    expect(asked).toEqual([question])
+    // Not offered in the other modes.
+    await page.locator('[data-search-mode="meaning"]').click()
+    await expect(page.locator('[data-ai-presets]')).toBeHidden()
   })
 
   for (const width of [320, 390]) {
