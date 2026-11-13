@@ -109,7 +109,7 @@ test('TC-E-46 CLI header: the language menu is a [xx] switch like [ade] and [dar
   }
 })
 
-test.describe('TC-E-61 CLI header on phones: the switches get a row of their own', () => {
+test.describe('TC-E-61 CLI header on phones: the switches share the site name row', () => {
   for (const [width, path] of [
     [320, '/'],
     [375, '/ja/notes'],
@@ -128,13 +128,17 @@ test.describe('TC-E-61 CLI header on phones: the switches get a row of their own
       const switches = await top(
         '[data-view-set], [data-language-menu] summary, [data-theme-toggle]',
       )
+      const [brand] = await top('[data-status-open]')
       const sections = await top('[data-section-nav] a')
       expect(switches, path).toHaveLength(3)
       // [ade] [xx] [dark] stay together on one row ...
       expect(new Set(switches).size, path).toBe(1)
-      // ... below every section link, none of which shares that row.
+      // ... above every section link, none of which shares that row.
       expect(sections.length, path).toBeGreaterThan(0)
-      for (const y of sections) expect(y, path).toBeLessThan(switches[0] ?? 0)
+      for (const y of sections) expect(y, path).toBeGreaterThan(switches[0] ?? 0)
+      // From 375px that row is the site name's. At 320px a long version
+      // label (-dev, -preview) may push them onto a row of their own.
+      if (width >= 375) expect(switches[0], path).toBe(brand)
       expect(await overflowX(page), path).toBeLessThanOrEqual(0)
     })
   }

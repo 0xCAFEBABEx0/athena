@@ -50,10 +50,10 @@ const languages = LOCALES.map((code) => ({
 const crumbs = current.split('/').filter(Boolean)
 ---
 
-<header class="cli-header container flex flex-wrap items-center justify-between gap-x-4 pt-5">
-  <span class="inline-flex items-center gap-2">
+<header class="cli-header container flex flex-wrap items-center gap-x-4 pt-5 max-md:gap-x-2">
+  <span class="inline-flex items-center gap-2 max-md:gap-1">
     <a
-      class="inline-flex min-h-11 items-center gap-2 font-mono text-sm font-semibold text-base-content no-underline"
+      class="inline-flex min-h-11 items-center gap-2 font-mono max-md:gap-1.5 text-sm font-semibold text-base-content no-underline"
       href={localizePath(locale, '/')}
     >
       <span class="text-primary" aria-hidden="true">❯_</span>{site.siteName}
@@ -67,44 +67,44 @@ const crumbs = current.split('/').filter(Boolean)
       v{SHORT_VERSION}
     </button>
   </span>
-  <nav class="flex flex-wrap items-center" aria-label={t.nav}>
+  <nav class="flex flex-wrap items-center max-md:order-2 max-md:basis-full md:ms-auto" aria-label={t.nav}>
     <span class="flex flex-wrap items-center" data-section-nav>
       {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
     </span>
-    {/* The switches wrap as one group: on phones they get a row of their own under the sections. */}
-    <span class="flex items-center" data-header-switches>
-      <ViewToggle />
-      <details class="dropdown dropdown-end" data-language-menu>
-        <summary
-          class="btn btn-ghost btn-sm min-h-11 px-2 font-mono font-normal text-base-content/65 hover:text-base-content"
-          aria-label={t.language}
-        >
-          [{LOCALE_LABEL[locale].toLowerCase()}]
-        </summary>
-        <ul
-          class="menu dropdown-content z-20 mt-1 w-20 rounded-box border border-base-300 bg-base-100 p-1 font-mono text-sm"
-        >
-          {
-            languages.map((lang) => (
-              <li>
-                <a
-                  href={lang.href}
-                  hreflang={lang.code}
-                  lang={lang.code}
-                  class:list={[{ 'menu-active': lang.code === locale }]}
-                  aria-current={lang.code === locale ? 'true' : undefined}
-                  title={lang.name}
-                >
-                  {lang.label.toLowerCase()}
-                </a>
-              </li>
-            ))
-          }
-        </ul>
-      </details>
-      <ThemeToggle />
-    </span>
   </nav>
+  {/* Below md the switches share the site name's row and the sections take the next one. */}
+  <span class="ms-auto flex items-center max-md:order-1 md:ms-0" data-header-switches>
+    <ViewToggle />
+    <details class="dropdown dropdown-end" data-language-menu>
+      <summary
+        class="btn btn-ghost btn-sm min-h-11 px-1 font-mono font-normal md:px-2 text-base-content/65 hover:text-base-content"
+        aria-label={t.language}
+      >
+        [{LOCALE_LABEL[locale].toLowerCase()}]
+      </summary>
+      <ul
+        class="menu dropdown-content z-20 mt-1 w-20 rounded-box border border-base-300 bg-base-100 p-1 font-mono text-sm"
+      >
+        {
+          languages.map((lang) => (
+            <li>
+              <a
+                href={lang.href}
+                hreflang={lang.code}
+                lang={lang.code}
+                class:list={[{ 'menu-active': lang.code === locale }]}
+                aria-current={lang.code === locale ? 'true' : undefined}
+                title={lang.name}
+              >
+                {lang.label.toLowerCase()}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </details>
+    <ThemeToggle />
+  </span>
 </header>
 
 <header class="modern-topbar">
