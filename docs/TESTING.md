@@ -154,9 +154,9 @@ rules: [`docs/ADMIN.md`](./ADMIN.md).
 | ID | Screen | Expect |
 |---|---|---|
 | TC-A-01 | Login | The whoa.me mark, `whoa.me` and a `cms` badge above the line "Sign in to edit the notes, builds and pages on whoa.me."; Inter text; the Login button is an ink pill; no horizontal scroll |
-| TC-A-02 | Dashboard | "Hi <name>", View site ↗ and + New note; Drafts / Published / Builds counts that link to the filtered lists (Drafts in pink when above 0); Recent notes with thumbnail, title, author · date and Draft / Published; the collection cards below are flat. At 390 / 320px the counts stay on one row and the list rows do not overflow |
+| TC-A-02 | Dashboard | "Hi <name>", View site ↗ and + New note; Drafts / Published / Builds counts that link to the filtered lists (Drafts in pink when above 0); Recent notes with thumbnail, title, author · date and Draft / Published (a note without a hero image has no thumbnail box, and its title starts at the left edge, like Ghost); the collection cards below are flat. At 390 / 320px the counts stay on one row and the list rows do not overflow |
 | TC-A-03 | Sidebar | Groups Content (Notes, Pages, Builds, Media, Categories), Site, Forms, System; the current item is a grey pill; the sidebar icon is the mark, not a blank square |
-| TC-A-04 | Notes list | One row per note: thumbnail (100px, 64px on phones), title, "By <author> · <time ago>", Draft in pink or Published; no zebra stripes; the Published column is hidden below 768px; a row opens the note |
+| TC-A-04 | Notes list | One row per note: thumbnail (100px, 64px on phones; no box at all for a note without a hero image, the title starts where the thumbnail would be), title, "By <author> · <time ago>", Draft in pink or Published; no zebra stripes; the Published column is hidden below 768px; a row opens the note |
 | TC-A-05 | Note editor | The title is large and borderless with no label (1.6rem on phones); the rich text is 17px; Translate to ja / zh is an outlined pill with a spinner while it runs. Known Payload layout at 320px: the breadcrumb runs into the locale selector |
 
 ## Deployment checks (Preview, then Production)

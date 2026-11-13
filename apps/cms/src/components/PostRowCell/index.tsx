@@ -32,15 +32,18 @@ export const PostRowCell: React.FC<DefaultServerCellComponentProps> = async ({
 
   return (
     <a
-      className="whoa-ui tw:grid tw:grid-cols-[64px_minmax(0,1fr)] tw:md:grid-cols-[100px_minmax(0,1fr)] tw:items-center tw:gap-3 tw:md:gap-4 tw:min-w-0 tw:text-inherit tw:no-underline"
+      className={`whoa-ui tw:grid tw:items-center tw:gap-3 tw:md:gap-4 tw:min-w-0 tw:text-inherit tw:no-underline ${
+        // Like Ghost: no hero image, no box; the title starts at the left edge.
+        thumb ? 'tw:grid-cols-[64px_minmax(0,1fr)] tw:md:grid-cols-[100px_minmax(0,1fr)]' : 'tw:grid-cols-1'
+      }`}
       href={`/admin/collections/${collectionSlug}/${doc.id}`}
     >
-      <span className="tw:block tw:aspect-[16/10] tw:rounded-field tw:bg-base-200 tw:overflow-hidden">
-        {thumb ? (
-                      // biome-ignore lint/performance/noImgElement: tiny admin thumbnail; next/image adds nothing here
-                      <img alt="" className="tw:block tw:size-full tw:object-cover" src={thumb} />
-                    ) : null}
-      </span>
+      {thumb ? (
+        <span className="tw:block tw:aspect-[16/10] tw:rounded-field tw:bg-base-200 tw:overflow-hidden">
+          {/* biome-ignore lint/performance/noImgElement: tiny admin thumbnail; next/image adds nothing here */}
+          <img alt="" className="tw:block tw:size-full tw:object-cover" src={thumb} />
+        </span>
+      ) : null}
       <span className="tw:grid tw:gap-0.5 tw:min-w-0">
         <span className="tw:text-sm tw:md:text-[15px] tw:font-semibold tw:leading-snug tw:whitespace-normal">
           {String(cellData || 'Untitled')}

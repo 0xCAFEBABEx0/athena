@@ -13,7 +13,8 @@ section of each new version as a GitHub Release.
   in the editor, and dark mode to match.
 - The admin dashboard opens with your name, links to the site and a new
   note, draft / published / build counts, and the five latest notes.
-- The Notes list shows each note as one row with its image, title,
+- The Notes list shows each note as one row with its image (none, and no
+  empty box, when it has no hero image, as in Ghost), title,
   author, how long ago it changed, and Draft or Published.
 - The sidebar is grouped into Content, Site, Forms and System; Posts are
   called Notes and Projects Builds, like the site's sections.

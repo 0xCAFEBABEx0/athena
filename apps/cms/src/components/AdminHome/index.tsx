@@ -58,12 +58,13 @@ export const AdminHome: React.FC<ServerProps> = async ({ payload, user }) => {
               const authors = doc.populatedAuthors?.map((a) => a.name).filter(Boolean).join(', ')
               return (
                 <li className="tw:list-row tw:items-center tw:rounded-none tw:border-b tw:border-base-300 tw:px-1" key={doc.id}>
-                  <div className="tw:w-20 tw:aspect-[16/10] tw:rounded-field tw:bg-base-200 tw:overflow-hidden">
-                    {thumb ? (
-                      // biome-ignore lint/performance/noImgElement: tiny admin thumbnail; next/image adds nothing here
+                  {/* Like Ghost: no hero image, no box; the title moves to the left edge. */}
+                  {thumb ? (
+                    <div className="tw:w-20 tw:aspect-[16/10] tw:rounded-field tw:bg-base-200 tw:overflow-hidden">
+                      {/* biome-ignore lint/performance/noImgElement: tiny admin thumbnail; next/image adds nothing here */}
                       <img alt="" className="tw:size-full tw:object-cover" src={thumb} />
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : null}
                   <a className="tw:grid tw:gap-0.5 tw:text-inherit tw:no-underline" href={`${posts}/${doc.id}`}>
                     <span className="tw:text-[15px] tw:font-semibold tw:leading-snug">{doc.title}</span>
                     <span className="tw:text-xs tw:opacity-60">
