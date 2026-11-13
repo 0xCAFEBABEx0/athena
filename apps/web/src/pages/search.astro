@@ -4,6 +4,8 @@ import Layout from '@/layouts/Layout.astro'
 import PostList from '@/components/PostList.astro'
 import Prompt from '@/components/Prompt.astro'
 import SearchPrompt from '@/components/SearchPrompt.astro'
+import { aiSearchEnabled } from '@/lib/ai'
+import { aiText } from '@/lib/ai-text'
 import { getSearchIndexDocs } from '@/lib/cms'
 import { categoryTitles } from '@/lib/format'
 import { routeMeta } from '@/lib/seo'
@@ -11,6 +13,7 @@ import { getSite } from '@/lib/site'
 
 const locale = localeOf(Astro)
 const t = dict(locale)
+const ai = aiText(locale)
 const lp = (path: string) => localizePath(locale, path)
 const [site, docs] = await Promise.all([
   getSite(Astro.locals, locale),
@@ -29,9 +32,14 @@ const haystack = posts.map((post) =>
     .toLowerCase(),
 )
 
+// AI search (by meaning, and questions answered from the notes) shows only
+// when the web deployment can write answers; see docs/AI_SEARCH.md.
+const withAi = aiSearchEnabled()
+
 // One cached page for every query: ISR keys the cache by path and ignores
-// ?q=, so the server renders every post and the browser hides the ones that
-// do not match. Typing a new query never reaches a function or the CMS.
+// ?q= and ?mode=, so the server renders every post and the browser does the
+// rest: keyword search hides the rows that do not match, the AI modes ask
+// /api/ai/* and reorder the rows. Typing never reaches a function.
 // Search results are thin, query-dependent pages: Google asks sites to keep
 // them out of the index (links on them are still followed).
 const meta = { ...routeMeta(t.searchTitle, lp('/search'), site), noindex: true }
@@ -42,39 +50,251 @@ const strings = {
   ask: t.askSearch('{q}'),
   headingAll: t.searchAll,
   heading: t.searchResults,
+  placeholder: t.searchPlaceholder,
+  commandMeaning: ai.commandMeaning,
+  commandAsk: ai.commandAsk,
+  askMeaning: ai.askMeaning,
+  headingMeaning: ai.headingMeaning,
+  headingAsk: ai.headingAsk,
+  placeholderMeaning: ai.placeholderMeaning,
+  placeholderAsk: ai.placeholderAsk,
+  noMatch: ai.noMatch,
+  cited: ai.cited(0).replace('0', '{n}'),
+  errorBusy: ai.errorBusy,
+  errorDaily: ai.errorDaily,
+  errorDisabled: ai.errorDisabled,
+  errorRefused: ai.errorRefused,
+  errorFailed: ai.errorFailed,
 }
+const modes = [
+  { id: 'keyword', label: ai.modeKeyword },
+  { id: 'meaning', label: ai.modeMeaning },
+  { id: 'ask', label: ai.modeAsk },
+] as const
 ---
 
 <Layout meta={meta}>
-  <div class="container pt-10" data-search-page data-strings={JSON.stringify(strings)}>
+  <div class="container pt-10" data-search-page data-locale={locale} data-strings={JSON.stringify(strings)}>
     <h1 class="sr-only">{t.search}</h1>
-    <SearchPrompt />
+    <SearchPrompt>
+      {
+        withAi && (
+          <div class="search-modes mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <div role="tablist" aria-label={ai.modes} class="tabs tabs-box tabs-sm font-mono" data-search-modes>
+              {modes.map((mode, index) => (
+                <button
+                  type="button"
+                  role="tab"
+                  class:list={['tab', { 'tab-active': index === 0 }]}
+                  aria-selected={index === 0 ? 'true' : 'false'}
+                  data-search-mode={mode.id}
+                >
+                  <span class="cli-only" aria-hidden="true">[</span>
+                  {mode.label}
+                  <span class="cli-only" aria-hidden="true">]</span>
+                </button>
+              ))}
+            </div>
+            <span class="text-xs text-base-content/65" hidden data-mode-hint data-hint={ai.enterHint} data-hint-ask={ai.enterHintAsk}></span>
+          </div>
+        )
+      }
+    </SearchPrompt>
     <div class="mt-10">
       <Prompt command={strings.commandAll} question={strings.askAll} heading={strings.headingAll} count={posts.length} />
+
+      {
+        withAi && (
+          <>
+            <p class="ai-status mt-3 flex items-center gap-2 font-mono text-sm text-base-content/65" role="status" hidden data-ai-status>
+              <span class="loading loading-dots loading-sm" aria-hidden="true" />
+              <span data-ai-status-text data-searching={ai.searching} data-thinking={ai.thinking} />
+            </p>
+            <div role="alert" class="alert alert-warning alert-soft mt-3 text-sm" hidden data-ai-error>
+              <span data-ai-error-text />
+            </div>
+            <section class="ai-answer card card-border mt-3" hidden aria-labelledby="ai-answer-label" data-ai-answer>
+              <div class="card-body gap-3 p-4">
+                <h2 id="ai-answer-label" class="ai-answer-label font-mono text-xs font-semibold text-base-content/65">
+                  <span class="cli-only text-primary" aria-hidden="true">●</span>
+                  <span class="modern-only ai-answer-mark" aria-hidden="true">✦</span> {ai.answer}
+                </h2>
+                <div class="ai-answer-text text-[15px] leading-relaxed" aria-live="polite" data-ai-text />
+                <div class="ai-sources" hidden data-ai-sources>
+                  <h3 class="font-mono text-xs text-base-content/65">{ai.sources}</h3>
+                  <ol class="mt-1.5 flex flex-col gap-1 text-sm" data-ai-source-list />
+                </div>
+                <p class="text-xs text-base-content/65">{ai.disclaimer}</p>
+              </div>
+            </section>
+          </>
+        )
+      }
+
       <PostList class="mt-1.5" posts={posts} search={haystack} />
       <p class="mt-2 pl-5 font-mono text-sm text-base-content/65" hidden={posts.length > 0} data-search-empty>
-        ⎿ {t.notFound}
+        ⎿ <span data-search-empty-text data-default={t.notFound}>{t.notFound}</span>
       </p>
     </div>
   </div>
 </Layout>
 
 <script>
-  type Strings = Record<'commandAll' | 'command' | 'askAll' | 'ask' | 'headingAll' | 'heading', string>
+  type Strings = Record<
+    | 'commandAll'
+    | 'command'
+    | 'askAll'
+    | 'ask'
+    | 'headingAll'
+    | 'heading'
+    | 'placeholder'
+    | 'commandMeaning'
+    | 'commandAsk'
+    | 'askMeaning'
+    | 'headingMeaning'
+    | 'headingAsk'
+    | 'placeholderMeaning'
+    | 'placeholderAsk'
+    | 'noMatch'
+    | 'cited'
+    | 'errorBusy'
+    | 'errorDaily'
+    | 'errorDisabled'
+    | 'errorRefused'
+    | 'errorFailed',
+    string
+  >
+  type Mode = 'keyword' | 'meaning' | 'ask'
+  type PostHit = { slug: string; href: string; title: string; heading: string | null; snippet: string }
+  type Source = { n: number; slug: string; title: string; href: string; heading: string | null }
+  type AnswerEvent =
+    | { type: 'sources'; sources: Source[] }
+    | { type: 'text'; text: string }
+    | { type: 'cite'; n: number }
+    | { type: 'done'; cached: boolean }
+    | { type: 'error'; code: string; message: string }
+
+  const MODES: Mode[] = ['keyword', 'meaning', 'ask']
+  const isMode = (value: unknown): value is Mode => MODES.includes(value as Mode)
 
   const page = document.querySelector<HTMLElement>('[data-search-page]')
   if (page) {
     const strings = JSON.parse(page.dataset.strings ?? '{}') as Strings
+    const locale = page.dataset.locale ?? 'en'
     const input = page.querySelector<HTMLInputElement>('[data-search-input]')
+    const list = page.querySelector<HTMLElement>('[data-post-list]')
     const rows = Array.from(page.querySelectorAll<HTMLElement>('[data-search-text]'))
     const empty = page.querySelector<HTMLElement>('[data-search-empty]')
+    const emptyText = page.querySelector<HTMLElement>('[data-search-empty-text]')
     const command = page.querySelector<HTMLElement>('[data-prompt-line]')
     const question = page.querySelector<HTMLElement>('[data-prompt-question]')
     const heading = page.querySelector<HTMLElement>('[data-prompt-heading]')
     const counts = Array.from(page.querySelectorAll<HTMLElement>('[data-prompt-count]'))
+    const tabs = Array.from(page.querySelectorAll<HTMLButtonElement>('[data-search-mode]'))
+    const hint = page.querySelector<HTMLElement>('[data-mode-hint]')
+    const status = page.querySelector<HTMLElement>('[data-ai-status]')
+    const statusText = page.querySelector<HTMLElement>('[data-ai-status-text]')
+    const alert = page.querySelector<HTMLElement>('[data-ai-error]')
+    const alertText = page.querySelector<HTMLElement>('[data-ai-error-text]')
+    const answer = page.querySelector<HTMLElement>('[data-ai-answer]')
+    const answerText = page.querySelector<HTMLElement>('[data-ai-text]')
+    const sourcesBox = page.querySelector<HTMLElement>('[data-ai-sources]')
+    const sourceList = page.querySelector<HTMLElement>('[data-ai-source-list]')
+    const originalOrder = [...rows]
 
-    const apply = (raw: string) => {
-      const query = raw.trim()
+    const params = new URLSearchParams(window.location.search)
+    const requested = params.get('mode')
+    let mode: Mode = tabs.length && isMode(requested) ? requested : 'keyword'
+    /** Query last sent in each AI mode, so switching back does not ask again. */
+    /** The mode and query whose results are on screen, so Enter or a tab click does not ask again. */
+    let shown: string | undefined
+    let controller: AbortController | null = null
+
+    const fill = (template: string, query: string) => template.replace('{q}', query)
+
+    const setPrompt = (query: string, shown: number) => {
+      const texts: Record<Mode, { line: string; bubble: string; title: string }> = {
+        keyword: { line: strings.command, bubble: strings.ask, title: strings.heading },
+        meaning: { line: strings.commandMeaning, bubble: strings.askMeaning, title: strings.headingMeaning },
+        ask: { line: strings.commandAsk, bubble: '{q}', title: strings.headingAsk },
+      }
+      const { line, bubble, title } = texts[mode]
+      if (command) command.textContent = query ? fill(line, query) : strings.commandAll
+      if (question) question.textContent = query ? fill(bubble, query) : strings.askAll
+      if (heading) heading.textContent = query ? title : strings.headingAll
+      for (const count of counts) count.textContent = String(shown)
+    }
+
+    const setEmpty = (show: boolean, text?: string) => {
+      if (empty) empty.hidden = !show
+      if (emptyText) emptyText.textContent = text ?? emptyText.dataset.default ?? ''
+    }
+
+    const clearSnippets = () => {
+      for (const node of page.querySelectorAll('[data-ai-snippet]')) node.remove()
+    }
+
+    /** Put every row back in its original order, all shown. */
+    const resetRows = () => {
+      clearSnippets()
+      if (list) for (const row of originalOrder) list.append(row)
+      for (const row of rows) row.hidden = false
+    }
+
+    /** Show only the rows for `slugs`, in that order. */
+    const showRows = (slugs: string[], snippets?: Map<string, string>) => {
+      clearSnippets()
+      const bySlug = new Map(rows.map((row) => [row.dataset.slug, row]))
+      for (const row of rows) row.hidden = true
+      let shown = 0
+      for (const slug of slugs) {
+        const row = bySlug.get(slug)
+        if (!row || !list) continue
+        list.append(row)
+        row.hidden = false
+        shown += 1
+        const snippet = snippets?.get(slug)
+        if (snippet) {
+          const line = document.createElement('p')
+          line.className = 'ai-snippet'
+          line.dataset.aiSnippet = ''
+          line.textContent = snippet
+          row.append(line)
+        }
+      }
+      return shown
+    }
+
+    const setStatus = (text: string | null) => {
+      if (status) status.hidden = text === null
+      if (statusText && text !== null) statusText.textContent = text
+    }
+
+    const setError = (text: string | null) => {
+      if (alert) alert.hidden = text === null
+      if (alertText) alertText.textContent = text ?? ''
+    }
+
+    const errorFor = (code: string | undefined, status: number) => {
+      if (code === 'busy') return strings.errorBusy
+      if (code === 'daily') return strings.errorDaily
+      if (code === 'disabled' || code === 'search' || status === 503) return strings.errorDisabled
+      if (code === 'refused') return strings.errorRefused
+      return strings.errorFailed
+    }
+
+    const resetAi = () => {
+      controller?.abort()
+      controller = null
+      setStatus(null)
+      setError(null)
+      if (answer) answer.hidden = true
+      if (answerText) answerText.replaceChildren()
+      if (sourceList) sourceList.replaceChildren()
+      if (sourcesBox) sourcesBox.hidden = true
+    }
+
+    const keyword = (query: string) => {
       const words = query.toLowerCase().split(/\s+/).filter(Boolean)
       let shown = 0
       for (const row of rows) {
@@ -82,29 +302,271 @@ const strings = {
         row.hidden = !match
         if (match) shown += 1
       }
-      if (empty) empty.hidden = shown > 0
-      const fill = (template: string) => template.replace('{q}', query)
-      if (command) command.textContent = query ? fill(strings.command) : strings.commandAll
-      if (question) question.textContent = query ? fill(strings.ask) : strings.askAll
-      if (heading) heading.textContent = query ? strings.heading : strings.headingAll
-      for (const count of counts) count.textContent = String(shown)
+      setEmpty(shown === 0)
+      setPrompt(query, shown)
     }
 
-    const query = new URLSearchParams(window.location.search).get('q') ?? ''
+    const post = (path: string, query: string, signal: AbortSignal) =>
+      fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: query, locale }),
+        signal,
+      })
+
+    const meaning = async (query: string) => {
+      resetAi()
+      if (!query) {
+        resetRows()
+        setEmpty(rows.length === 0)
+        setPrompt('', rows.length)
+        return
+      }
+      shown = `meaning\n${query}`
+      controller = new AbortController()
+      const { signal } = controller
+      setPrompt(query, 0)
+      setEmpty(false)
+      for (const row of rows) row.hidden = true
+      setStatus(page.querySelector<HTMLElement>('[data-ai-status-text]')?.dataset.searching ?? '')
+      try {
+        const res = await post('/api/ai/search', query, signal)
+        const body = (await res.json().catch(() => ({}))) as { posts?: PostHit[]; error?: { code?: string } }
+        if (signal.aborted) return
+        setStatus(null)
+        if (!res.ok || !body.posts) {
+          shown = undefined
+          resetRows()
+          setPrompt(query, rows.length)
+          setError(errorFor(body.error?.code, res.status))
+          return
+        }
+        const snippets = new Map(body.posts.map((hit) => [hit.slug, hit.snippet]))
+        const count = showRows(body.posts.map((hit) => hit.slug), snippets)
+        setPrompt(query, count)
+        setEmpty(count === 0, strings.noMatch)
+      } catch (error) {
+        if (signal.aborted) return
+        shown = undefined
+        setStatus(null)
+        resetRows()
+        setError(errorFor(undefined, 0))
+        console.error(error)
+      }
+    }
+
+    const citeMark = (n: number, sources: Source[]) => {
+      const source = sources.find((item) => item.n === n)
+      const mark = document.createElement(source ? 'a' : 'span')
+      mark.className = 'ai-cite badge badge-outline badge-xs font-mono'
+      mark.textContent = String(n)
+      mark.setAttribute('aria-label', strings.cited.replace('{n}', String(n)))
+      if (source && mark instanceof HTMLAnchorElement) {
+        mark.href = source.href
+        mark.title = source.title
+      }
+      return mark
+    }
+
+    /** Append answer text, starting a new paragraph at each blank line. */
+    const appendText = (text: string) => {
+      if (!answerText) return
+      const parts = text.split(/\n{2,}/)
+      parts.forEach((part, index) => {
+        let paragraph = answerText.lastElementChild as HTMLParagraphElement | null
+        if (!paragraph || index > 0) {
+          paragraph = document.createElement('p')
+          answerText.append(paragraph)
+        }
+        if (part) paragraph.append(document.createTextNode(index > 0 ? part.replace(/^\n+/, '') : part))
+      })
+    }
+
+    const ask = async (query: string) => {
+      resetAi()
+      if (!query) {
+        resetRows()
+        setEmpty(rows.length === 0)
+        setPrompt('', rows.length)
+        return
+      }
+      shown = `ask\n${query}`
+      controller = new AbortController()
+      const { signal } = controller
+      setPrompt(query, 0)
+      setEmpty(false)
+      for (const row of rows) row.hidden = true
+      setStatus(page.querySelector<HTMLElement>('[data-ai-status-text]')?.dataset.searching ?? '')
+      let sources: Source[] = []
+      let wrote = false
+      try {
+        const res = await post('/api/ai/ask', query, signal)
+        if (!res.ok || !res.body) {
+          const body = (await res.json().catch(() => ({}))) as { error?: { code?: string } }
+          shown = undefined
+          setStatus(null)
+          resetRows()
+          setPrompt(query, rows.length)
+          setError(errorFor(body.error?.code, res.status))
+          return
+        }
+        const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+        let buffer = ''
+        const handle = (event: AnswerEvent) => {
+          if (event.type === 'sources') {
+            sources = event.sources
+            const count = showRows(sources.map((source) => source.slug))
+            setPrompt(query, count)
+            if (!sources.length) {
+              setStatus(null)
+              setEmpty(true, strings.noMatch)
+              return
+            }
+            setStatus(page.querySelector<HTMLElement>('[data-ai-status-text]')?.dataset.thinking ?? '')
+            if (sourceList && sourcesBox) {
+              for (const source of sources) {
+                const item = document.createElement('li')
+                item.className = 'flex items-baseline gap-2'
+                const link = document.createElement('a')
+                link.href = source.href
+                link.className = 'link link-hover min-w-0'
+                link.textContent = source.heading ? `${source.title} — ${source.heading}` : source.title
+                item.append(citeMark(source.n, sources), link)
+                sourceList.append(item)
+              }
+            }
+          } else if (event.type === 'text') {
+            if (!wrote) {
+              wrote = true
+              setStatus(null)
+              if (answer) answer.hidden = false
+            }
+            appendText(event.text)
+          } else if (event.type === 'cite') {
+            const paragraph = answerText?.lastElementChild
+            paragraph?.append(' ', citeMark(event.n, sources))
+          } else if (event.type === 'done') {
+            setStatus(null)
+            if (wrote && sourcesBox) sourcesBox.hidden = sources.length === 0
+          } else if (event.type === 'error') {
+            setStatus(null)
+            shown = undefined
+            setError(errorFor(event.code, 200))
+          }
+        }
+        for (;;) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buffer += value
+          let newline = buffer.indexOf('\n')
+          while (newline >= 0) {
+            const line = buffer.slice(0, newline).trim()
+            buffer = buffer.slice(newline + 1)
+            if (line) handle(JSON.parse(line) as AnswerEvent)
+            newline = buffer.indexOf('\n')
+          }
+        }
+      } catch (error) {
+        if (signal.aborted) return
+        shown = undefined
+        setStatus(null)
+        setError(errorFor(undefined, 0))
+        console.error(error)
+      }
+    }
+
+    const run = (query: string) => {
+      if (mode === 'keyword') {
+        shown = undefined
+        resetAi()
+        resetRows()
+        keyword(query)
+        return
+      }
+      if (shown === `${mode}\n${query}`) return
+      if (mode === 'meaning') void meaning(query)
+      else void ask(query)
+    }
+
+    const syncUrl = (query: string) => {
+      const url = new URL(window.location.href)
+      if (query) url.searchParams.set('q', query)
+      else url.searchParams.delete('q')
+      if (mode === 'keyword') url.searchParams.delete('mode')
+      else url.searchParams.set('mode', mode)
+      history.replaceState(null, '', url)
+    }
+
+    const selectMode = (next: Mode) => {
+      mode = next
+      for (const tab of tabs) {
+        const active = tab.dataset.searchMode === next
+        tab.classList.toggle('tab-active', active)
+        tab.setAttribute('aria-selected', String(active))
+        tab.tabIndex = active ? 0 : -1
+      }
+      if (input) {
+        input.placeholder =
+          next === 'meaning' ? strings.placeholderMeaning : next === 'ask' ? strings.placeholderAsk : strings.placeholder
+        input.enterKeyHint = next === 'keyword' ? 'search' : next === 'ask' ? 'send' : 'search'
+      }
+      if (hint) {
+        hint.hidden = next === 'keyword'
+        hint.textContent = (next === 'ask' ? hint.dataset.hintAsk : hint.dataset.hint) ?? ''
+      }
+    }
+
+    const activate = (tab: HTMLButtonElement) => {
+      const next = tab.dataset.searchMode
+      if (!isMode(next) || next === mode) return false
+      selectMode(next)
+      const query = input?.value.trim() ?? ''
+      syncUrl(query)
+      run(query)
+      return true
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => {
+        if (activate(tab)) input?.focus()
+      })
+      // Arrow keys move between tabs (WAI-ARIA tabs pattern).
+      tab.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
+        event.preventDefault()
+        const step = event.key === 'ArrowRight' ? 1 : -1
+        const target = tabs[(index + step + tabs.length) % tabs.length]
+        if (!target) return
+        // Focus stays on the tabs, as the WAI-ARIA tabs pattern expects.
+        target.focus()
+        activate(target)
+      })
+    })
+
+    const query = params.get('q') ?? ''
     if (input) {
       input.value = query
       if (!query) input.focus()
-      // Filter as you type; Enter keeps the URL in step without a reload.
-      input.addEventListener('input', () => apply(input.value))
+      // Keyword search filters as you type; the AI modes run on Enter.
+      input.addEventListener('input', () => {
+        if (mode === 'keyword') keyword(input.value.trim())
+      })
       input.form?.addEventListener('submit', (event) => {
         if (input.value.trim().startsWith('/')) return
         event.preventDefault()
-        const url = new URL(window.location.href)
-        if (input.value.trim()) url.searchParams.set('q', input.value.trim())
-        else url.searchParams.delete('q')
-        history.replaceState(null, '', url)
+        const value = input.value.trim()
+        syncUrl(value)
+        run(value)
       })
     }
-    apply(query)
+    selectMode(mode)
+    // A hovered link is prerendered (speculation rules): do not spend an AI
+    // request on a page that may never be shown.
+    const doc = document as Document & { prerendering?: boolean }
+    if (mode !== 'keyword' && doc.prerendering) {
+      document.addEventListener('prerenderingchange', () => run(query), { once: true })
+    } else {
+      run(query)
+    }
   }
 </script>

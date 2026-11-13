@@ -6,7 +6,8 @@ import { dict, localeOf, localizePath } from '@/lib/i18n'
  * view: the chat composer pinned to the bottom of the column. Either way it
  * submits to /search; the popup search is the "/" and ⌘K shortcut. Slash
  * commands work here too: typing "/s…" suggests /status, and Enter opens the
- * status panel instead of searching.
+ * status panel instead of searching. Children (the /search page's mode
+ * switch) render under the box, inside the pinned composer in the modern view.
  */
 type Props = {
   value?: string
@@ -52,6 +53,8 @@ const { value = '', autofocus = false, class: className } = Astro.props
       <button type="submit" class="modern-only modern-send" aria-label={t.searchSubmit}>↑</button>
     </label>
   </form>
+  {/* Extra controls that travel with the box (the search modes on /search). */}
+  <slot />
   <p class="modern-only modern-hint font-mono">
     / {t.shortcutSearch} · j/k {t.shortcutMove} · h/l {t.shortcutSection} · g h {t.shortcutHome} · t {t.shortcutTheme} · v {t.shortcutView} · s {t.shortcutStatus}
   </p>

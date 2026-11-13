@@ -93,6 +93,20 @@ const later = (promise: Promise<unknown>) => {
   }
 }
 
+/** A cached entry that is still fresh (read after the last expiry), or null. */
+const readFresh = async (store: CmsCacheStore, key: string): Promise<Entry | null> => {
+  const [hit, expiredAt] = await Promise.all([store.get(key), store.get(EXPIRED_AT_KEY)])
+  const fresh = typeof expiredAt !== 'number' || (isEntry(hit) && hit.readAt > expiredAt)
+  return isEntry(hit) && fresh ? hit : null
+}
+
+const writeEntry = (store: CmsCacheStore, key: string, entry: Entry) =>
+  later(
+    store.set(key, entry, { tags: [CMS_DATA_TAG], ttl: TTL_SECONDS }).catch((error: unknown) => {
+      console.error('[cms-cache] write failed', error)
+    }),
+  )
+
 /**
  * Return the cached value for `key`, or `load()` it and cache the result.
  * A failed `load()` is never cached; a cache that errors is skipped.
@@ -107,22 +121,77 @@ export const cachedCms = async <T>(
   const readAt = Date.now()
   if (!freshReads.getStore()) {
     try {
-      const [hit, expiredAt] = await Promise.all([store.get(key), store.get(EXPIRED_AT_KEY)])
-      const fresh = typeof expiredAt !== 'number' || (isEntry(hit) && hit.readAt > expiredAt)
-      if (isEntry(hit) && fresh) return hit.value as T
+      const hit = await readFresh(store, key)
+      if (hit) return hit.value as T
     } catch (error) {
       console.error('[cms-cache] read failed', error)
     }
   }
 
   const value = await load()
-  const entry: Entry = { value, readAt }
-  later(
-    store.set(key, entry, { tags: [CMS_DATA_TAG], ttl: TTL_SECONDS }).catch((error: unknown) => {
-      console.error('[cms-cache] write failed', error)
-    }),
-  )
+  writeEntry(store, key, { value, readAt })
   return value
+}
+
+/**
+ * Something derived from CMS content and computed elsewhere (an AI answer
+ * streamed to the reader): read it with `peekCms`, then `storeCms` the result
+ * with the time its CMS read started. Same freshness rules as `cachedCms`, so
+ * the next CMS change expires it.
+ */
+export const peekCms = async <T>(
+  key: string,
+  store: CmsCacheStore | null = runtimeCache(),
+): Promise<T | null> => {
+  if (!store) return null
+  try {
+    const hit = await readFresh(store, key)
+    return hit ? (hit.value as T) : null
+  } catch (error) {
+    console.error('[cms-cache] read failed', error)
+    return null
+  }
+}
+
+export const storeCms = (
+  key: string,
+  value: unknown,
+  readAt: number,
+  store: CmsCacheStore | null = runtimeCache(),
+): void => {
+  if (store) writeEntry(store, key, { value, readAt })
+}
+
+const localCounters = new Map<string, { value: number; expires: number }>()
+
+/**
+ * Add `by` to a counter kept for `ttlSeconds` (untagged, so CMS changes keep
+ * it) and return the new total. Approximate: the Runtime Cache has no atomic
+ * increment, so two requests at the same moment can count once. Without the
+ * shared cache it counts per instance.
+ */
+export const bumpCounter = async (
+  key: string,
+  ttlSeconds: number,
+  by = 1,
+  store: CmsCacheStore | null = runtimeCache(),
+): Promise<number> => {
+  if (!store) {
+    const now = Date.now()
+    const current = localCounters.get(key)
+    const value = (current && current.expires > now ? current.value : 0) + by
+    localCounters.set(key, { value, expires: now + ttlSeconds * 1000 })
+    return value
+  }
+  try {
+    const current = await store.get(key)
+    const value = (typeof current === 'number' ? current : 0) + by
+    await store.set(key, value, { ttl: ttlSeconds })
+    return value
+  } catch (error) {
+    console.error('[cms-cache] counter failed', error)
+    return by
+  }
 }
 
 /** Expire every cached CMS response. Returns false when it could not. */

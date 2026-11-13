@@ -9,7 +9,7 @@
      component whose name appears anywhere in the source ("table", "list",
      "footer", "steps"...), about 60 KB of CSS nobody uses. Add a name here
      before using a new component. */
-  include: properties, rootcolor, rootscrollgutter, rootscrolllock, scrollbar, svg, button, card, modal, menu, dropdown, tab, kbd, badge, input, select, textarea, checkbox, join, breadcrumbs, status, radius, typography;
+  include: properties, rootcolor, rootscrollgutter, rootscrolllock, scrollbar, svg, button, card, modal, menu, dropdown, tab, kbd, badge, input, select, textarea, checkbox, join, breadcrumbs, status, radius, typography, alert, loading, link;
 }
 
 /* Dark mode is driven by the data-theme attribute, not the OS media query. */
@@ -2701,5 +2701,122 @@ html:not([data-view='modern']) .work-page-list {
   .post-row:active,
   [data-post-row]:active {
     background-color: var(--modern-sel);
+  }
+}
+
+/* AI search on /search (docs/AI_SEARCH.md): mode tabs, answer card, snippets.
+   daisyUI tabs, card, alert, loading and badge; the CLI view strips them back
+   to terminal output. */
+.ai-answer-text p + p {
+  margin-top: 0.625rem;
+}
+
+.ai-answer-text p {
+  overflow-wrap: anywhere;
+}
+
+.ai-cite {
+  margin-inline: 0.125rem 0.25rem;
+  vertical-align: 0.0625rem;
+  text-decoration: none;
+}
+
+a.ai-cite:hover,
+a.ai-cite:focus-visible {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.ai-snippet {
+  margin: -0.25rem 0 0.375rem;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  overflow-wrap: anywhere;
+
+  @media (min-width: 40rem) {
+    padding-left: 8.75rem;
+  }
+}
+
+.ai-answer-mark {
+  color: var(--color-primary);
+}
+
+html:not([data-view='modern']) {
+  .search-modes .tabs-box {
+    gap: 0.25rem;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .search-modes .tab {
+    --tab-bg: transparent;
+    height: auto;
+    padding: 0.125rem 0.25rem;
+    font-size: 0.8125rem;
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  }
+
+  .search-modes .tab-active {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .ai-answer {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .ai-answer .card-body {
+    padding: 0;
+  }
+
+  .ai-answer-text,
+  .ai-answer .ai-sources,
+  .ai-answer .card-body > p {
+    border-left: 1px solid var(--color-base-300);
+    padding-left: 1rem;
+    margin-left: 0.25rem;
+  }
+
+  .ai-answer .card-body > p {
+    font-family: var(--font-mono);
+  }
+}
+
+[data-view='modern'] {
+  .search-modes {
+    justify-content: center;
+  }
+
+  .ai-answer {
+    border-color: var(--color-base-300);
+    border-radius: 0.875rem;
+    background-color: var(--modern-card);
+  }
+
+  .ai-answer-label {
+    font-family: var(--font-sans);
+  }
+
+  .ai-snippet {
+    padding: 0 1rem;
+
+    @media (min-width: 40rem) {
+      padding-left: 8rem;
+    }
+  }
+
+  .ai-status {
+    font-family: var(--font-sans);
   }
 }

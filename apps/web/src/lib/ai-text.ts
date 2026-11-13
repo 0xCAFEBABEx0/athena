@@ -1,0 +1,92 @@
+import type { Locale } from './i18n'
+
+/** Text of the AI search on /search (modes, answer card, errors), per language. */
+const en = {
+  modes: 'Search mode',
+  modeKeyword: 'Keyword',
+  modeMeaning: 'By meaning',
+  modeAsk: 'Ask AI',
+  placeholderMeaning: 'Describe what you are looking for…',
+  placeholderAsk: 'Ask a question about the notes…',
+  enterHint: 'Press Enter to search',
+  enterHintAsk: 'Press Enter to ask',
+  commandMeaning: 'search --meaning "{q}" notes/',
+  commandAsk: 'ask "{q}"',
+  askMeaning: 'Find notes about the idea of “{q}”.',
+  headingMeaning: 'Closest notes',
+  headingAsk: 'Notes used for the answer',
+  answer: 'Answer',
+  sources: 'Sources',
+  searching: 'Searching the notes…',
+  thinking: 'Reading the notes…',
+  disclaimer: 'Written by AI from the notes listed below. It can be wrong.',
+  cited: (n: number) => `Source ${n}`,
+  noMatch: 'No note seems to be about this.',
+  errorBusy: 'Too many searches. Try again in a few minutes.',
+  errorDaily: 'The AI search limit for today is used up. Try again tomorrow, or use Keyword.',
+  errorDisabled: 'AI search is not available yet. Use Keyword instead.',
+  errorRefused: 'This question could not be answered.',
+  errorFailed: 'Something went wrong. Try again, or use Keyword.',
+}
+
+export type AiText = typeof en
+
+const ja: AiText = {
+  modes: '検索の方法',
+  modeKeyword: 'キーワード',
+  modeMeaning: '意味で探す',
+  modeAsk: 'AIに質問',
+  placeholderMeaning: '探している内容を文章で…',
+  placeholderAsk: '記事について質問する…',
+  enterHint: 'Enter で検索',
+  enterHintAsk: 'Enter で質問',
+  commandMeaning: 'search --meaning "{q}" notes/',
+  commandAsk: 'ask "{q}"',
+  askMeaning: '「{q}」に近い内容の記事を探して。',
+  headingMeaning: '近い記事',
+  headingAsk: '回答に使った記事',
+  answer: '回答',
+  sources: '参照した記事',
+  searching: '記事を探しています…',
+  thinking: '記事を読んでいます…',
+  disclaimer: '下の記事をもとに AI が書いた回答です。誤りを含むことがあります。',
+  cited: (n: number) => `出典 ${n}`,
+  noMatch: 'この内容の記事は見つかりませんでした。',
+  errorBusy: '検索が多すぎます。数分おいてからもう一度お試しください。',
+  errorDaily: '今日の AI 検索の上限に達しました。明日またお試しいただくか、キーワード検索をお使いください。',
+  errorDisabled: 'AI 検索はまだ使えません。キーワード検索をお使いください。',
+  errorRefused: 'この質問には答えられませんでした。',
+  errorFailed: 'うまくいきませんでした。もう一度試すか、キーワード検索をお使いください。',
+}
+
+const zh: AiText = {
+  modes: '搜索方式',
+  modeKeyword: '关键词',
+  modeMeaning: '按语义',
+  modeAsk: '问 AI',
+  placeholderMeaning: '用一句话描述你要找的内容…',
+  placeholderAsk: '就这些笔记提个问题…',
+  enterHint: '按 Enter 搜索',
+  enterHintAsk: '按 Enter 提问',
+  commandMeaning: 'search --meaning "{q}" notes/',
+  commandAsk: 'ask "{q}"',
+  askMeaning: '找和“{q}”意思相近的笔记。',
+  headingMeaning: '相近的笔记',
+  headingAsk: '回答所用的笔记',
+  answer: '回答',
+  sources: '参考的笔记',
+  searching: '正在搜索笔记…',
+  thinking: '正在阅读笔记…',
+  disclaimer: '由 AI 根据下列笔记生成，可能有误。',
+  cited: (n: number) => `出处 ${n}`,
+  noMatch: '似乎没有相关的笔记。',
+  errorBusy: '搜索次数过多，请几分钟后再试。',
+  errorDaily: '今天的 AI 搜索次数已用完。请明天再试，或使用关键词搜索。',
+  errorDisabled: 'AI 搜索暂不可用，请使用关键词搜索。',
+  errorRefused: '无法回答这个问题。',
+  errorFailed: '出错了。请重试，或使用关键词搜索。',
+}
+
+const TEXT: Record<Locale, AiText> = { en, ja, zh }
+
+export const aiText = (locale: Locale): AiText => TEXT[locale]

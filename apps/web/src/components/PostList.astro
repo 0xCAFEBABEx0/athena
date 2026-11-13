@@ -30,7 +30,7 @@ const items = posts
       const date = formatDate(post.publishedAt)
       const tag = categoryTitles(post.categories)[0]
       return (
-        <li data-search-text={text}>
+        <li data-search-text={text} data-slug={post.slug}>
           <a class="post-row" href={localizePath(locale, `${ROUTES.posts}/${post.slug}`)} data-post-row>
             <span class="post-row-marker hidden sm:inline" aria-hidden="true">❯</span>
             {date && (
