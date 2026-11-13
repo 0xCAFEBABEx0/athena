@@ -121,6 +121,20 @@ reviews:
         (`isDraft`), not `athena-draft` alone. Astro skips
         underscore-prefixed files, so endpoint file names must not start
         with `_`.
+    - path: 'apps/{web/src/pages/api/ai/**,web/src/lib/ai*.ts,cms/src/ai/**,cms/src/app/(payload)/api/ai/**}'
+      instructions: |
+        AI search (docs/AI_SEARCH.md). Every uncached request costs an
+        embedding call, a Neon query and (for /api/ai/ask) a Claude call, so
+        the web endpoints must keep, in this order: the same-origin check,
+        the size checks, the cached replay, then the per-visitor and daily
+        limits before any CMS or Claude call. Cached replays must not count
+        against the limits. The CMS /api/ai/search accepts only the
+        REVALIDATE_SECRET bearer (timing-safe) or a logged-in user. The
+        index must stay outside Payload (schema `ai`, no collection or job
+        task) and must read posts as an anonymous visitor
+        (`overrideAccess: false`), so drafts never reach the index or an
+        answer. Indexing must never fail a save. Links shown to readers are
+        built from ROUTES, never from model output.
     - path: 'apps/web/src/lib/cms.ts'
       instructions: |
         Payload REST defaults to `limit=10` and drafts require auth. Every
@@ -149,7 +163,9 @@ reviews:
       instructions: |
         /search is one ISR page per language (ISR ignores ?q=) and filters
         in the browser; it must not read the query on the server or call the
-        CMS per query. global.css lists the daisyUI components it ships
+        CMS per query. The AI modes (docs/AI_SEARCH.md) call the web app's
+        /api/ai/* only on Enter, never while typing or while the page is
+        prerendered (document.prerendering). global.css lists the daisyUI components it ships
         (`include:`); a component used without being listed renders
         unstyled.
     - path: 'apps/web/src/**/*.{astro,css}'

@@ -55,7 +55,7 @@ const collect = async (events: AsyncIterable<AnswerEvent>) => {
   return out
 }
 
-describe('TC-U-59 AI answers', () => {
+describe('TC-U-60 AI answers', () => {
   test('posts are numbered in order of first appearance; excerpts of one post share its number', () => {
     const { sources, sourceOf } = numberSources([chunk('a', 'One'), chunk('b'), chunk('a', 'Two')], 'zh')
     expect(sources).toEqual([

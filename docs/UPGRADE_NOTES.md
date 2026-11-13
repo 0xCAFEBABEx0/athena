@@ -2,6 +2,45 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## AI search on `/search` — 2026-11-13
+
+**CMS**
+
+- `src/ai/`: post text → chunks → embeddings (Voyage `voyage-4-lite`, 1024
+  dimensions) in `ai.post_chunks` (pgvector). The Posts `afterChange` /
+  `afterDelete` hooks keep it in step after the commit; drafts and autosaves
+  are skipped. New routes `POST /api/ai/search` (web server or a logged-in
+  user) and `POST /api/ai/reindex` (logged-in user).
+- No Payload schema change: no new collection, field or job task, so no
+  `generate:types` and no Payload migration.
+
+**Web**
+
+- `/search` gets mode tabs (Keyword / By meaning / Ask AI) when
+  `ANTHROPIC_API_KEY` is set; `POST /api/ai/search` and `/api/ai/ask`
+  (NDJSON stream). New dependency `@anthropic-ai/sdk`. daisyUI `include:`
+  gains `alert`, `loading`, `link`.
+
+**Database (manual, schema push is off)**
+
+Run [`docs/sql/2026-11-13-ai-search.sql`](./sql/2026-11-13-ai-search.sql)
+(pgvector, schema `ai`, table `ai.post_chunks`) on the preview Neon branch,
+then production. Order with the deploy does not matter; without the table
+publishing logs a warning and the AI modes show an error. Checked: runs twice
+on an empty database and on a copy of the current schema.
+
+**Environment**
+
+- athena-cms: `VOYAGE_API_KEY` (Preview + Production).
+- athena-web: `ANTHROPIC_API_KEY` (Preview + Production); optional
+  `AI_DAILY_LIMIT` (default 200 uncached questions a day), `AI_ANSWER_MODEL`.
+
+**After deploying**
+
+The index fills on the first search by meaning (or `POST /api/ai/reindex`
+from a logged-in admin). Details and the Payload 4.0 notes:
+[`docs/AI_SEARCH.md`](./AI_SEARCH.md).
+
 ## About page — 2026-11-12
 
 **CMS**

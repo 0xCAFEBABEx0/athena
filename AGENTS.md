@@ -61,6 +61,7 @@ apps/cms/src/
 ├── Site/ Stack/ About/ Header/ Footer/  # globals (Site = name, intro, links, projects; Stack = /stacks tools + favicon fetch; About = /about profile)
 ├── github/                   # sync.ts: GitHub snapshot for the projects (/builds) collection; contributions.ts: home contribution graph
 ├── x/                        # oembed.ts: reads posts on X for the Site global picks
+├── ai/                       # AI search index: lexical.ts → chunk.ts → embeddings.ts (Voyage) → store.ts (ai.post_chunks, pgvector); indexer.ts, hooks.ts (Posts), search.ts
 ├── utilities/                # invalidateWeb.ts, generatePreviewPath.ts, env.ts, getURL.ts
 └── payload.config.ts         # Main Payload CMS configuration
 
@@ -69,7 +70,7 @@ apps/cms/config/next.config.mjs   # Real Next.js config (root next.config.mjs re
 apps/web/src/
 ├── pages/                    # [...slug], notes/* (posts), builds/* (projects), stacks, about, search, sitemaps, 404, api/* endpoints
 ├── components/               # Block/hero renderers (blocks/, heros/, ...)
-├── lib/                      # cms.ts (REST client), site.ts (site global), work.ts (/builds entries), stack.ts (/stacks), about.ts (/about), richtext.ts, draft.ts, seo.ts, media.ts
+├── lib/                      # cms.ts (REST client), site.ts (site global), work.ts (/builds entries), stack.ts (/stacks), about.ts (/about), richtext.ts, draft.ts, seo.ts, media.ts, ai*.ts (AI search: CMS search call, ranking, limits, Claude answers)
 ├── layouts/Layout.astro      # Theme init, meta tags, Header/Footer
 └── middleware.ts             # Redirects-collection handling
 
@@ -84,6 +85,7 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 
 - **Cache invalidation**: on publish/unpublish, `apps/cms/src/utilities/invalidateWeb.ts` POSTs `{ paths, tags }` to `${WEB_URL}/api/invalidate` with `Authorization: Bearer ${REVALIDATE_SECRET}`. The Astro endpoint marks the Vercel cache tag `content` stale (every cached page, feed, sitemap and `/search-index.json` carries it, added in `middleware.ts`) and re-renders the affected paths right away. ISR expiration is 7 days, only a safety net. A new deployment starts with an empty cache, so `.github/workflows/warm-cache.yml` (on Vercel's `deployment_status`) runs `scripts/warm-cache.sh` to request every sitemap URL once on the preview or production domain (repository variables `PREVIEW_WEB_URL` / `PRODUCTION_WEB_URL`; update the defaults there when the domain moves). The preview domain is behind Vercel Authentication, so warming it needs the athena-web Protection Bypass for Automation secret as the repository secret `VERCEL_AUTOMATION_BYPASS_SECRET`; without it the run ends early with a warning. On a miss, `middleware.ts` starts the layout's CMS requests together (memos keyed by `Astro.locals`), so pass `Astro.locals`, not `Astro.request`, to `getSite`/`getWork`/nav helpers. Published CMS responses are also kept in the Vercel Runtime Cache (`apps/web/src/lib/cms-cache.ts`, tag `cms-data`, 1-day TTL, Vercel only): `/api/invalidate` expires it before anything re-renders, and the re-renders it requests (`x-prerender-revalidate`) skip cache reads. Page routes 404 an unknown slug from the cached `getPublishedSlugs()` list (not in draft mode), so a crawler's made-up URLs never reach the CMS or wake Neon. Hovered links are prerendered (speculation rules in `Layout.astro`): scripts that must only run when a page is shown wait for `prerenderingchange`. The ISR bypass token is derived from `REVALIDATE_SECRET` (`apps/web/src/lib/isr-bypass.mjs`); draft preview sets it as the `__prerender_bypass` cookie.
 - **Draft preview**: the admin Preview button targets `${WEB_URL}/api/preview?slug&collection&path&previewSecret` (`generatePreviewPath.ts`). The endpoint validates `PREVIEW_SECRET`, sets the HttpOnly `athena-draft` and `__prerender_bypass` cookies, and redirects (only to a path on the site, `isLocalPath`); `isDraft` needs both cookies, the second equal to the ISR bypass token, so `athena-draft` alone shows no drafts; draft-aware pages then fetch with `draft=true` using the `web-frontend` service account's API key (`PAYLOAD_API_KEY`). Create/rotate that account with `apps/cms/src/scripts/create-web-service-account.ts`.
+- **AI search** ([`docs/AI_SEARCH.md`](./docs/AI_SEARCH.md)): the CMS keeps post excerpts with embeddings in `ai.post_chunks` (own schema `ai`, outside Payload; manual SQL `docs/sql/2026-11-13-ai-search.sql`), updated by the Posts hooks after the commit from what an anonymous visitor can read. The browser calls the web app's `/api/ai/search` and `/api/ai/ask` (same origin only, on Enter); the web server asks `${CMS_URL}/api/ai/search` with `Authorization: Bearer ${REVALIDATE_SECRET}`, keeps results and finished answers in the Runtime Cache (`cms-data`, expired by every publish), and writes answers with Claude from the excerpts (`search_result` blocks, citations). The AI UI shows only when athena-web has `ANTHROPIC_API_KEY`.
 - **Forms**: the web `FormBlock` posts JSON to its own `/api/form-submissions`, which forwards it server-side to `${CMS_URL}/api/form-submissions` with the protection bypass (`apps/web/src/lib/form-submission.ts`); browsers never call the CMS.
 
 `PREVIEW_SECRET` and `REVALIDATE_SECRET` must be identical in both deployments — drift shows up as silent 401s (`invalidateWeb` logs errors but never throws; a missing secret logs `Web invalidation skipped`, a redirect to the Vercel login `Web invalidation failed: 302`).
@@ -102,7 +104,7 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 - **Prefix unused vars** with `_` to suppress lint warnings
 - **Section paths**: posts live under `/notes`, projects under `/builds`, the Stack global at `/stacks` (renamed in 1.2.0), the About global at `/about`. Build them from `ROUTES` in `packages/shared/src/constants.ts`, never as string literals (the E2E specs in `apps/web/e2e/` are the exception: they spell the public URLs out, so a change to `ROUTES` that moves a public URL fails them); `middleware.ts` answers the old `/posts`, `/work`, `/stack` (every language) with a 308 to the new path (query kept; `apps/web/scripts/route-legacy-redirects.mjs` routes those paths to the plain function after the build, because the ISR function never sees the query and caches by path), and CMS links typed with an old path are mapped by `currentRoute`
 - **Links from data**: a URL from the CMS, GitHub or a query string becomes an `href` or redirect only through `safeHref` / `httpUrl` / `isLocalPath` (`apps/web/src/lib/safe-url.ts`)
-- **Search** (`/search`) is one ISR page per language filtered in the browser; never read `?q=` on the server
+- **Search** (`/search`) is one ISR page per language filtered in the browser; never read `?q=` on the server. The AI modes call `/api/ai/*` from the browser on Enter only, never while typing or while the page is prerendered
 - **Tests**: add or update a case in `docs/TESTING.md` with each behavior change, and run both web suites before pushing
 - **Lint (cms)**: Biome (`apps/cms/biome.json`, `react` + `next` domains), not ESLint: typescript-eslint has no TypeScript 7 support. Suppress with `// biome-ignore lint/<group>/<rule>: reason`. Prettier still formats
 
@@ -206,6 +208,7 @@ REVALIDATE_SECRET=         # Shared with web: bearer token for /api/invalidate (
 WEB_PROTECTION_BYPASS=     # optional; athena-web Protection Bypass for Automation (invalidation past Vercel Authentication)
 BLOB_READ_WRITE_TOKEN=     # Vercel Blob storage token
 ANTHROPIC_API_KEY=         # Translate button (Claude); TRANSLATION_MODEL optional
+VOYAGE_API_KEY=            # AI search embeddings (voyage-4-lite); EMBEDDING_PROVIDER/MODEL/BASE_URL optional (openai uses OPENAI_API_KEY)
 GITHUB_TOKEN=              # /builds GitHub sync (fine-grained, public repos read-only)
 ```
 
@@ -215,6 +218,7 @@ Web (`apps/web/.env` — see `apps/web/README.md`):
 CMS_URL= WEB_URL= PREVIEW_SECRET= REVALIDATE_SECRET=
 PAYLOAD_API_KEY=           # web-frontend service account key (draft fetches)
 CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automation
+ANTHROPIC_API_KEY=         # AI search answers; unset = no AI modes on /search. AI_ANSWER_MODEL, AI_DAILY_LIMIT (default 200) optional
 ```
 
 ## Key URLs (Local Dev)

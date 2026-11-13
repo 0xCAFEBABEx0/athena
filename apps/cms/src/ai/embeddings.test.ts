@@ -24,7 +24,7 @@ const fakeFetch = (calls: Call[], respond?: (body: Record<string, unknown>) => R
     return Response.json({ data: input.map((_, index) => ({ index, embedding: vector(index) })).reverse() })
   }) as unknown as typeof fetch
 
-describe('TC-U-53 AI index: embeddings', () => {
+describe('TC-U-54 AI index: embeddings', () => {
   test('Voyage is the default: voyage-4-lite, input_type and 1024 dimensions; no key means not configured', () => {
     expect(embeddingConfig({})).toBeNull()
     const config = configured({ VOYAGE_API_KEY: 'k' })
@@ -68,7 +68,7 @@ describe('TC-U-53 AI index: embeddings', () => {
   })
 })
 
-describe('TC-U-54 AI search: request checks', () => {
+describe('TC-U-55 AI search: request checks', () => {
   test('search requests: query trimmed, 1–300 characters, unknown language is English, limit clamped', () => {
     expect(parseSearchRequest({ q: '  hello   world ', locale: 'ja' })).toEqual({ q: 'hello world', locale: 'ja', limit: 12 })
     expect(parseSearchRequest({ q: 'x', locale: 'fr', limit: 500 })).toEqual({ q: 'x', locale: 'en', limit: 24 })

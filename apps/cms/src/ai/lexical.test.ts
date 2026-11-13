@@ -8,7 +8,7 @@ const paragraph = (...children: unknown[]) => ({ type: 'paragraph', children })
 const heading = (value: string) => ({ type: 'heading', tag: 'h2', children: [text(value)] })
 const root = (...children: unknown[]) => ({ root: { type: 'root', children } })
 
-describe('TC-U-51 AI index: rich text to sections', () => {
+describe('TC-U-52 AI index: rich text to sections', () => {
   test('splits at headings, keeps paragraphs, lists, links and code blocks as text', () => {
     const value = root(
       paragraph(text('Intro with a '), { type: 'link', children: [text('link')] }, text('.')),
@@ -44,7 +44,7 @@ describe('TC-U-51 AI index: rich text to sections', () => {
   })
 })
 
-describe('TC-U-52 AI index: chunks', () => {
+describe('TC-U-53 AI index: chunks', () => {
   test('the description opens the first chunk; chunks never cross a heading; title and heading are embedded', () => {
     const chunks = buildChunks({
       title: 'Deploying',

@@ -4,6 +4,24 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.5.0] - 2026-11-13
+
+### Added
+
+- AI search on `/search`: next to the keyword filter, two new tabs.
+  **By meaning** finds notes about what you mean, not only the words you
+  typed, best first, with the closest passage under each title. **Ask AI**
+  answers a question from the notes, in the page's language, with numbered
+  citations that link to the notes it used. Both run when you press Enter.
+- Answers and results are kept until the next publish, so the same question
+  is answered again at once and costs nothing; uncached questions are
+  limited per visitor and per day.
+- The CMS keeps an index of the published notes' text (pgvector, outside
+  Payload's own tables), updated on publish. Needs
+  `docs/sql/2026-11-13-ai-search.sql` and the `VOYAGE_API_KEY` /
+  `ANTHROPIC_API_KEY` settings ([`docs/AI_SEARCH.md`](docs/AI_SEARCH.md));
+  without them `/search` stays as it was.
+
 ## [1.4.0] - 2026-11-13
 
 ### Changed

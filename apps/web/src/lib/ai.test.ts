@@ -35,7 +35,7 @@ const hit = (slug: string, score: number, content = `About ${slug}.`, heading: s
   score,
 })
 
-describe('TC-U-56 AI search (web): queries and ranking', () => {
+describe('TC-U-57 AI search (web): queries and ranking', () => {
   test('queries are trimmed to one line of 1–300 characters; unknown languages are English', () => {
     expect(normalizeQuery('  how   do\nyou deploy? ')).toBe('how do you deploy?')
     expect(normalizeQuery('')).toBeNull()
@@ -100,7 +100,7 @@ describe('TC-U-56 AI search (web): queries and ranking', () => {
   })
 })
 
-describe('TC-U-57 AI search (web): asking the CMS', () => {
+describe('TC-U-58 AI search (web): asking the CMS', () => {
   beforeEach(() => {
     process.env.REVALIDATE_SECRET = 's3cret'
     process.env.CMS_URL = 'https://cms.example/'
@@ -171,7 +171,7 @@ describe('TC-U-57 AI search (web): asking the CMS', () => {
   })
 })
 
-describe('TC-U-58 AI search (web): limits and stored answers', () => {
+describe('TC-U-59 AI search (web): limits and stored answers', () => {
   afterEach(() => {
     restoreEnv()
     resetVisitorLimits()

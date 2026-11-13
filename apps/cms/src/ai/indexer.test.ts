@@ -43,7 +43,7 @@ const vectorFor = (text: string) => {
 
 const realFetch = globalThis.fetch
 
-suite('TC-U-55 AI index: Postgres', () => {
+suite('TC-U-56 AI index: Postgres', () => {
   beforeAll(async () => {
     pool = new Pool({ connectionString: url })
     await pool.query(SCHEMA_SQL)
