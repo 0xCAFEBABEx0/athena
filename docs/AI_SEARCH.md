@@ -87,6 +87,12 @@ POST /api/ai/search  ◄──────────────── Bearer 
 - Neon: each uncached query is one short `SELECT` (it wakes the compute if it
   slept). Indexing reads the post and writes only changed rows.
 
+Known limit: a publish expires the cached results at once, while the index
+is updated a few seconds later (after the embedding call). A search for the
+same words in that window caches the old results until the next publish.
+With today's traffic this is unlikely; publishing again (or any other post)
+clears it.
+
 ## Setup
 
 | Where | Variable | Notes |
