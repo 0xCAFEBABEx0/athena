@@ -23,7 +23,7 @@
     "env:check": "node -e \"console.log('Environment:', process.env.NODE_ENV || 'development'); console.log('Vercel Env:', process.env.VERCEL_ENV || 'local');\""
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.7.0",
+    "@anthropic-ai/sdk": "^1.8.0",
     "@athena/shared": "workspace:*",
     "@fontsource-variable/inter": "^5.2.5",
     "@payloadcms/db-postgres": "3.93.0",
