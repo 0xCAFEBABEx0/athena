@@ -68,39 +68,42 @@ const crumbs = current.split('/').filter(Boolean)
     </button>
   </span>
   <nav class="flex flex-wrap items-center" aria-label={t.nav}>
-    <span class="contents" data-section-nav>
+    <span class="flex flex-wrap items-center" data-section-nav>
       {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
     </span>
-    <ViewToggle />
-    <details class="dropdown dropdown-end" data-language-menu>
-      <summary
-        class="btn btn-ghost btn-sm min-h-11 px-2 font-mono font-normal text-base-content/65 hover:text-base-content"
-        aria-label={t.language}
-      >
-        [{LOCALE_LABEL[locale].toLowerCase()}]
-      </summary>
-      <ul
-        class="menu dropdown-content z-20 mt-1 w-20 rounded-box border border-base-300 bg-base-100 p-1 font-mono text-sm"
-      >
-        {
-          languages.map((lang) => (
-            <li>
-              <a
-                href={lang.href}
-                hreflang={lang.code}
-                lang={lang.code}
-                class:list={[{ 'menu-active': lang.code === locale }]}
-                aria-current={lang.code === locale ? 'true' : undefined}
-                title={lang.name}
-              >
-                {lang.label.toLowerCase()}
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-    </details>
-    <ThemeToggle />
+    {/* The switches wrap as one group: on phones they get a row of their own under the sections. */}
+    <span class="flex items-center" data-header-switches>
+      <ViewToggle />
+      <details class="dropdown dropdown-end" data-language-menu>
+        <summary
+          class="btn btn-ghost btn-sm min-h-11 px-2 font-mono font-normal text-base-content/65 hover:text-base-content"
+          aria-label={t.language}
+        >
+          [{LOCALE_LABEL[locale].toLowerCase()}]
+        </summary>
+        <ul
+          class="menu dropdown-content z-20 mt-1 w-20 rounded-box border border-base-300 bg-base-100 p-1 font-mono text-sm"
+        >
+          {
+            languages.map((lang) => (
+              <li>
+                <a
+                  href={lang.href}
+                  hreflang={lang.code}
+                  lang={lang.code}
+                  class:list={[{ 'menu-active': lang.code === locale }]}
+                  aria-current={lang.code === locale ? 'true' : undefined}
+                  title={lang.name}
+                >
+                  {lang.label.toLowerCase()}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </details>
+      <ThemeToggle />
+    </span>
   </nav>
 </header>
 

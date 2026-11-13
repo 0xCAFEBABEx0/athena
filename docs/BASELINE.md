@@ -74,7 +74,8 @@ Rules that come with them:
 - **Switches** (view, language, theme) all use the same toggle style: CLI
   `[xx]` brackets, ADE daisyUI tabs (the ADE theme tabs are sun | moon
   icons). Order everywhere: view → language → theme (CLI header, ADE top
-  bar, `/status` config rows).
+  bar, `/status` config rows). On phones the CLI switches wrap as one group
+  onto their own row under the section links, never one by one.
 - **Language**: switch values stay English (CLI / ADE, EN / JP / ZH,
   Light / Dark, true / false); all other UI text follows the page language.
   The CLI header is lowercase (`posts`, `[ade]`, `[dark]`, `[en]`).

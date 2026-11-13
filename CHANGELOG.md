@@ -4,6 +4,15 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.3.1] - 2026-11-13
+
+### Fixed
+
+- CLI header on phones: the switches `[ade] [en] [dark]` now wrap as one
+  group onto their own row under the section links, instead of `[dark]`
+  (or `[en] [dark]`) dropping onto a line of its own. Wider screens keep
+  everything on one row.
+
 ## [1.3.0] - 2026-11-12
 
 ### Added
