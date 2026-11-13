@@ -12,8 +12,10 @@ import '@/admin-ui/index.css'
 export const AdminHome: React.FC<ServerProps> = async ({ payload, user }) => {
   const [recent, drafts, published, builds] = await Promise.all([
     payload.find({ collection: 'posts', draft: true, limit: 5, sort: '-updatedAt', depth: 1 }),
-    payload.count({ collection: 'posts', where: { _status: { equals: 'draft' } } }),
-    payload.count({ collection: 'posts', where: { _status: { equals: 'published' } } }),
+    // Counted like the linked lists (latest drafts), so a published note with a
+    // newer draft is a draft in both; count() would read the published table.
+    payload.find({ collection: 'posts', draft: true, limit: 1, depth: 0, where: { _status: { equals: 'draft' } } }),
+    payload.find({ collection: 'posts', draft: true, limit: 1, depth: 0, where: { _status: { equals: 'published' } } }),
     payload.count({ collection: 'projects' }),
   ])
   const web = getWebURL() || 'http://localhost:4321'
