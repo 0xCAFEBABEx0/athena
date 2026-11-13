@@ -1,0 +1,243 @@
+/*
+ * whoa.me admin theme (Ghost-like: cool greys, Inter, ink buttons, pink drafts).
+ *
+ * Plain CSS on purpose (no Sass features): Payload 4 replaces custom.scss
+ * with custom.css, so this file is renamed, not rewritten. The upgrade steps
+ * are in docs/ADMIN.md. Three parts:
+ *   1. --whoa-* tokens: the only place colors live. src/admin-ui/index.css
+ *      (daisyUI) reads them too. Keep this part as is at 4.0.
+ *   2. Mapping onto Payload 3's variables. Rewrite for Payload 4's
+ *      --color-* / --ramp-* variables at 4.0.
+ *   3. Payload 3 selector overrides. Payload 4 renames these classes:
+ *      delete this part at 4.0 and redo only what still looks wrong.
+ */
+
+/* ---------- 1. Tokens ---------- */
+:root {
+  --whoa-font: 'Inter Variable', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP',
+    system-ui, sans-serif;
+  --whoa-bg: #ffffff;
+  --whoa-panel: #fafafb;
+  --whoa-active: #eceef0;
+  --whoa-line: #e6e9eb;
+  --whoa-muted: #64707c; /* 4.8:1 on --whoa-panel, 5.1:1 on white */
+  --whoa-ink: #15171a;
+  --whoa-on-ink: #ffffff;
+  --whoa-draft: #d6175f;
+  --whoa-on-draft: #ffffff;
+  --whoa-success: #2f855a;
+  --whoa-error: #c53030;
+}
+
+html[data-theme='dark'] {
+  --whoa-bg: #151719;
+  --whoa-panel: #1b1e21;
+  --whoa-active: #262a2e;
+  --whoa-line: #2b2f33;
+  --whoa-muted: #8e9aa6;
+  --whoa-ink: #f4f5f6;
+  --whoa-on-ink: #151719;
+  --whoa-draft: #ff5c9d;
+  --whoa-on-draft: #151719;
+  --whoa-success: #5fd394;
+  --whoa-error: #ff7a7a;
+}
+
+/* ---------- 2. Payload 3 variables (rewrite at 4.0) ---------- */
+:root {
+  /* Payload 3 derives --theme-elevation-* (and dark mode) from this ramp. */
+  --color-base-0: #ffffff;
+  --color-base-50: #f4f5f6;
+  --color-base-100: #eceef0;
+  --color-base-150: #e1e4e7;
+  --color-base-200: #d4d8dc;
+  --color-base-250: #c4c9ce;
+  --color-base-300: #b3b9bf;
+  --color-base-350: #a2a9b0;
+  --color-base-400: #919aa2;
+  --color-base-450: #808a93;
+  --color-base-500: #6f7983;
+  --color-base-550: #606973;
+  --color-base-600: #525a63;
+  --color-base-650: #444b53;
+  --color-base-700: #373d44;
+  --color-base-750: #2c3137;
+  --color-base-800: #22262b;
+  --color-base-850: #1b1e22;
+  --color-base-900: #151719;
+  --color-base-950: #0f1113;
+  --color-base-1000: #0a0b0c;
+  --font-body: var(--whoa-font);
+  --style-radius-s: 4px;
+  --style-radius-m: 6px;
+  --style-radius-l: 12px;
+}
+
+/* ---------- 3. Payload 3 selector overrides (delete at 4.0) ---------- */
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sidebar: a quiet floating panel, grey pill for the current item. */
+.nav {
+  background: transparent;
+  border-right: 0;
+}
+.nav__scroll {
+  background: var(--whoa-panel);
+  border: 1px solid var(--whoa-line);
+  border-radius: 12px;
+  margin: 8px;
+  height: calc(100% - 16px);
+}
+.nav-group__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--whoa-muted);
+}
+.nav__link {
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--whoa-ink);
+}
+.nav__link:hover,
+.nav__link.active {
+  background: var(--whoa-active);
+}
+.nav__link-indicator {
+  display: none;
+}
+
+/* Main action: ink pill. */
+.btn--style-primary {
+  background-color: var(--whoa-ink);
+  color: var(--whoa-on-ink);
+  border-radius: 999px;
+}
+.btn--style-primary:hover,
+.btn--style-primary:focus-visible {
+  background-color: var(--whoa-ink);
+  color: var(--whoa-on-ink);
+  opacity: 0.88;
+}
+.btn--style-secondary,
+.btn--style-pill {
+  border-radius: 999px;
+}
+
+/* Dashboard cards: flat. */
+.collections__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--whoa-muted);
+}
+.card {
+  background: transparent;
+  border: 1px solid var(--whoa-line);
+  border-radius: 10px;
+  box-shadow: none;
+  min-height: 0;
+}
+.card:hover {
+  background: var(--whoa-panel);
+}
+
+/* Lists: no zebra stripes, roomy rows, quiet header. */
+.list-header__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.table thead th {
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--whoa-muted);
+}
+.table tbody tr,
+.table tbody tr:nth-child(odd),
+.table tbody tr:nth-child(even) {
+  background: transparent;
+}
+.table tbody tr {
+  border-top: 1px solid var(--whoa-line);
+}
+.table tbody tr:hover {
+  background: var(--whoa-panel);
+}
+.table td {
+  padding-block: 14px;
+}
+@media (max-width: 768px) {
+  /* Phones: the post row already shows status and time. */
+  .table th#heading-publishedAt,
+  .table .cell-publishedAt {
+    display: none;
+  }
+}
+
+/* Editor: big borderless title for notes and pages (Builds keep a normal
+   labelled title field), calmer labels. */
+.doc-header__title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--whoa-muted);
+}
+:is(.collection-edit--posts, .collection-edit--pages)
+  .field-type.text:has(#field-title)
+  .field-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+:is(.collection-edit--posts, .collection-edit--pages)
+  .field-type.text:has(#field-title)
+  #field-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  height: auto;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:is(.collection-edit--posts, .collection-edit--pages)
+  .field-type.text:has(#field-title)
+  #field-title::-webkit-input-placeholder {
+  /* Payload sets placeholders to 1rem normal; keep the big title's size. */
+  font-size: inherit;
+  font-weight: inherit;
+}
+:is(.collection-edit--posts, .collection-edit--pages)
+  .field-type.text:has(#field-title)
+  #field-title::-moz-placeholder {
+  font-size: inherit;
+  font-weight: inherit;
+}
+@media (max-width: 768px) {
+  /* The title is a one-line input: keep more of it visible on phones. */
+  :is(.collection-edit--posts, .collection-edit--pages)
+  .field-type.text:has(#field-title)
+  #field-title {
+    font-size: 1.6rem;
+  }
+}
+.field-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--whoa-muted);
+}
+.rich-text-lexical .ContentEditable__root {
+  font-size: 17px;
+  line-height: 1.7;
+}
+.tabs-field__tab-button--active::after,
+.doc-tab--active::after {
+  background: var(--whoa-ink);
+}

@@ -1,9 +1,10 @@
 'use client'
 
-import { Button, useConfig, useDocumentInfo, useLocale } from '@payloadcms/ui'
+import { useConfig, useDocumentInfo, useLocale } from '@payloadcms/ui'
 import { DEFAULT_LOCALE } from '@athena/shared/constants'
 import type React from 'react'
 import { useState } from 'react'
+import '@/admin-ui/index.css'
 
 type Result =
   | { ok: true; seconds: number; locales: Record<string, { segments: number; translated: number }> }
@@ -13,6 +14,9 @@ type Result =
  * Sidebar action on posts and pages: translate the saved English version
  * into 日本語 and 中文 as drafts. The editor then switches the locale to
  * review each translation and publishes when it reads well.
+ *
+ * Built with daisyUI instead of Payload's <Button>, whose size/buttonStyle
+ * props change in Payload 4.
  */
 export const TranslateButton: React.FC = () => {
   const { id, collectionSlug } = useDocumentInfo()
@@ -23,8 +27,8 @@ export const TranslateButton: React.FC = () => {
 
   if (!id) {
     return (
-      <div className="field-type" style={{ marginBottom: 'var(--base)' }}>
-        <p style={{ margin: 0, opacity: 0.7 }}>Save the English version to enable translation.</p>
+      <div className="whoa-ui field-type tw:mb-6">
+        <p className="tw:m-0 tw:text-sm tw:opacity-70">Save the English version to enable translation.</p>
       </div>
     )
   }
@@ -64,40 +68,28 @@ export const TranslateButton: React.FC = () => {
     }
   }
 
+  const notEnglish = locale?.code !== DEFAULT_LOCALE
+
   return (
-    <div className="field-type" style={{ marginBottom: 'var(--base)' }}>
-      <p style={{ margin: '0 0 calc(var(--base) / 2)', fontWeight: 600 }}>Translation</p>
-      <Button
-        buttonStyle="secondary"
-        disabled={state === 'running' || locale?.code !== DEFAULT_LOCALE}
-        margin={false}
+    <div className="whoa-ui field-type tw:mb-6 tw:grid tw:gap-2 tw:justify-items-start">
+      <p className="tw:m-0 tw:text-sm tw:font-semibold">Translation</p>
+      <button
+        className="tw:btn tw:btn-sm tw:btn-outline tw:rounded-full"
+        disabled={state === 'running' || notEnglish}
         onClick={run}
-        size="small"
+        type="button"
       >
+        {state === 'running' ? <span className="tw:loading tw:loading-spinner tw:loading-xs" /> : null}
         {state === 'running' ? 'Translating…' : 'Translate to 日本語 / 中文'}
-      </Button>
-      {locale?.code !== DEFAULT_LOCALE ? (
-        <p style={{ margin: 'calc(var(--base) / 2) 0 0', opacity: 0.7 }}>
-          Switch to English to translate from it.
-        </p>
-      ) : null}
+      </button>
+      {notEnglish ? <p className="tw:m-0 tw:text-sm tw:opacity-70">Switch to English to translate from it.</p> : null}
       {message ? (
-        <p
-          role="status"
-          style={{
-            margin: 'calc(var(--base) / 2) 0 0',
-            color: state === 'error' ? 'var(--theme-error-500)' : undefined,
-          }}
-        >
+        <p className={`tw:m-0 tw:text-sm ${state === 'error' ? 'tw:text-error' : ''}`} role="status">
           {message}
           {state === 'done' ? (
             <>
               {' '}
-              <button
-                onClick={() => window.location.reload()}
-                style={{ background: 'none', border: 0, color: 'inherit', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
-                type="button"
-              >
+              <button className="tw:btn tw:btn-link tw:btn-xs tw:p-0 tw:align-baseline" onClick={() => window.location.reload()} type="button">
                 Reload
               </button>
             </>

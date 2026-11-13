@@ -95,7 +95,8 @@ const revalidateProjectDelete: CollectionAfterDeleteHook = async ({ doc, req }) 
 
 export const Projects: CollectionConfig<'projects'> = {
   slug: 'projects',
-  labels: { singular: 'Work', plural: 'Work' },
+  // Shown as Builds, like the public section (/builds).
+  labels: { singular: 'Build', plural: 'Builds' },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -108,7 +109,7 @@ export const Projects: CollectionConfig<'projects'> = {
     useAsTitle: 'repo',
     defaultColumns: ['repo', 'status', 'pinned', 'hidden', 'order', 'syncedAt'],
     description:
-      'Repositories shown at /work. Only entries added here appear; tick Hidden to take one off the site.',
+      'Repositories shown at /builds. Only entries added here appear; tick Hidden to take one off the site.',
   },
   fields: [
     {

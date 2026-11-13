@@ -9,6 +9,7 @@ import type { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import { searchFields } from '@/search/fieldOverrides'
 import { beforeSyncWithSearch } from '@/search/beforeSync'
+import { adminNav } from './adminNav'
 
 import type { Page, Post } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
@@ -89,4 +90,6 @@ export const plugins: Plugin[] = [
       },
     },
   }),
+  // Last, so it also sees the collections the plugins above add.
+  adminNav,
 ]

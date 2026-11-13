@@ -22,7 +22,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 
 ## Tech Stack
 
-- **CMS**: Payload CMS 3 + Next.js 16 (App Router); admin styling is Payload's own SCSS (no Tailwind)
+- **CMS**: Payload CMS 3 + Next.js 16 (App Router); the admin's Ghost-like theme is plain CSS in `custom.scss` plus daisyUI v5 for our own admin components, every class `tw:`-prefixed and scoped to `.whoa-ui` (Tailwind via `@tailwindcss/postcss`, no preflight; rules and the Payload 4.0 steps in [`docs/ADMIN.md`](./docs/ADMIN.md))
 - **Web**: Astro 7 + `@astrojs/vercel` (SSR + ISR), Tailwind CSS v4 (`@tailwindcss/vite`) + daisyUI v5 (themes in `src/styles/global.css`; design rules in [`docs/BASELINE.md`](./docs/BASELINE.md))
 - **Language**: TypeScript (strict mode). `apps/cms` is on TypeScript 7 (native `tsc`); `apps/web` stays on 6 until `astro check` supports 7
 - **Runtime**: Vercel Functions of both apps run on **Bun 1.4** (`"bunVersion": "1.4.x"` in each `vercel.json`, Vercel's Bun runtime, beta), and both production builds run under Bun (`bun --bun next build` / `bun --bun astro build`; the Astro adapter derives `bun1.x` from the build process, which Vercel maps to Bun 1.3, so `apps/web/scripts/pin-bun-runtime.mjs` rewrites it to `bunVersion` after the build). Do not add `engines.node` to the app `package.json` files: it overrides `bunVersion` and puts functions back on Node. Node.js 24 LTS (pinned to 24.22.1 via `.nvmrc`, Vercel project setting 24.x) still runs tooling (`astro check`, Payload CLI, CI) and the CMS dev server (`next dev` under Bun fails to resolve Turbopack's hashed externals)
@@ -55,7 +55,9 @@ bun run deploy:production     # Open a preview -> main PR and enable auto-merge
 ```
 apps/cms/src/
 ├── app/(payload)/            # Payload admin panel + API routes
-├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only; rendering lives in apps/web
+├── blocks/ collections/ fields/ heros/ hooks/ plugins/   # configs only; rendering lives in apps/web (plugins/adminNav.ts: sidebar groups)
+├── admin-ui/index.css        # Tailwind + daisyUI for the admin components (tw: prefix, .whoa-ui scope)
+├── components/               # admin components: AdminBrand, AdminHome, PostRowCell, TranslateButton, ...
 ├── Site/ Stack/ About/ Header/ Footer/  # globals (Site = name, intro, links, projects; Stack = /stacks tools + favicon fetch; About = /about profile)
 ├── github/                   # sync.ts: GitHub snapshot for the projects (/builds) collection; contributions.ts: home contribution graph
 ├── x/                        # oembed.ts: reads posts on X for the Site global picks
@@ -95,6 +97,7 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
   `apps/cms/src/app/(payload)/` (kept as generated) and imports of files outside `src/`
 - **Never edit** `packages/shared/src/payload-types.ts` - regenerate with `bun run generate:types`
 - **CMS**: Server Components by default; add `'use client'` only when needed
+- **CMS admin UI** ([`docs/ADMIN.md`](./docs/ADMIN.md)): build it to survive Payload 4.0. Use only the stable admin APIs (`graphics`, `beforeLogin`, `beforeDashboard`, field `Cell`, `admin.group`); style our components with `tw:`-prefixed daisyUI classes inside `.whoa-ui`, not Payload's `Button` or SCSS imports; colors come from the `--whoa-*` tokens; Payload 3 class overrides go only in part 3 of `custom.scss`. Check every admin change at 1440, 390 and 320px, light and dark (TC-A-*)
 - **Front-end design and browser support** (`apps/web`): read [`docs/BASELINE.md`](./docs/BASELINE.md) before changing UI, CSS or client-side JS. It holds the Baseline target (Widely available freely; Newly available and Limited only as progressive enhancement), the features in use and their fallbacks, and the design rules: themes and dark mode (`data-theme`, not the OS media query), the daisyUI `include:` list, motion, switches, narrow widths
 - **Prefix unused vars** with `_` to suppress lint warnings
 - **Section paths**: posts live under `/notes`, projects under `/builds`, the Stack global at `/stacks` (renamed in 1.2.0), the About global at `/about`. Build them from `ROUTES` in `packages/shared/src/constants.ts`, never as string literals (the E2E specs in `apps/web/e2e/` are the exception: they spell the public URLs out, so a change to `ROUTES` that moves a public URL fails them); `middleware.ts` answers the old `/posts`, `/work`, `/stack` (every language) with a 308 to the new path (query kept; `apps/web/scripts/route-legacy-redirects.mjs` routes those paths to the plain function after the build, because the ISR function never sees the query and caches by path), and CMS links typed with an old path are mapped by `currentRoute`
