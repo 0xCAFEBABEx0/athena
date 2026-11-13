@@ -109,6 +109,44 @@ test('TC-E-46 CLI header: the language menu is a [xx] switch like [ade] and [dar
   }
 })
 
+test.describe('TC-E-61 CLI header on phones: the switches get a row of their own', () => {
+  for (const [width, path] of [
+    [320, '/'],
+    [375, '/ja/notes'],
+    [390, '/zh'],
+  ] as const) {
+    test(`${width}px ${path}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 })
+      await open(page, path, { view: 'cli', theme: width === 375 ? 'dark' : 'light' })
+      const header = page.locator('header.cli-header')
+      const top = async (selector: string) =>
+        Promise.all(
+          (await header.locator(selector).all()).map(async (el) =>
+            Math.round((await el.boundingBox())?.y ?? -1),
+          ),
+        )
+      const switches = await top(
+        '[data-view-set], [data-language-menu] summary, [data-theme-toggle]',
+      )
+      const sections = await top('[data-section-nav] a')
+      expect(switches, path).toHaveLength(3)
+      // [ade] [xx] [dark] stay together on one row ...
+      expect(new Set(switches).size, path).toBe(1)
+      // ... below every section link, none of which shares that row.
+      expect(sections.length, path).toBeGreaterThan(0)
+      for (const y of sections) expect(y, path).toBeLessThan(switches[0] ?? 0)
+      expect(await overflowX(page), path).toBeLessThanOrEqual(0)
+    })
+  }
+
+  test('1280px: sections and switches share one row', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await open(page, '/', { view: 'cli' })
+    const header = page.locator('header.cli-header')
+    expect((await header.boundingBox())?.height ?? 0).toBeLessThan(80)
+  })
+})
+
 test.describe('TC-E-47 ADE below 1024px: light | dark tabs in the top bar', () => {
   for (const [width, path] of [
     [320, '/ja'],
