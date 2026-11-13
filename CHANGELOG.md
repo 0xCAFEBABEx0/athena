@@ -4,6 +4,27 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.4.0] - 2026-11-13
+
+### Changed
+
+- CMS admin redesigned in a Ghost-like style: cool greys, Inter, ink pill
+  buttons, drafts in pink, a quiet floating sidebar, a big borderless title
+  in the editor, and dark mode to match.
+- The admin dashboard opens with your name, links to the site and a new
+  note, draft / published / build counts, and the five latest notes.
+- The Notes list shows each note as one row with its image, title,
+  author, how long ago it changed, and Draft or Published.
+- The sidebar is grouped into Content, Site, Forms and System; Posts are
+  called Notes and Projects Builds, like the site's sections.
+- The admin's own components use daisyUI (Tailwind with a `tw:` prefix),
+  built so the move to Payload 4.0 only renames `custom.scss` and redoes
+  its Payload 3 overrides ([`docs/ADMIN.md`](docs/ADMIN.md)).
+
+### Removed
+
+- The template's welcome box on the admin dashboard.
+
 ## [1.3.2] - 2026-11-13
 
 ### Changed

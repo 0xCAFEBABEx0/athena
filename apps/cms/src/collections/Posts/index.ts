@@ -30,6 +30,8 @@ import { translateUIField } from '@/translation/translate'
 
 export const Posts: CollectionConfig<'posts'> = {
   slug: 'posts',
+  // Shown as Notes, like the public section (/notes).
+  labels: { singular: 'Note', plural: 'Notes' },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -49,7 +51,7 @@ export const Posts: CollectionConfig<'posts'> = {
     },
   },
   admin: {
-    defaultColumns: ['title', 'slug', 'updatedAt'],
+    defaultColumns: ['title', 'publishedAt'],
     livePreview: {
       url: ({ data, req }) => {
         const path = generatePreviewPath({
@@ -75,6 +77,7 @@ export const Posts: CollectionConfig<'posts'> = {
       type: 'text',
       localized: true,
       required: true,
+      admin: { components: { Cell: '@/components/PostRowCell' } },
     },
     {
       type: 'tabs',

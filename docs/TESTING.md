@@ -76,6 +76,7 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed, the favicon fetches and GitHub's A
 | TC-U-46 | GitHub graph | GitHub usernames are letters, digits and single hyphens (≤ 39); the calendar is flattened day by day from GitHub's answer (unknown shades count as none); one GraphQL request sends the login as a variable with the token; a bad name or a missing `GITHUB_TOKEN` sends nothing; HTTP errors, an unknown user (no user, or a `NOT_FOUND` GraphQL error) and a network failure come back as messages, never thrown; any other GraphQL error (rate limit, token scope) is reported by its type only, not as an unknown user |
 | TC-U-47 | GitHub graph | Site save: a new username is read and stored with `syncedAt`; an unchanged username with a stored calendar is not read again; a changed username is read, and when that fails the old user's calendar is dropped, the error stored and the save still succeeds; an empty username clears the graph; a save from the sync skips the hook. Sync: saves only when the calendar or its error changed (a calendar read back from jsonb with its keys in another order counts as unchanged; the save skips the hook), keeps the last calendar on a failure, records the same error once without moving `syncedAt` (the last successful read), writes nothing when the username was changed while GitHub was being read, and asks nothing without a username. The scheduled job runs the projects and the graph independently: a projects failure is thrown again after the graph sync |
 | TC-U-31 | Invalidation | A missing `REVALIDATE_SECRET` / `WEB_URL` logs a warning; the request carries the bearer secret and `x-vercel-protection-bypass`, does not follow redirects, and a 302 is logged as a failure with its target; paths the web app reports in `failed` are logged as a warning, not as `Web invalidated`; outside a request (no Next `after()` scope) the call runs right away |
+| TC-U-51 | Admin format | `timeAgo` gives seconds, minutes, hours, days, months or years ago (singular for 1) and an empty string for no date or a bad one; `publishState` is `draft` only for `draft` (no status means published); `thumbnailURL` prefers `variants.thumbnail` (Payload 4), then `sizes.thumbnail` (Payload 3), then the file URL, and gives nothing for an id, null or an empty object |
 
 ## End-to-end tests (`apps/web/e2e`)
 
@@ -143,6 +144,21 @@ CMS (`apps/cms/src/**/*.test.ts`; X's oEmbed, the favicon fetches and GitHub's A
 | TC-E-61 | layout | CLI header on phones (320 `/`, 375 `/ja/notes` dark, 390 `/zh`): `[ade] [xx] [dark]` stay together on one row above the section links, none of which shares that row; from 375px that row is the site name's (at 320px a `-dev` / `-preview` version label may push the switches onto a row of their own); no horizontal scroll. At 1280px sections and switches share one row |
 | TC-E-56 | files | With a CMS Redirects entry from `/posts/moved-away` (the mock CMS has one; elsewhere the case skips): that path answers 301 to the entry's target, not the 308 to `/notes/moved-away`; `/notes/moved-away` and `/ja/notes/moved-away` (where a CMS link typed with the old path points) answer 301 to the same target |
 
+## CMS admin checks (by eye)
+
+Run against `bun run dev:cms` with a few posts (some drafts, some with a hero
+image), at **1440, 390 and 320px, in light and dark** (the admin's own theme
+switch under Account). Phone widths are part of every admin change. Layout
+rules: [`docs/ADMIN.md`](./ADMIN.md).
+
+| ID | Screen | Expect |
+|---|---|---|
+| TC-A-01 | Login | The whoa.me mark, `whoa.me` and a `cms` badge above the line "Sign in to edit the notes, builds and pages on whoa.me."; Inter text; the Login button is an ink pill; no horizontal scroll |
+| TC-A-02 | Dashboard | "Hi <name>", View site ↗ and + New note; Drafts / Published / Builds counts that link to the filtered lists (Drafts in pink when above 0); Recent notes with thumbnail, title, author · date and Draft / Published; the collection cards below are flat. At 390 / 320px the counts stay on one row and the list rows do not overflow |
+| TC-A-03 | Sidebar | Groups Content (Notes, Pages, Builds, Media, Categories), Site, Forms, System; the current item is a grey pill; the sidebar icon is the mark, not a blank square |
+| TC-A-04 | Notes list | One row per note: thumbnail (100px, 64px on phones), title, "By <author> · <time ago>", Draft in pink or Published; no zebra stripes; the Published column is hidden below 768px; a row opens the note |
+| TC-A-05 | Note editor | The title is large and borderless with no label (1.6rem on phones); the rich text is 17px; Translate to ja / zh is an outlined pill with a spinner while it runs. Known Payload layout at 320px: the breadcrumb runs into the locale selector |
+
 ## Deployment checks (Preview, then Production)
 
 Run after a deploy; the warm-cache workflow should have filled the cache.
@@ -172,6 +188,7 @@ Run after a deploy; the warm-cache workflow should have filled the cache.
 
 | Date | Target | Unit | E2E | Notes |
 |---|---|---|---|---|
+| 2026-11-13 | local dev (Payload 3.93 + local Postgres 16, 3 sample posts), local CMS build | web 78/78, cms 65/65 | — | Ghost-like admin with daisyUI (TC-U-51, TC-A-01–05). Checked by eye at 1440 / 390 / 320px, light and dark: login, dashboard, sidebar, Notes list, note editor; no horizontal scroll from our components. Payload's own edit header at 320px overlaps the breadcrumb and the locale selector (also without the change). `bun run build:cms` (Turbopack, PostCSS) passes. |
 | 2026-11-13 | local dev (mock CMS with 4 header links) | web 78/78 | 68/70 (24 skipped) | CLI switches on the site name row below md (TC-E-61; fails on v1.3.1 production at 320 / 375 / 390). With a production-length version label (`v1.3.2`) all three fit beside `whoa.me` at 320px in en/ja/zh, light and dark (`[light]` is the widest); with `-preview` they take their own row below 360px. One row from 768px. The same 2 local-only failures as the 1.3.1 run (TC-E-30, TC-E-49). |
 | 2026-11-13 | local dev (mock CMS with 4 header links: about, notes, builds, stacks) | web 78/78 | 70/72 (24 skipped) | CLI header switches on their own row (TC-E-61; 375 and 390 fail without the change). Checked screenshots at 320 / 375 / 390 / 480 / 768 / 1280 px, en/ja/zh, light and dark; the language menu stays on screen at 320px. ADE top bar unchanged (one row at 320 / 375 / 390). The 2 failures also fail without the change: TC-E-30 (the dev server answers `/.env` with 403 while `apps/web/.env` exists) and TC-E-49 (the mock CMS has no Stack global). |
 | 2026-11-12 | local dev (mock CMS with 5 header links and a Stack global) | web 78/78 | 86/86 (4 skipped) | `g` then `h` goes home (TC-E-60; it fails without the change). The home banner, the hints and the Keys tab list `g h`; no horizontal scroll at 390px. |

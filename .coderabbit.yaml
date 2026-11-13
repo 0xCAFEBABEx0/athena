@@ -71,6 +71,20 @@ reviews:
         `authenticated`. Flag any access rule that exposes drafts or
         unpublished content to anonymous users. Revalidation hooks
         (`afterChange`, `afterDelete`) must call `invalidateWeb()`.
+    - path: 'apps/cms/src/{components/**,admin-ui/**,app/(payload)/custom.scss,plugins/adminNav.ts}'
+      instructions: |
+        Admin UI rules live in `docs/ADMIN.md`; the admin must survive the
+        move to Payload 4.0. Our components use only stable admin APIs
+        (`graphics`, `beforeLogin`, `beforeDashboard`, field `Cell`,
+        `admin.group`) and daisyUI classes with the `tw:` prefix inside a
+        `.whoa-ui` wrapper; flag unprefixed Tailwind/daisyUI classes,
+        Payload's `Button` (its `size="small"` is gone in 4), SCSS imports
+        from `@payloadcms/ui/scss`, rem-based arbitrary sizes (the admin root
+        is 13px), and a daisyUI component missing from the `include:` list
+        in `admin-ui/index.css`. Colors come from the `--whoa-*` tokens in
+        `custom.scss`, which stays plain CSS (it becomes `custom.css` at
+        4.0); Payload 3 class overrides belong only in its part 3. Image
+        URLs go through `thumbnailURL` (reads 4's `variants` and 3's `sizes`).
     - path: 'apps/cms/src/migrations/**/*.ts'
       instructions: |
         These run against the production Neon Postgres database. Flag
