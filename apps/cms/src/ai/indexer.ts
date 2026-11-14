@@ -51,7 +51,10 @@ const readPublished = async (
 ): Promise<PostText | null> => {
   const { docs } = await payload.find({
     collection: 'posts',
-    where: { id: { equals: id } },
+    // `_status` as well as anonymous access: when this runs inline with the
+    // save's `req` (jobs, scripts), Payload reads with that request's user,
+    // who can see drafts.
+    where: { and: [{ id: { equals: id } }, { _status: { equals: 'published' } }] },
     locale,
     depth: 0,
     limit: 1,
@@ -158,6 +161,7 @@ export const reindexAll = async (payload: Payload): Promise<ReindexResult | null
   for (const locale of LOCALES) {
     const { docs } = await payload.find({
       collection: 'posts',
+      where: { _status: { equals: 'published' } },
       locale,
       depth: 0,
       pagination: false,

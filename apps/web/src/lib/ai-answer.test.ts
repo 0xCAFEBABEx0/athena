@@ -9,6 +9,7 @@ import {
   type StoredAnswer,
   buildMessages,
   compactParts,
+  mayReuse,
   ndjson,
   numberSources,
   pacedReplay,
@@ -232,5 +233,18 @@ describe('TC-U-60 AI answers', () => {
     expect(sourceKey([a], 'm')).not.toBe(sourceKey([{ ...a, hash: 'edited' }], 'm'))
     expect(sourceKey([a], 'm')).not.toBe(sourceKey([{ ...a, slug: 'renamed' }], 'm'))
     expect(sourceKey([a], 'm')).not.toBe(sourceKey([a], 'other'))
+  })
+})
+
+describe('TC-U-63 kept answers are replayed only for the same question, or a paraphrase of a suggested one', () => {
+  const key = 'a'.repeat(64)
+  test('the same question (case and spacing aside) with the same excerpts', () => {
+    expect(mayReuse({ question: 'how do you deploy?', sourceKey: key }, '  How do  you deploy? ', key, [])).toBe(true)
+    expect(mayReuse({ question: 'how do you deploy?', sourceKey: 'b'.repeat(64) }, 'How do you deploy?', key, [])).toBe(false)
+  })
+  test("a paraphrase only when the kept question is one of the Site's suggested questions", () => {
+    const kept = { question: 'how is the site deployed?', sourceKey: key }
+    expect(mayReuse(kept, 'How does this site get deployed?', key, [])).toBe(false)
+    expect(mayReuse(kept, 'How does this site get deployed?', key, ['How is the site deployed?'])).toBe(true)
   })
 })

@@ -17,6 +17,7 @@ import {
   SEARCH_CHUNKS,
   type StoredAnswer,
   answerModel,
+  mayReuse,
   ndjson,
   pacedReplay,
   restoreAnswer,
@@ -78,7 +79,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!ask) return error(400, 'invalid', 'Ask a question of 1–300 characters.')
 
   // Chosen in the CMS (Site global): a change takes effect without a deploy.
-  const model = answerModel((await getSite(locals, ask.locale)).aiModel)
+  const site = await getSite(locals, ask.locale)
+  const model = answerModel(site.aiModel)
   const key = `ai:answer:${model}:${queryKey(ask.locale, ask.q)}`
   const cached = restoreAnswer(await peekCms<StoredAnswer>(key), ask.locale)
   if (cached) return new Response(ndjson(pacedReplay(cached)), { headers: streamHeaders })
@@ -99,7 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const sources = sourceKey(chunks, model)
 
   for (const candidate of search.answers) {
-    if (candidate.sourceKey !== sources) continue
+    if (!mayReuse(candidate, ask.q, sources, site.aiPresets)) continue
     const kept = restoreAnswer(candidate.answer, ask.locale)
     if (!kept) continue
     storeCms(key, kept, readAt)

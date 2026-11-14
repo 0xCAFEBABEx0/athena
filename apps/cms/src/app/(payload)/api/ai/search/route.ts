@@ -11,7 +11,11 @@ const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
 
 /**
- * POST /api/ai/search  { "q": "…", "locale": "en" | "ja" | "zh", "limit"?: 12 }
+ * POST /api/ai/search  { "q": "…", "locale": "en" | "ja" | "zh", "limit"?: 12, "answerModel"?: "claude-…" }
+ *   → { results, building, answers? }
+ *
+ * With `answerModel` (Ask AI), `answers` lists the answers that model wrote
+ * before for this question or one meaning nearly the same (ai.answers).
  *
  * Semantic search over published posts: embeds the query and returns the
  * nearest post excerpts, best first. Called server-side by the web app

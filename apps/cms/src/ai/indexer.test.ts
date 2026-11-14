@@ -14,7 +14,7 @@ import { SCHEMA_SQL, nearestChunks, saveAnswer, storedAnswers } from './store'
 const url = process.env.AI_TEST_POSTGRES_URL
 const suite = url ? describe : describe.skip
 
-type Doc = { id: number; slug: string; title: string; content: unknown; meta?: { description?: string } }
+type Doc = { id: number; slug: string; title: string; content: unknown; meta?: { description?: string }; _status?: string }
 
 const paragraph = (text: string) => ({ type: 'paragraph', children: [{ type: 'text', text }] })
 const body = (...texts: string[]) => ({ root: { type: 'root', children: texts.map(paragraph) } })
@@ -24,13 +24,27 @@ let published: Record<string, Doc[]> = {}
 let embedded: string[] = []
 let pool: Pool
 
+type Where = { id?: { equals?: unknown }; _status?: { equals?: unknown }; and?: Where[] }
+const conditions = (where?: Where): Where[] => (where ? [where, ...(where.and ?? []).flatMap(conditions)] : [])
+
+/**
+ * The Local API, applying `where` on id and `_status`. Docs without
+ * `_status` are published; a draft is returned unless `where` asks for
+ * published ones, as for a request whose user can read drafts.
+ */
 const fakePayload = () =>
   ({
     db: { pool },
-    find: async ({ locale, where }: { locale: string; where?: { id?: { equals?: string } } }) => {
-      const docs = published[locale] ?? []
-      const id = where?.id?.equals
-      return { docs: id === undefined ? docs : docs.filter((doc) => String(doc.id) === String(id)) }
+    find: async ({ locale, where }: { locale: string; where?: Where }) => {
+      const all = conditions(where)
+      const docs = (published[locale] ?? []).filter((doc) =>
+        all.every(
+          (c) =>
+            (c.id?.equals === undefined || String(doc.id) === String(c.id.equals)) &&
+            (c._status?.equals === undefined || (doc._status ?? 'published') === c._status.equals),
+        ),
+      )
+      return { docs }
     },
   }) as unknown as Payload
 
@@ -107,6 +121,15 @@ suite('TC-U-56 AI index: Postgres', () => {
     expect((await rows()).map((r) => [r.locale, r.slug, r.content])).toEqual([['en', 'new', 'Alpha.']])
 
     await removePost(fakePayload(), 2)
+    expect(await rows()).toEqual([])
+  })
+
+  test('only published posts are indexed, even when the read could see drafts (a script saving with a user)', async () => {
+    const draft: Doc = { id: 5, slug: 'secret', title: 'Secret', content: body('Delta.'), _status: 'draft' }
+    published = { en: [draft], ja: [draft], zh: [draft] }
+    await indexPost(fakePayload(), 5)
+    expect(await rows()).toEqual([])
+    await reindexAll(fakePayload())
     expect(await rows()).toEqual([])
   })
 

@@ -1,4 +1,4 @@
-import { bumpCounter } from './cms-cache'
+import { bumpCounter, type CmsCacheStore, runtimeCache } from './cms-cache'
 import { env } from './env'
 
 /**
@@ -11,7 +11,8 @@ import { env } from './env'
  *   (in memory; a determined client can spread over instances, which the
  *   daily cap still bounds).
  * - Per day: AI_DAILY_LIMIT uncached requests for the whole site (default
- *   200), counted in the Runtime Cache.
+ *   100), counted in the Runtime Cache. If that count cannot be read or
+ *   written, the request is refused (fails closed).
  */
 
 const WINDOW_MS = 10 * 60 * 1000
@@ -45,9 +46,12 @@ export const dailyLimit = (): number => {
 }
 
 /** Count one uncached AI request today (UTC); false once the day's budget is spent. */
-export const allowToday = async (now = new Date()): Promise<boolean> => {
+export const allowToday = async (
+  now = new Date(),
+  store: CmsCacheStore | null = runtimeCache(),
+): Promise<boolean> => {
   const day = now.toISOString().slice(0, 10)
-  const used = await bumpCounter(`ai:daily:${day}`, 2 * 24 * 60 * 60)
+  const used = await bumpCounter(`ai:daily:${day}`, 2 * 24 * 60 * 60, 1, store)
   return used <= dailyLimit()
 }
 

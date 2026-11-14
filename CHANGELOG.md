@@ -30,6 +30,15 @@ section of each new version as a GitHub Release.
   `ANTHROPIC_API_KEY` settings ([`docs/AI_SEARCH.md`](docs/AI_SEARCH.md));
   without them `/search` stays as it was.
 
+### Security
+
+- Pages can no longer be shown in a frame by other sites (only the site
+  itself and the CMS's Live Preview), and a link from another site to an AI
+  question waits for Enter instead of asking it.
+- A kept answer is reused for a reworded question only when it was written
+  for one of the suggested questions; the daily AI limit refuses requests
+  when it cannot count them.
+
 ## [1.4.0] - 2026-11-13
 
 ### Changed

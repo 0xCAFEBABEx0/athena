@@ -3,7 +3,7 @@ import { timingSafeEqual } from 'node:crypto'
 /**
  * True when the request carries `Authorization: Bearer <REVALIDATE_SECRET>`,
  * the secret the CMS and the web app already share (see AGENTS.md). Used by
- * the web app's server-side calls to /api/ai/search.
+ * the web app's server-side calls to /api/ai/search and /api/ai/answers.
  */
 export const isServerCaller = (request: Request, secret = process.env.REVALIDATE_SECRET): boolean => {
   if (!secret) return false

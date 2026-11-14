@@ -11,8 +11,9 @@ const json = (body: unknown, status = 200) => Response.json(body, { status })
  *
  * Rebuild the AI search index from every published post. Needed once after
  * the table is created, and after changing the embedding provider or model.
- * Unchanged excerpts are skipped, so running it again is cheap. Editors only
- * (session cookie or API key).
+ * Unchanged excerpts are skipped, so running it again is cheap. Any logged-in
+ * user (an editor's session cookie, or an API key such as the web-frontend
+ * service account's); it reads only what the public can read.
  */
 export async function POST(request: Request): Promise<Response> {
   const payload = await getPayload({ config })

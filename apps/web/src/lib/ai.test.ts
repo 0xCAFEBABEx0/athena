@@ -281,4 +281,15 @@ describe('TC-U-59 AI search (web): limits and stored answers', () => {
     expect(await bumpCounter('c', 60, 2, store)).toBe(3)
     expect(await peekCms('k', null)).toBeNull()
   })
+
+  test('the daily limit refuses when the shared count cannot be read or written (fails closed)', async () => {
+    const broken: CmsCacheStore = {
+      get: () => Promise.reject(new Error('cache down')),
+      set: () => Promise.reject(new Error('cache down')),
+      expireTag: async () => undefined,
+    }
+    expect(await bumpCounter('c', 60, 1, broken)).toBe(Number.POSITIVE_INFINITY)
+    expect(await allowToday(new Date(), broken)).toBe(false)
+    expect(await allowToday(new Date(), memoryStore())).toBe(true)
+  })
 })

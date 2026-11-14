@@ -61,7 +61,7 @@ const hasSharedCache = (): boolean => {
 
 let warnedUnavailable = false
 
-const runtimeCache = (): CmsCacheStore | null => {
+export const runtimeCache = (): CmsCacheStore | null => {
   if (!process.env.VERCEL) return null
   if (!hasSharedCache()) {
     if (!warnedUnavailable) {
@@ -168,7 +168,9 @@ const localCounters = new Map<string, { value: number; expires: number }>()
  * Add `by` to a counter kept for `ttlSeconds` (untagged, so CMS changes keep
  * it) and return the new total. Approximate: the Runtime Cache has no atomic
  * increment, so two requests at the same moment can count once. Without the
- * shared cache it counts per instance.
+ * shared cache it counts per instance. When the shared cache fails, the total
+ * is unknown and comes back as Infinity, so a limit built on it refuses
+ * (fails closed) rather than letting every request through.
  */
 export const bumpCounter = async (
   key: string,
@@ -190,7 +192,7 @@ export const bumpCounter = async (
     return value
   } catch (error) {
     console.error('[cms-cache] counter failed', error)
-    return by
+    return Number.POSITIVE_INFINITY
   }
 }
 

@@ -41,6 +41,27 @@ export const sourceKey = (chunks: ChunkHit[], model: string): string =>
     .update(JSON.stringify([PROMPT_VERSION, model, chunks.map((c) => [c.hash, c.slug, c.title, c.heading])]))
     .digest('hex')
 
+/** A question as ai.answers stores it (apps/cms/src/ai/search.ts questionKey): case and spacing ignored. */
+export const questionKey = (q: string): string => q.replace(/\s+/g, ' ').trim().toLowerCase()
+
+/**
+ * Whether a kept answer may be replayed for `question`. It must come from the
+ * same excerpts (source_key), and from the same question, or, for a
+ * paraphrase, from one of the suggested questions in the Site settings. A
+ * visitor's own question can carry instructions that steer its answer, so
+ * that answer is replayed only to someone asking exactly the same thing.
+ */
+export const mayReuse = (
+  kept: { question: string; sourceKey: string },
+  question: string,
+  sources: string,
+  presets: readonly string[],
+): boolean => {
+  if (kept.sourceKey !== sources) return false
+  if (kept.question === questionKey(question)) return true
+  return presets.some((preset) => questionKey(preset) === kept.question)
+}
+
 export type Source = { n: number; slug: string; title: string; href: string; heading: string | null }
 
 export type AnswerPart = { text: string } | { cite: number }

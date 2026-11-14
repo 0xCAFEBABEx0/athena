@@ -138,8 +138,11 @@ reviews:
         (ai.answers) is reused only when its source_key matches the excerpts
         the question would be answered from now, and its replay must look
         exactly like a new answer: same events, paced, no `cached` flag or
-        header. The answer model comes from the Site global (`aiModel`),
-        then AI_ANSWER_MODEL.
+        header. A paraphrase (not the same words) may reuse only an answer
+        kept for a Site suggested question (`mayReuse`). The daily limit
+        must fail closed. The index query keeps `_status: published` as
+        well as `overrideAccess: false`. The answer model comes from the
+        Site global (`aiModel`), then AI_ANSWER_MODEL.
     - path: 'apps/web/src/lib/cms.ts'
       instructions: |
         Payload REST defaults to `limit=10` and drafts require auth. Every

@@ -636,7 +636,21 @@ const modes = withAsk
     // A hovered link is prerendered (speculation rules): do not spend an AI
     // request on a page that may never be shown.
     const doc = document as Document & { prerendering?: boolean }
-    if (mode !== 'keyword' && doc.prerendering) {
+    // A question in the URL is asked by itself only when the visitor came
+    // from this site (the "Ask Hoo" row, a tab, a reload). A link from
+    // anywhere else, or a typed URL, waits for Enter, so another site cannot
+    // spend answers by sending visitors here.
+    const fromSite = (() => {
+      try {
+        return new URL(document.referrer).origin === window.location.origin
+      } catch {
+        return false
+      }
+    })()
+    if (mode === 'ask' && query && !fromSite) {
+      keyword('')
+      setPrompt('', rows.length)
+    } else if (mode !== 'keyword' && doc.prerendering) {
       document.addEventListener('prerenderingchange', () => run(query), { once: true })
     } else {
       run(query)

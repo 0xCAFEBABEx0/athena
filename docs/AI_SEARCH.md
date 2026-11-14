@@ -107,8 +107,12 @@ POST /api/ai/search  ◄──────────────── Bearer 
   model, with the question's embedding and a `source_key` (a hash of the
   prompt version, the model and the excerpts it was written from). A later
   question, also after a publish or on a new deployment, reuses it when it is
-  written the same or means nearly the same (cosine ≥ 0.95) **and** would be
-  answered from the very same excerpts. When a post it used changes, the key
+  written the same (case and spacing aside) **and** would be answered from
+  the very same excerpts. A question that only means nearly the same
+  (cosine ≥ 0.95) reuses an answer kept for one of the Site's suggested
+  questions, never one written for another visitor's own words: those words
+  could carry instructions that steered the answer (`mayReuse` in
+  `apps/web/src/lib/ai-answer.ts`). When a post it used changes, the key
   no longer matches and Claude writes a new answer, which replaces the old
   one. The lookup rides on the search request the question needs anyway (one
   embedding, one more `SELECT` in the same round trip); saving runs after the
@@ -121,11 +125,22 @@ POST /api/ai/search  ◄──────────────── Bearer 
 - Uncached requests: 10 per visitor per 10 minutes (per function instance),
   and `AI_DAILY_LIMIT` per UTC day for the whole site (default 100; `0` turns
   uncached AI requests off). Beyond that the page shows "busy" or "daily
-  limit" in an alert.
+  limit" in an alert. If the daily count cannot be read or written (Runtime
+  Cache failure), the request is refused: the limit fails closed.
 - Only same-origin browsers may call `/api/ai/*` (Origin check); bodies over
   2 KB and questions over 300 characters are refused before anything runs.
 - The page never asks on its own: the AI modes run on Enter, and a page
-  prerendered by a hovered link waits until it is shown.
+  prerendered by a hovered link waits until it is shown. A link to
+  `/search?q=…&mode=ask` asks on arrival only when the visitor came from this
+  site (the "Ask Hoo" row; `document.referrer` of the same origin); from
+  another site, or typed, the question waits in the box for Enter.
+- No other site may frame the pages (`Content-Security-Policy:
+  frame-ancestors 'self' <CMS origin>`, set in `middleware.ts` on HTML
+  responses; the CMS origin is there for Payload's Live Preview), so a hidden
+  frame cannot spend answers either.
+- The index reads posts as an anonymous visitor **and** with
+  `_status: published` in the query, so a save run by a script with a user
+  (who can read drafts) still never indexes a draft.
 - Neon: each uncached query is one short `SELECT` (it wakes the compute if it
   slept). Indexing reads the post and writes only changed rows.
 

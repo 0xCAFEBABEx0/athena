@@ -98,7 +98,7 @@ rules in section 1.
 | Invoker commands (`commandfor`) to open dialogs | Newly (2025-12) | Removes small open handlers; keep the JS path. |
 | Popover API + anchor positioning for the language menu | Popover Newly (2025-01), anchor positioning Limited | Would replace the JS that picks the menu's side; only worth it once anchor positioning is Baseline. |
 | `font-size-adjust` for the Geist / CJK mix | Newly (2024-07) | Only if Speed Insights shows layout shift from font swaps; needs an eye check in ja / zh. |
-| Security headers (CSP, `X-Content-Type-Options`, `frame-ancestors`, `Referrer-Policy`) | Widely | Production sends only HSTS. Because pages are ISR-cached, a CSP has to use hashes, not nonces; start in Report-Only. |
+| Security headers (CSP, `X-Content-Type-Options`, `frame-ancestors`, `Referrer-Policy`) | Widely | Production sends HSTS, and since 1.5.0 `frame-ancestors 'self' <CMS origin>` on HTML pages (`lib/frame-policy.ts`; the CMS for Live Preview). Because pages are ISR-cached, a CSP has to use hashes, not nonces; start in Report-Only. |
 
 ## 5. Looking things up
 

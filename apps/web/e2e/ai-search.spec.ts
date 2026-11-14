@@ -266,6 +266,45 @@ test.describe('/search with AI (browser calls stubbed)', () => {
   }
 })
 
+test.describe('/search?mode=ask from elsewhere', () => {
+  test("TC-E-69 a question in a link from another site (or typed) waits for Enter; from this site's Ask Hoo row it is asked; no other site may frame the page", async ({
+    page,
+    request,
+  }) => {
+    const res = await request.get('/search')
+    const policy = res.headers()['content-security-policy'] ?? ''
+    expect(policy).toContain("frame-ancestors 'self'")
+    expect(policy).not.toContain('*')
+
+    await open(page, '/search', { view: 'cli' })
+    const slugs = await requireAi(page)
+    await requireAsk(page)
+    const asked: string[] = []
+    await page.route('**/api/ai/ask', async (route) => {
+      asked.push(String(route.request().postDataJSON()?.q))
+      await route.fulfill({ contentType: 'application/x-ndjson', body: answerStream(slugs) })
+    })
+    // Opened directly (no referrer from this site): nothing is asked.
+    await open(page, '/search?q=how+it+works&mode=ask', { view: 'cli' })
+    await expect(page.locator('[data-search-input]')).toHaveValue('how it works')
+    await expect(page.locator('[data-search-mode="ask"]')).toHaveAttribute('aria-selected', 'true')
+    await page.waitForTimeout(400)
+    expect(asked).toEqual([])
+    await page.locator('[data-search-input]').press('Enter')
+    await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
+    expect(asked).toEqual(['how it works'])
+
+    // The composer's Ask Hoo row on this site: asked on arrival.
+    await open(page, '/', { view: 'modern' })
+    const input = page.locator('[data-search-prompt] [data-search-input]').first()
+    await input.fill('what is this site')
+    await page.locator('[data-prompt-ask]').first().click()
+    await expect(page).toHaveURL(/mode=ask/)
+    await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
+    expect(asked).toEqual(['how it works', 'what is this site'])
+  })
+})
+
 test.describe('/api/ai/* (only requests refused before any cost)', () => {
   test('TC-E-65 another site cannot call the AI endpoints; an empty question is refused', async ({ request, baseURL }) => {
     for (const path of ['/api/ai/ask', '/api/ai/search']) {
