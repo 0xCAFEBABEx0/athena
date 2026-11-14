@@ -6,6 +6,7 @@ import { ROUTES } from '@athena/shared/constants'
  */
 import ThemeToggle from '@/components/ThemeToggle.astro'
 import SiteMark from '@/components/SiteMark.astro'
+import { aiModes } from '@/lib/ai'
 import { dict, localeOf, localizePath, splitLocale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
 import { SHORT_VERSION } from '@/lib/build'
@@ -20,6 +21,7 @@ type Props = {
 const { site } = Astro.props
 const locale = localeOf(Astro)
 const t = dict(locale)
+const searchLabel = aiModes().includes('ask') ? t.searchOpenAsk : t.searchOpen
 const lp = (path: string) => localizePath(locale, path)
 
 const [navLinks, recent, work] = await Promise.all([
@@ -72,7 +74,7 @@ const authorInitial = (
 
   <button type="button" class="modern-search-button" data-search-open>
     <span class="text-primary" aria-hidden="true">⌕</span>
-    {t.searchOpen}
+    {searchLabel}
     <kbd class="kbd kbd-sm ms-auto font-mono">/</kbd>
   </button>
 

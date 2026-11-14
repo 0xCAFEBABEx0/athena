@@ -30,6 +30,13 @@ section of each new version as a GitHub Release.
   `ANTHROPIC_API_KEY` settings ([`docs/AI_SEARCH.md`](docs/AI_SEARCH.md));
   without them `/search` stays as it was.
 
+### Changed
+
+- The search boxes, the sidebar's search button and the home tips no longer
+  say "Search notes": they say "Search", or "Search, or ask Hoo" where Ask
+  AI is on, and an AI error now points to the keyword search that still works
+  as you type, not to the old Keyword tab.
+
 ### Security
 
 - Pages can no longer be shown in a frame by other sites (only the site

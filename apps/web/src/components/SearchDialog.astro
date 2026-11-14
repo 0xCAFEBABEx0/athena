@@ -47,14 +47,14 @@ const strings = {
     >
       <span class="text-lg text-base-content/50" aria-hidden="true">⌕</span>
       {modes.includes('meaning') && <input type="hidden" name="mode" value="meaning" />}
-      <label class="sr-only" for="search-dialog-input">{t.searchOpen}</label>
+      <label class="sr-only" for="search-dialog-input">{modes.includes('ask') ? t.searchOpenAsk : t.searchOpen}</label>
       <input
         id="search-dialog-input"
         type="search"
         name="q"
         autocomplete="off"
         spellcheck="false"
-        placeholder={t.searchPlaceholder}
+        placeholder={modes.includes('ask') ? t.searchPlaceholderAsk : t.searchPlaceholder}
         class="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-base-content/65"
         role="combobox"
         aria-expanded="true"

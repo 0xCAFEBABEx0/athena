@@ -24,12 +24,12 @@ const en = {
   cited: (n: number) => `Source ${n}`,
   noMatch: 'No note seems to be about this.',
   errorBusy: 'Too many searches. Try again in a few minutes.',
-  errorDaily: 'The AI search limit for today is used up. Try again tomorrow, or use Keyword.',
-  errorDisabled: 'AI search is not available yet. Use Keyword instead.',
+  errorDaily: 'The AI search limit for today is used up. Try again tomorrow; keyword search still works as you type.',
+  errorDisabled: 'AI search is not available right now. Keyword search still works as you type.',
   errorBuilding: 'The notes are being indexed for AI search. Try again in a minute.',
   presets: 'Try asking',
   errorRefused: 'This question could not be answered.',
-  errorFailed: 'Something went wrong. Try again, or use Keyword.',
+  errorFailed: 'Something went wrong. Try again; keyword search still works as you type.',
 }
 
 export type AiText = typeof en
@@ -57,12 +57,12 @@ const ja: AiText = {
   cited: (n: number) => `出典 ${n}`,
   noMatch: 'この内容の記事は見つかりませんでした。',
   errorBusy: '検索が多すぎます。数分おいてからもう一度お試しください。',
-  errorDaily: '今日の AI 検索の上限に達しました。明日またお試しいただくか、キーワード検索をお使いください。',
-  errorDisabled: 'AI 検索はまだ使えません。キーワード検索をお使いください。',
+  errorDaily: '今日の AI 検索の上限に達しました。明日またお試しください。入力中のキーワード検索はそのまま使えます。',
+  errorDisabled: 'AI 検索はいま使えません。入力中のキーワード検索はそのまま使えます。',
   errorBuilding: 'AI 検索のために記事を読み込んでいます。1 分ほどしてからもう一度お試しください。',
   presets: '質問の例',
   errorRefused: 'この質問には答えられませんでした。',
-  errorFailed: 'うまくいきませんでした。もう一度試すか、キーワード検索をお使いください。',
+  errorFailed: 'うまくいきませんでした。もう一度お試しください。入力中のキーワード検索はそのまま使えます。',
 }
 
 const zh: AiText = {
@@ -88,12 +88,12 @@ const zh: AiText = {
   cited: (n: number) => `出处 ${n}`,
   noMatch: '似乎没有相关的笔记。',
   errorBusy: '搜索次数过多，请几分钟后再试。',
-  errorDaily: '今天的 AI 搜索次数已用完。请明天再试，或使用关键词搜索。',
-  errorDisabled: 'AI 搜索暂不可用，请使用关键词搜索。',
+  errorDaily: '今天的 AI 搜索次数已用完，请明天再试。输入时的关键词搜索仍可使用。',
+  errorDisabled: 'AI 搜索暂不可用。输入时的关键词搜索仍可使用。',
   errorBuilding: '正在为 AI 搜索建立笔记索引，请一分钟后再试。',
   presets: '可以这样问',
   errorRefused: '无法回答这个问题。',
-  errorFailed: '出错了。请重试，或使用关键词搜索。',
+  errorFailed: '出错了，请重试。输入时的关键词搜索仍可使用。',
 }
 
 const TEXT: Record<Locale, AiText> = { en, ja, zh }

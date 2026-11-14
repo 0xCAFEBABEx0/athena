@@ -64,7 +64,7 @@ const ask = modes.includes('ask')
         type="search"
         name="q"
         value={value}
-        placeholder={t.searchPlaceholder}
+        placeholder={ask ? t.searchPlaceholderAsk : t.searchPlaceholder}
         autocomplete="off"
         autofocus={autofocus}
         data-search-input
