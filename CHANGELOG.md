@@ -8,11 +8,14 @@ section of each new version as a GitHub Release.
 
 ### Added
 
-- AI search on `/search`: next to the keyword filter, two new tabs.
-  **By meaning** finds notes about what you mean, not only the words you
-  typed, best first, with the closest passage under each title. **Ask AI**
-  answers a question from the notes, in the page's language, with numbered
-  citations that link to the notes it used. Both run when you press Enter.
+- Search by meaning: `/search` still narrows the notes by keyword as you
+  type, and Enter now finds the notes about what you mean, not only the words
+  you typed, best first, with the closest passage under each title. Enter in
+  the search box on every page and in the "/" popup does the same.
+- **Ask AI** tab on `/search`: answers a question from the notes, in the
+  page's language, with numbered citations that link to the notes it used.
+  While you type in the search box or the "/" popup, an **Ask Hoo** row opens
+  your question there.
 - Suggested questions under Ask AI, set per language in the CMS (Site).
 - Answers are kept and reused for the same question, or one meaning nearly
   the same, as long as the notes they came from have not changed, so common

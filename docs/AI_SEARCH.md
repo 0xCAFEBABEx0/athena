@@ -1,12 +1,26 @@
 # AI search
 
-`/search` has three modes, as daisyUI tabs under the prompt:
+`/search` has two daisyUI tabs under the prompt, **Search** and **Ask AI**
+(no tabs without Ask AI). Search does two things:
 
 | Mode | What it does | Runs | Cost per uncached query |
 |---|---|---|---|
-| Keyword | Filters the post list in the browser (unchanged) | while typing | none |
-| By meaning | Finds posts whose text is close in meaning to the query, best first, with the closest excerpt under each title | on Enter | 1 embedding request, 1 Neon query |
-| Ask AI | Writes a short answer from the posts' text, with numbered citations that link to the posts | on Enter | the above + 1 Claude request |
+| Keyword (`?mode` absent) | Filters the post list in the browser (unchanged) | while typing | none |
+| By meaning (`?mode=meaning`) | Finds posts whose text is close in meaning to the query, best first, with the closest excerpt under each title | on Enter | 1 embedding request, 1 Neon query |
+| Ask AI (`?mode=ask`) | Writes a short answer from the posts' text, with numbered citations that link to the posts | on Enter | the above + 1 Claude request |
+
+So typing never costs anything: results narrow as you type, and Enter asks for
+the posts closest in meaning; typing again goes back to the keyword filter.
+When no post has the words, the empty line says to press Enter. Keyword
+search stays because it is free and instant, finds names and tool names
+exactly, and keeps working when the AI side is off.
+
+Elsewhere on the site, the pinned composer and the "/" popup send Enter to
+`/search?q=…&mode=meaning` (a hidden `mode` field, only when By meaning is
+offered; the popup's Enter still opens a selected result first). With Ask AI
+on, both also show an **Ask Hoo** row while you type, which opens the question
+in `/search?mode=ask`. The row is never selected by itself (↓ in the composer,
+↑↓ in the popup, or a click), so Enter never spends an answer by accident.
 
 By meaning needs only the CMS side (`VOYAGE_API_KEY` and the table), so it
 shows on every deployment that has `REVALIDATE_SECRET`. Ask AI shows only when
@@ -168,6 +182,6 @@ The design keeps the index outside Payload so the 4.0 upgrade does not touch it:
 
 ## Checking it
 
-Unit: TC-U-52–61. E2E: TC-E-62–67 (the browser calls are stubbed, so they
+Unit: TC-U-52–61. E2E: TC-E-62–68 (the browser calls are stubbed, so they
 spend nothing on a deployment). Deployment: TC-P-19–23 in
 [`TESTING.md`](./TESTING.md).

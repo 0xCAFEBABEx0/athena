@@ -164,13 +164,16 @@ reviews:
         there. Requests carrying the ISR bypass token
         (`x-prerender-revalidate`) run with `withFreshCmsReads`, so the
         re-renders after a CMS change never read the Runtime Cache.
-    - path: 'apps/web/src/{pages/search.astro,styles/global.css}'
+    - path: 'apps/web/src/{pages/search.astro,components/SearchPrompt.astro,components/SearchDialog.astro,styles/global.css}'
       instructions: |
         /search is one ISR page per language (ISR ignores ?q=) and filters
         in the browser; it must not read the query on the server or call the
         CMS per query. The AI modes (docs/AI_SEARCH.md) call the web app's
         /api/ai/* only on Enter, never while typing or while the page is
-        prerendered (document.prerendering). global.css lists the daisyUI components it ships
+        prerendered (document.prerendering): Search filters by keyword as
+        you type and searches by meaning on Enter. The composer's and the
+        "/" popup's "Ask Hoo" row must never be selected by itself, so a
+        plain Enter never spends an answer. global.css lists the daisyUI components it ships
         (`include:`); a component used without being listed renders
         unstyled.
     - path: 'apps/web/src/**/*.{astro,css}'

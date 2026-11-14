@@ -36,13 +36,16 @@ const haystack = posts.map((post) =>
 // when the web deployment can write answers; see docs/AI_SEARCH.md.
 const enabledModes = aiModes()
 const withAi = enabledModes.length > 0
+const withMeaning = enabledModes.includes('meaning')
+const withAsk = enabledModes.includes('ask')
 // Suggested questions (Site global), shown under Ask AI.
-const presets = enabledModes.includes('ask') ? site.aiPresets : []
+const presets = withAsk ? site.aiPresets : []
 
 // One cached page for every query: ISR keys the cache by path and ignores
 // ?q= and ?mode=, so the server renders every post and the browser does the
-// rest: keyword search hides the rows that do not match, the AI modes ask
-// /api/ai/* and reorder the rows. Typing never reaches a function.
+// rest. The Search tab filters the rows by keyword as you type and, on Enter,
+// asks /api/ai/search for the notes closest in meaning (?mode=meaning) and
+// reorders the rows; Ask AI answers on Enter. Typing never reaches a function.
 // Search results are thin, query-dependent pages: Google asks sites to keep
 // them out of the index (links on them are still followed).
 const meta = { ...routeMeta(t.searchTitle, lp('/search'), site), noindex: true }
@@ -59,9 +62,9 @@ const strings = {
   askMeaning: ai.askMeaning,
   headingMeaning: ai.headingMeaning,
   headingAsk: ai.headingAsk,
-  placeholderMeaning: ai.placeholderMeaning,
   placeholderAsk: ai.placeholderAsk,
   noMatch: ai.noMatch,
+  emptyMeaning: ai.emptyMeaning,
   cited: ai.cited(0).replace('0', '{n}'),
   errorBusy: ai.errorBusy,
   errorDaily: ai.errorDaily,
@@ -70,36 +73,53 @@ const strings = {
   errorRefused: ai.errorRefused,
   errorFailed: ai.errorFailed,
 }
-const modes = [
-  { id: 'keyword', label: ai.modeKeyword },
-  { id: 'meaning', label: ai.modeMeaning },
-  { id: 'ask', label: ai.modeAsk },
-].filter((mode) => mode.id === 'keyword' || enabledModes.includes(mode.id as 'meaning' | 'ask'))
+// Two tabs: Search (keyword as you type, by meaning on Enter) and Ask AI.
+// Without Ask AI there is nothing to switch between, so no tabs.
+const modes = withAsk
+  ? [
+      { id: 'keyword', label: ai.modeSearch },
+      { id: 'ask', label: ai.modeAsk },
+    ]
+  : []
 ---
 
 <Layout meta={meta}>
-  <div class="container pt-10" data-search-page data-locale={locale} data-strings={JSON.stringify(strings)}>
+  <div
+    class="container pt-10"
+    data-search-page
+    data-locale={locale}
+    data-meaning={withMeaning ? '' : undefined}
+    data-strings={JSON.stringify(strings)}
+  >
     <h1 class="sr-only">{t.search}</h1>
-    <SearchPrompt>
+    <SearchPrompt assist={false}>
       {
         withAi && (
           <div class="search-modes mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <div role="tablist" aria-label={ai.modes} class="tabs tabs-box tabs-sm font-mono" data-search-modes>
-              {modes.map((mode, index) => (
-                <button
-                  type="button"
-                  role="tab"
-                  class:list={['tab', { 'tab-active': index === 0 }]}
-                  aria-selected={index === 0 ? 'true' : 'false'}
-                  data-search-mode={mode.id}
-                >
-                  <span class="cli-only" aria-hidden="true">[</span>
-                  {mode.label}
-                  <span class="cli-only" aria-hidden="true">]</span>
-                </button>
-              ))}
-            </div>
-            <span class="text-xs text-base-content/65" hidden data-mode-hint data-hint={ai.enterHint} data-hint-ask={ai.enterHintAsk}></span>
+            {modes.length > 0 && (
+              <div role="tablist" aria-label={ai.modes} class="tabs tabs-box tabs-sm font-mono" data-search-modes>
+                {modes.map((mode, index) => (
+                  <button
+                    type="button"
+                    role="tab"
+                    class:list={['tab', { 'tab-active': index === 0 }]}
+                    aria-selected={index === 0 ? 'true' : 'false'}
+                    data-search-mode={mode.id}
+                  >
+                    <span class="cli-only" aria-hidden="true">[</span>
+                    {mode.label}
+                    <span class="cli-only" aria-hidden="true">]</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <span
+              class="text-xs text-base-content/65"
+              hidden
+              data-mode-hint
+              data-hint={withMeaning ? ai.enterHintMeaning : ''}
+              data-hint-ask={ai.enterHintAsk}
+            ></span>
           </div>
         )
       }
@@ -173,9 +193,9 @@ const modes = [
     | 'askMeaning'
     | 'headingMeaning'
     | 'headingAsk'
-    | 'placeholderMeaning'
     | 'placeholderAsk'
     | 'noMatch'
+    | 'emptyMeaning'
     | 'cited'
     | 'errorBusy'
     | 'errorDaily'
@@ -226,10 +246,14 @@ const modes = [
 
     const params = new URLSearchParams(window.location.search)
     const requested = params.get('mode')
-    // A mode this deployment does not offer (no tab for it) falls back to Keyword.
-    let mode: Mode =
-      isMode(requested) && tabs.some((tab) => tab.dataset.searchMode === requested) ? requested : 'keyword'
-    /** Query last sent in each AI mode, so switching back does not ask again. */
+    /** By meaning is the Search tab's Enter, when this deployment offers it. */
+    const meaningOn = page.dataset.meaning !== undefined
+    /** The tab a mode belongs to: Search covers Keyword and By meaning. */
+    const tabOf = (value: Mode) => (value === 'ask' ? 'ask' : 'keyword')
+    const offered = (value: Mode) =>
+      value === 'keyword' || (value === 'meaning' ? meaningOn : tabs.some((tab) => tab.dataset.searchMode === value))
+    // A mode this deployment does not offer falls back to Keyword.
+    let mode: Mode = isMode(requested) && offered(requested) ? requested : 'keyword'
     /** The mode and query whose results are on screen, so Enter or a tab click does not ask again. */
     let shown: string | undefined
     let controller: AbortController | null = null
@@ -327,7 +351,8 @@ const modes = [
         row.hidden = !match
         if (match) shown += 1
       }
-      setEmpty(shown === 0)
+      // No keyword match: point at Enter, which searches by meaning.
+      setEmpty(shown === 0, meaningOn && words.length > 0 ? strings.emptyMeaning : undefined)
       setPrompt(query, shown)
     }
 
@@ -525,19 +550,18 @@ const modes = [
     const selectMode = (next: Mode) => {
       mode = next
       for (const tab of tabs) {
-        const active = tab.dataset.searchMode === next
+        const active = tab.dataset.searchMode === tabOf(next)
         tab.classList.toggle('tab-active', active)
         tab.setAttribute('aria-selected', String(active))
         tab.tabIndex = active ? 0 : -1
       }
       if (input) {
-        input.placeholder =
-          next === 'meaning' ? strings.placeholderMeaning : next === 'ask' ? strings.placeholderAsk : strings.placeholder
-        input.enterKeyHint = next === 'keyword' ? 'search' : next === 'ask' ? 'send' : 'search'
+        input.placeholder = next === 'ask' ? strings.placeholderAsk : strings.placeholder
+        input.enterKeyHint = next === 'ask' ? 'send' : 'search'
       }
       if (hint) {
-        hint.hidden = next === 'keyword'
         hint.textContent = (next === 'ask' ? hint.dataset.hintAsk : hint.dataset.hint) ?? ''
+        hint.hidden = !hint.textContent
       }
       if (presetBox) presetBox.hidden = next !== 'ask'
     }
@@ -554,7 +578,7 @@ const modes = [
 
     const activate = (tab: HTMLButtonElement) => {
       const next = tab.dataset.searchMode
-      if (!isMode(next) || next === mode) return false
+      if (!isMode(next) || next === tabOf(mode)) return false
       selectMode(next)
       const query = input?.value.trim() ?? ''
       syncUrl(query)
@@ -583,14 +607,25 @@ const modes = [
     if (input) {
       input.value = query
       if (!query) input.focus()
-      // Keyword search filters as you type; the AI modes run on Enter.
+      // Search filters by keyword as you type; Enter searches by meaning
+      // (or asks, in Ask AI). Typing again after a search by meaning goes
+      // back to the keyword filter.
       input.addEventListener('input', () => {
-        if (mode === 'keyword') keyword(input.value.trim())
+        if (mode === 'ask') return
+        const value = input.value.trim()
+        if (mode === 'meaning') {
+          mode = 'keyword'
+          syncUrl(value)
+          run(value)
+        } else {
+          keyword(value)
+        }
       })
       input.form?.addEventListener('submit', (event) => {
         if (input.value.trim().startsWith('/')) return
         event.preventDefault()
         const value = input.value.trim()
+        if (mode !== 'ask') mode = meaningOn && value ? 'meaning' : 'keyword'
         syncUrl(value)
         run(value)
       })

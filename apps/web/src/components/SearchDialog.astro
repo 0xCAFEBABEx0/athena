@@ -3,13 +3,21 @@
  * Popup search (⌘K / Ctrl+K, "/" or any [data-search-open] button). Keyword
  * search only: on first open the browser loads /search-index.json (cached at
  * Vercel like a page) and filters it locally, so typing sends no requests.
- * Enter with nothing selected opens the full /search page.
+ * Enter with nothing selected opens the full /search page (by meaning, with
+ * AI search on). With Ask AI on, an "Ask Hoo" row on top opens the question in
+ * /search's Ask AI; it is never selected by itself, so Enter costs no answer.
  */
+import { aiModes } from '@/lib/ai'
+import { aiText } from '@/lib/ai-text'
 import { dict, localeOf, localizePath } from '@/lib/i18n'
 
 const locale = localeOf(Astro)
 const t = dict(locale)
+const ai = aiText(locale)
+const modes = aiModes()
 const strings = {
+  askHoo: modes.includes('ask') ? ai.askHoo : '',
+  askHooHint: ai.askHooHint,
   posts: t.groupPosts,
   pages: t.groupPages,
   loading: t.searchLoading,
@@ -38,6 +46,7 @@ const strings = {
       data-search-form
     >
       <span class="text-lg text-base-content/50" aria-hidden="true">⌕</span>
+      {modes.includes('meaning') && <input type="hidden" name="mode" value="meaning" />}
       <label class="sr-only" for="search-dialog-input">{t.searchOpen}</label>
       <input
         id="search-dialog-input"
@@ -88,6 +97,8 @@ const strings = {
   import type { SearchHit, SearchIndex } from '@/pages/search-index.json'
 
   type Strings = {
+    askHoo: string
+    askHooHint: string
     posts: string
     pages: string
     loading: string
@@ -135,6 +146,52 @@ const strings = {
       ;(window as Window & { __openStatus?: () => void }).__openStatus?.()
     }
 
+    /** "Ask Hoo" row: opens the question in /search's Ask AI. */
+    const askURL = (q: string) => {
+      const url = new URL(form.action)
+      url.searchParams.set('q', q)
+      url.searchParams.set('mode', 'ask')
+      return url.href
+    }
+    const renderAsk = (q: string) => {
+      const query = q.replace(/\s+/g, ' ').trim()
+      if (!strings.askHoo || !query || query.startsWith('/')) return
+      const option = document.createElement('a')
+      option.href = askURL(query)
+      option.id = `search-hit-${options.length}`
+      option.dataset.ask = ''
+      option.setAttribute('role', 'option')
+      option.setAttribute('aria-selected', 'false')
+      option.className = 'search-hit search-hit-ask'
+      const glyph = document.createElement('span')
+      glyph.className = 'search-hit-icon'
+      glyph.setAttribute('aria-hidden', 'true')
+      glyph.textContent = '✦'
+      const title = document.createElement('span')
+      title.className = 'min-w-0 flex-1 truncate'
+      const name = document.createElement('span')
+      name.className = 'font-semibold'
+      name.textContent = strings.askHoo
+      const text = document.createElement('span')
+      text.className = 'text-base-content/65'
+      text.textContent = `“${query}”`
+      title.append(name, ' ', text)
+      const hint = document.createElement('span')
+      hint.className = 'hidden shrink-0 text-xs text-base-content/65 sm:inline'
+      hint.textContent = strings.askHooHint
+      const enter = document.createElement('span')
+      enter.className = 'search-hit-enter'
+      enter.setAttribute('aria-hidden', 'true')
+      enter.textContent = '↵'
+      option.append(glyph, title, hint, enter)
+      const index = options.length
+      option.addEventListener('mousemove', () => {
+        if (active !== index) select(index)
+      })
+      options.push(option)
+      list.append(option)
+    }
+
     const renderCommands = (q: string) => {
       const query = q.trim().toLowerCase()
       if (!query.startsWith('/')) return
@@ -179,6 +236,8 @@ const strings = {
       list.replaceChildren()
       options = []
       renderCommands(q)
+      renderAsk(q)
+      const offset = options.length
       for (const group of ['posts', 'pages'] as const) {
         const hits: SearchHit[] = data[group]
         if (hits.length === 0) continue
@@ -222,7 +281,7 @@ const strings = {
           list.append(option)
         }
       }
-      const total = options.length
+      const total = options.length - offset
       if (total === 0) {
         const empty = document.createElement('p')
         empty.className = 'px-3 py-6 text-center text-sm text-base-content/65'
@@ -230,7 +289,9 @@ const strings = {
         list.append(empty)
       }
       status.textContent = countLabel(total)
-      select(total > 0 ? 0 : -1)
+      // A slash command, else the first result; never "Ask Hoo" by itself.
+      const first = options.findIndex((option) => option.dataset.ask === undefined)
+      select(first)
     }
 
     // Loaded once per page view; a failed load is retried on the next search.

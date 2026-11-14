@@ -1,4 +1,6 @@
 ---
+import { aiModes } from '@/lib/ai'
+import { aiText } from '@/lib/ai-text'
 import { dict, localeOf, localizePath } from '@/lib/i18n'
 
 /**
@@ -8,16 +10,26 @@ import { dict, localeOf, localizePath } from '@/lib/i18n'
  * commands work here too: typing "/s…" suggests /status, and Enter opens the
  * status panel instead of searching. Children (the /search page's mode
  * switch) render under the box, inside the pinned composer in the modern view.
+ *
+ * With AI search on (docs/AI_SEARCH.md), Enter opens /search by meaning
+ * (?mode=meaning), and typing offers an "Ask Hoo" row that opens the question
+ * in Ask AI. Nothing is asked until the visitor presses Enter or picks the row.
+ * The /search page passes assist={false}: it has its own tabs.
  */
 type Props = {
   value?: string
   autofocus?: boolean
   class?: string
+  assist?: boolean
 }
 
 const locale = localeOf(Astro)
 const t = dict(locale)
-const { value = '', autofocus = false, class: className } = Astro.props
+const ai = aiText(locale)
+const { value = '', autofocus = false, class: className, assist = true } = Astro.props
+const modes = assist ? aiModes() : []
+const meaning = modes.includes('meaning')
+const ask = modes.includes('ask')
 ---
 
 <div class:list={['search-prompt', className]} data-search-prompt>
@@ -29,7 +41,20 @@ const { value = '', autofocus = false, class: className } = Astro.props
         <span class="hidden shrink-0 text-xs text-base-content/65 sm:inline">{t.statusCommand}</span>
         <span class="search-hit-enter" aria-hidden="true">↵</span>
       </button>
+      {
+        ask && (
+          <button type="button" class="search-hit search-hit-ask" role="option" aria-selected="false" hidden data-prompt-ask>
+            <span class="search-hit-icon" aria-hidden="true">✦</span>
+            <span class="min-w-0 flex-1 truncate text-left">
+              <span class="font-semibold">{ai.askHoo}</span> <span class="text-base-content/65" data-prompt-ask-text />
+            </span>
+            <span class="hidden shrink-0 text-xs text-base-content/65 sm:inline">{ai.askHooHint}</span>
+            <span class="search-hit-enter" aria-hidden="true">↵</span>
+          </button>
+        )
+      }
     </div>
+    {meaning && <input type="hidden" name="mode" value="meaning" />}
     <label
       class="search-prompt-box input input-lg h-12 w-full gap-3 bg-base-200 font-mono text-sm focus-within:border-primary focus-within:outline-none"
     >
@@ -75,10 +100,33 @@ const { value = '', autofocus = false, class: className } = Astro.props
     const form = root.querySelector('form')
     const input = root.querySelector<HTMLInputElement>('[data-search-input]')
     const menu = root.querySelector<HTMLElement>('[data-prompt-commands]')
-    if (!form || !input || !menu) continue
+    const command = root.querySelector<HTMLElement>('[data-prompt-command]')
+    // "Ask Hoo" (only with Ask AI on): opens the question in /search's Ask AI.
+    const askRow = root.querySelector<HTMLButtonElement>('[data-prompt-ask]')
+    const askText = root.querySelector<HTMLElement>('[data-prompt-ask-text]')
+    if (!form || !input || !menu || !command) continue
+
+    const question = () => input.value.replace(/\s+/g, ' ').trim()
+    const selectAsk = (on: boolean) => askRow?.setAttribute('aria-selected', String(on))
+    const ask = () => {
+      const q = question()
+      if (!q) return
+      const url = new URL(form.action)
+      url.searchParams.set('q', q)
+      url.searchParams.set('mode', 'ask')
+      window.location.href = url.href
+    }
 
     const update = () => {
-      menu.hidden = matchCommand(input.value) === null
+      const slash = matchCommand(input.value) !== null
+      command.hidden = !slash
+      if (askRow) {
+        const q = question()
+        askRow.hidden = slash || !q || q.startsWith('/')
+        if (askText) askText.textContent = `“${q}”`
+        if (askRow.hidden) selectAsk(false)
+      }
+      menu.hidden = command.hidden && (askRow?.hidden ?? true)
       // Open downward when the prompt sits near the top (e.g. the /search page).
       if (!menu.hidden) menu.toggleAttribute('data-below', form.getBoundingClientRect().top < menu.offsetHeight + 72)
     }
@@ -98,13 +146,29 @@ const { value = '', autofocus = false, class: className } = Astro.props
       }, 120)
     })
     input.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') menu.hidden = true
+      if (event.key === 'Escape') {
+        menu.hidden = true
+        selectAsk(false)
+      } else if (askRow && !askRow.hidden && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        // ↓ picks "Ask Hoo", ↑ goes back to a plain search.
+        event.preventDefault()
+        selectAsk(event.key === 'ArrowDown')
+      }
     })
+    if (askRow) {
+      askRow.addEventListener('mousedown', (event) => event.preventDefault())
+      askRow.addEventListener('click', ask)
+    }
     for (const button of menu.querySelectorAll<HTMLButtonElement>('[data-prompt-command]')) {
       button.addEventListener('mousedown', (event) => event.preventDefault())
       button.addEventListener('click', run)
     }
     form.addEventListener('submit', (event) => {
+      if (askRow && !askRow.hidden && askRow.getAttribute('aria-selected') === 'true') {
+        event.preventDefault()
+        ask()
+        return
+      }
       if (matchCommand(input.value) === null || !(window as StatusWindow).__openStatus) return
       event.preventDefault()
       run()

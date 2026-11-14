@@ -9,8 +9,9 @@ import { open, overflowX } from './helpers'
  * test only the page. The endpoints themselves are checked in TC-E-65 with
  * requests they refuse before any cost.
  *
- * Every case skips itself when the deployment has no AI search
- * (no ANTHROPIC_API_KEY: the mode tabs are not rendered) or no posts.
+ * Every case skips itself when the deployment has no AI search (no
+ * REVALIDATE_SECRET, or AI_SEARCH=off: the page has no data-meaning) or no
+ * posts; the Ask AI cases also without ANTHROPIC_API_KEY (no Ask AI tab).
  */
 
 const visibleRows = (page: Page) => page.locator('[data-search-text]:not([hidden])')
@@ -20,7 +21,7 @@ const slugsOn = (page: Page) =>
   page.locator('[data-search-text]').evaluateAll((els) => els.map((el) => el.getAttribute('data-slug') ?? ''))
 
 const requireAi = async (page: Page) => {
-  test.skip((await page.locator('[data-search-modes]').count()) === 0, 'AI search is off on this deployment')
+  test.skip((await page.locator('[data-search-page][data-meaning]').count()) === 0, 'AI search is off on this deployment')
   const slugs = await slugsOn(page)
   test.skip(slugs.length === 0, 'no posts in this CMS')
   return slugs
@@ -51,7 +52,7 @@ const answerStream = (slugs: string[], prefix = '') => {
 }
 
 test.describe('/search with AI (browser calls stubbed)', () => {
-  test('TC-E-62 the mode tabs switch with the keyboard and keep ?mode= in the URL; keyword search still needs no request', async ({
+  test('TC-E-62 Search and Ask AI tabs switch with the keyboard and keep ?mode= in the URL; typing filters with no request', async ({
     page,
   }) => {
     await open(page, '/search', { view: 'cli' })
@@ -61,32 +62,36 @@ test.describe('/search with AI (browser calls stubbed)', () => {
       if (request.url().includes('/api/ai/')) requests.push(request.url())
     })
     const tabs = page.locator('[data-search-mode]')
-    const count = await tabs.count()
-    expect(count).toBeGreaterThanOrEqual(2)
-    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
-    await tabs.first().focus()
-    await page.keyboard.press('ArrowRight')
-    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
-    await expect(tabs.nth(1)).toBeFocused()
-    await expect(page).toHaveURL(/[?&]mode=meaning/)
-    if (count === 3) {
-      await page.keyboard.press('ArrowRight')
-      await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
-      await expect(page).toHaveURL(/[?&]mode=ask/)
-    } else {
-      // Without Ask AI, ?mode=ask opens the keyword search.
+    if ((await tabs.count()) === 0) {
+      // Without Ask AI there is only Search, and ?mode=ask opens it.
       await open(page, '/search?mode=ask', { view: 'cli' })
+      await expect(page).not.toHaveURL(/mode=/)
+      await expect(page.locator('[data-mode-hint]')).toBeVisible()
+    } else {
+      await expect(tabs).toHaveCount(2)
+      await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+      await tabs.first().focus()
+      await page.keyboard.press('ArrowRight')
+      await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
+      await expect(tabs.nth(1)).toBeFocused()
+      await expect(page).toHaveURL(/[?&]mode=ask/)
+      await tabs.first().click()
+      await expect(page).not.toHaveURL(/mode=/)
+      // ?mode=meaning belongs to the Search tab.
+      await open(page, '/search?mode=meaning', { view: 'cli' })
       await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
     }
-    await tabs.first().click()
-    await expect(page).not.toHaveURL(/mode=/)
     await page.locator('[data-search-input]').fill('zzzz-no-such-post')
     await expect(visibleRows(page)).toHaveCount(0)
+    // No keyword match: the empty line points at Enter (search by meaning).
+    await expect(page.locator('[data-search-empty]')).toContainText('Enter')
     expect(requests).toEqual([])
   })
 
-  test('TC-E-63 search by meaning runs on Enter, orders the list by the results and shows a snippet', async ({ page }) => {
-    await open(page, '/search?mode=meaning', { view: 'cli' })
+  test('TC-E-63 Search filters by keyword as you type and searches by meaning on Enter; typing again goes back to keywords', async ({
+    page,
+  }) => {
+    await open(page, '/search', { view: 'cli' })
     const slugs = await requireAi(page)
     const picked = [...slugs].reverse().slice(0, 2)
     let bodies = 0
@@ -108,19 +113,77 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     })
     const input = page.locator('[data-search-input]')
     await input.fill('how it works')
-    // Typing alone asks nothing in this mode.
+    // Typing filters by keyword and asks nothing.
     await page.waitForTimeout(300)
     expect(bodies).toBe(0)
+    await expect(page.locator('[data-prompt-line]')).toHaveText('grep -ri "how it works" notes/')
     await input.press('Enter')
+    await expect(page.locator('[data-prompt-line]')).toHaveText('search --meaning "how it works" notes/')
     await expect(visibleRows(page)).toHaveCount(picked.length)
     expect(await visibleRows(page).evaluateAll((els) => els.map((el) => el.getAttribute('data-slug')))).toEqual(picked)
     await expect(visibleRows(page).first().locator('[data-ai-snippet]')).toHaveText('Snippet 1')
-    await expect(page.locator('[data-prompt-line]')).toHaveText('search --meaning "how it works" notes/')
     await expect(page).toHaveURL(/q=how\+it\+works.*mode=meaning|mode=meaning.*q=how\+it\+works/)
     // The same query again is not sent twice.
     await input.press('Enter')
     await page.waitForTimeout(300)
     expect(bodies).toBe(1)
+    // Typing again: back to the keyword filter, snippets gone, mode dropped.
+    await input.fill('')
+    await expect(visibleRows(page)).toHaveCount(slugs.length)
+    await expect(page.locator('[data-ai-snippet]')).toHaveCount(0)
+    await expect(page).not.toHaveURL(/mode=/)
+    expect(bodies).toBe(1)
+  })
+
+  test('TC-E-68 the composer and the "/" popup open /search by meaning on Enter and offer "Ask Hoo" only with Ask AI', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 800 })
+    await open(page, '/search', { view: 'cli' })
+    await requireAi(page)
+    const withAsk = (await page.locator('[data-search-mode="ask"]').count()) > 0
+    const requests: string[] = []
+    page.on('request', (request) => {
+      if (request.url().includes('/api/ai/')) requests.push(request.url())
+    })
+    // The pinned composer on the home page (ADE view).
+    await open(page, '/', { view: 'modern' })
+    const input = page.locator('[data-search-prompt] [data-search-input]').first()
+    await input.fill('how it works')
+    const ask = page.locator('[data-prompt-ask]').first()
+    if (withAsk) {
+      await expect(ask).toBeVisible()
+      await expect(ask).toHaveAttribute('aria-selected', 'false')
+      expect(await overflowX(page)).toBeLessThanOrEqual(0)
+      await input.press('ArrowDown')
+      await expect(ask).toHaveAttribute('aria-selected', 'true')
+      await input.press('ArrowUp')
+      await expect(ask).toHaveAttribute('aria-selected', 'false')
+    } else {
+      await expect(ask).toHaveCount(0)
+    }
+    expect(requests).toEqual([])
+    await page.route('**/api/ai/search', (route) => route.fulfill({ json: { posts: [] } }))
+    await input.press('Enter')
+    await expect(page).toHaveURL(/\/search\?.*mode=meaning/)
+    await expect(page.locator('[data-prompt-line]')).toHaveText('search --meaning "how it works" notes/')
+
+    // The "/" popup: never selects Ask Hoo by itself.
+    await open(page, '/', { view: 'cli' })
+    await page.keyboard.press('/')
+    const query = page.locator('[data-search-query]')
+    await expect(query).toBeFocused()
+    await query.fill('zzzz-no-such-post')
+    const askHit = page.locator('[data-search-results] [data-ask]')
+    if (withAsk) {
+      await expect(askHit).toBeVisible()
+      await expect(askHit).toHaveAttribute('aria-selected', 'false')
+      await expect(askHit).toHaveAttribute('href', /mode=ask/)
+    } else {
+      await expect(askHit).toHaveCount(0)
+    }
+    await query.press('Enter')
+    await expect(page).toHaveURL(/\/search\?.*mode=meaning/)
   })
 
   test('TC-E-64 Ask AI streams the answer with numbered citations linking to the posts; errors show as an alert', async ({
@@ -175,8 +238,8 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await expect(page.locator('[data-search-input]')).toHaveValue(question)
     await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
     expect(asked).toEqual([question])
-    // Not offered in the other modes.
-    await page.locator('[data-search-mode="meaning"]').click()
+    // Not offered in Search.
+    await page.locator('[data-search-mode="keyword"]').click()
     await expect(page.locator('[data-ai-presets]')).toBeHidden()
   })
 
