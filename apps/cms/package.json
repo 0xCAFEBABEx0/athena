@@ -45,7 +45,7 @@
     "sharp": "^0.35.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.5",
+    "@biomejs/biome": "2.6.6",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/escape-html": "^1.0.4",
     "@types/node": "^24.19.2",
