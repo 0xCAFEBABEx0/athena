@@ -49,7 +49,7 @@ test.describe('/search (one cached page, filtered in the browser)', () => {
       if (request.resourceType() === 'document') documents += 1
     })
     // With AI search on, Enter searches by meaning (stubbed: costs nothing).
-    await page.route('**/api/ai/search', (route) => route.fulfill({ json: { posts: [] } }))
+    await page.route('**/api/ai/search', (route) => route.fulfill({ json: { results: [] } }))
     await page.locator('[data-search-input]').fill('astro')
     await page.locator('[data-search-input]').press('Enter')
     await expect(page).toHaveURL(/\/search\?q=astro(&mode=meaning)?$/)

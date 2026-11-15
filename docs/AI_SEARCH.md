@@ -6,11 +6,13 @@
 | Mode | What it does | Runs | Cost per uncached query |
 |---|---|---|---|
 | Keyword (`?mode` absent) | Filters the post list in the browser (unchanged) | while typing | none |
-| By meaning (`?mode=meaning`) | Finds posts whose text is close in meaning to the query, best first, with the closest excerpt under each title | on Enter | 1 embedding request, 1 Neon query |
-| Ask AI (`?mode=ask`) | Writes a short answer from the posts' text, with numbered citations that link to the posts | on Enter | the above + 1 Claude request |
+| By meaning (`?mode=meaning`) | Finds notes and pages (about, builds, stacks, CMS pages) whose text is close in meaning to the query, best first, with the closest excerpt under each title | on Enter | 1 embedding request, 1 Neon query |
+| Ask AI (`?mode=ask`) | Writes a short answer from that text, with numbered citations that link to the notes and pages it used | on Enter | the above + 1 Claude request |
 
 So typing never costs anything: results narrow as you type, and Enter asks for
-the posts closest in meaning; typing again goes back to the keyword filter.
+the notes and pages closest in meaning (a note reuses its row in the list, any
+other page gets a row of its own, labelled `page`, `builds`, `about` or
+`stacks`); typing again goes back to the keyword filter.
 When no post has the words, the empty line says to press Enter. Keyword
 search stays because it is free and instant, finds names and tool names
 exactly, and keeps working when the AI side is off.
@@ -33,41 +35,50 @@ answer 503. A link with `?mode=` for a mode that is not offered opens Keyword.
 ```
 CMS (apps/cms)                                         Web (apps/web)
 ──────────────                                         ──────────────
-Post published/edited ─► afterChange (ai/hooks.ts)     /search?mode=meaning|ask  (ISR page, query read in the browser)
-  after the commit (Next after())                        │ POST /api/ai/search  or  /api/ai/ask   (same origin only)
-  read the post as a visitor would, per language         ▼
+Note, page, build, About or Stack saved                 /search?mode=meaning|ask  (ISR page, query read in the browser)
+  ─► afterChange (ai/hooks.ts), after the commit         │ POST /api/ai/search  or  /api/ai/ask   (same origin only)
+  read it as a visitor would, per language (sources.ts)  ▼
   ─► chunks by heading (~300 tokens, ai/chunk.ts)      pages/api/ai/*.ts
   ─► embed only changed chunks (Voyage)                  │ limits: 10 / visitor / 10 min, AI_DAILY_LIMIT / day
-  ─► ai.post_chunks (pgvector, own schema)               │ Runtime Cache: same query since the last CMS change = no CMS call
+  ─► ai.chunks (pgvector, own schema)                    │ Runtime Cache: same query since the last CMS change = no CMS call
                                                          ▼
 POST /api/ai/search  ◄──────────────── Bearer REVALIDATE_SECRET (+ protection bypass)
   embed the query, nearest excerpts (cosine)             │
-  ─► { results: [{ slug, title, heading, content, score }] }
-                                                         ├─ meaning: one row per post, best excerpt as snippet
+  ─► { results: [{ kind, slug, title, heading, content, score }] }
+                                                         ├─ meaning: one row per note or page, best excerpt as snippet
                                                          └─ ask: excerpts as `search_result` blocks ─► Claude
                                                                (citations on, streamed as NDJSON to the page)
 ```
 
-- **Index** (`apps/cms/src/ai/`): `lexical.ts` turns a post's rich text into
-  sections (headings, paragraphs, lists, code, banners); `chunk.ts` packs them
+- **Index** (`apps/cms/src/ai/`): `sources.ts` reads each kind of document
+  (a note's content; a page's hero and blocks; a build's description, brief
+  and notes; About's lead and story; Stack's intro and tools) and
+  `lexical.ts` turns rich text into sections (headings, paragraphs, lists,
+  code, banners); `chunk.ts` packs them
   into chunks that never cross a heading, the meta description first;
   `embeddings.ts` calls Voyage (`voyage-4-lite`, 1024 dimensions; OpenAI's
   `text-embedding-3-small` at 1024 also works); `store.ts` is the only SQL;
   `indexer.ts` keeps the table in step with what the public can read.
-- **What is indexed** is what an anonymous visitor can read: each post is
-  read through the Local API with `overrideAccess: false`, once per language
-  (en, ja, zh) with the usual English fallback. A draft, a scheduled post or
-  an unpublished one is not in the index. A chunk's vector is reused when the
-  same text was already embedded (an untranslated post's ja and zh rows reuse
+- **What is indexed** is what an anonymous visitor can read: each document
+  is read through the Local API with `overrideAccess: false`, once per
+  language (en, ja, zh) with the usual English fallback, and kept only when
+  the web app shows it: not a draft, a scheduled or unpublished note or page,
+  the CMS `home` page (not routed), a hidden build or one /builds does not
+  list (no GitHub snapshot; private without a live URL), nor /about or
+  /stacks while they are empty (404). A chunk's vector is reused when the
+  same text was already embedded (an untranslated note's ja and zh rows reuse
   the English vectors), so a republish with no text change embeds nothing.
-- **When it updates**: the Posts `afterChange` hook runs after the response
-  (and the transaction) with Next's `after()`, for a save that publishes,
-  edits a published post, or unpublishes one. Autosaves of drafts are skipped.
-  Deleting a post removes its rows. A failure is logged and never fails the
-  save.
+- **When it updates**: the `afterChange` hooks of Posts, Pages, Projects
+  (builds) and the About and Stack globals run after the response (and the
+  transaction) with Next's `after()`. For notes and pages, only a save that
+  publishes, edits a published one or unpublishes counts; autosaves of drafts
+  are skipped. Builds and the globals have no drafts, so every save counts
+  (the GitHub sync's saves cost one `SELECT` per excerpt unless the text
+  changed). Deleting a note, page or build removes its rows. A failure is
+  logged and never fails the save.
 - **First run**: the index starts empty. The first search on a deployment
-  whose index is empty answers `building: true` and indexes every public post
-  in the background; the page says the notes are being indexed (not cached),
+  whose index is empty answers `building: true` and indexes everything public
+  in the background; the page says the site is being indexed (not cached),
   and a search a minute later finds them. To rebuild by hand, a logged-in
   admin can `POST /api/ai/reindex` on the CMS (same cookie as the admin).
 - **Search** (`POST ${CMS_URL}/api/ai/search`, `{ q, locale, limit }`): embeds
@@ -81,8 +92,9 @@ POST /api/ai/search  ◄──────────────── Bearer 
   citations on. The system prompt says: answer only from them, in the page's
   language, briefly, no Markdown, and treat the question as a question, not
   instructions. Citations come back as `search_result_location` and are shown
-  as `[1]`, `[2]` badges linking to the posts. No relevant excerpt means no
-  Claude request ("No note seems to be about this"). A refusal shows an alert.
+  as `[1]`, `[2]` badges linking to the notes and pages. No relevant excerpt
+  means no Claude request ("Nothing on this site seems to be about this"). A
+  refusal shows an alert.
   At most 6 excerpts go to Claude (8 are searched), `effort: low`,
   `max_tokens` 1024, with the API's server-side fallback for declined
   requests (not for Haiku, which has none).
@@ -112,7 +124,7 @@ POST /api/ai/search  ◄──────────────── Bearer 
   (cosine ≥ 0.95) reuses an answer kept for one of the Site's suggested
   questions, never one written for another visitor's own words: those words
   could carry instructions that steered the answer (`mayReuse` in
-  `apps/web/src/lib/ai-answer.ts`). When a post it used changes, the key
+  `apps/web/src/lib/ai-answer.ts`). When a page it used changes, the key
   no longer matches and Claude writes a new answer, which replaces the old
   one. The lookup rides on the search request the question needs anyway (one
   embedding, one more `SELECT` in the same round trip); saving runs after the
@@ -138,11 +150,11 @@ POST /api/ai/search  ◄──────────────── Bearer 
   frame-ancestors 'self' <CMS origin>`, set in `middleware.ts` on HTML
   responses; the CMS origin is there for Payload's Live Preview), so a hidden
   frame cannot spend answers either.
-- The index reads posts as an anonymous visitor **and** with
+- The index reads notes and pages as an anonymous visitor **and** with
   `_status: published` in the query, so a save run by a script with a user
   (who can read drafts) still never indexes a draft.
 - Neon: each uncached query is one short `SELECT` (it wakes the compute if it
-  slept). Indexing reads the post and writes only changed rows.
+  slept). Indexing reads the document and writes only changed rows.
 
 Known limit: a publish expires the cached results at once, while the index
 is updated a few seconds later (after the embedding call). A search for the
@@ -163,33 +175,61 @@ clears it.
 `@anthropic-ai/sdk` adds about 4 MB to the web server functions (12 MB in
 all); only `/api/ai/ask` loads it, so other pages' cold starts do not change.
 
-Database: run [`docs/sql/2026-11-13-ai-search.sql`](./sql/2026-11-13-ai-search.sql)
-once on the preview Neon branch and on production (pgvector extension, schema
-`ai`, table `ai.post_chunks`), then
-[`docs/sql/2026-11-13-ai-answers.sql`](./sql/2026-11-13-ai-answers.sql)
-(the Site columns `ai_model` and table `site_ai_presets`, and `ai.answers`).
-Both are idempotent. Local dev creates the `ai` tables on first use (needs
+Database: run [`docs/sql/2026-11-15-ai.sql`](./sql/2026-11-15-ai.sql) once on
+the preview Neon branch and on production, before the CMS deploys: pgvector,
+schema `ai` with `ai.chunks` and `ai.answers`, the Site column `ai_model` and
+table `site_ai_presets`. It is idempotent, and on a branch that ran the two
+earlier files of 2026-11-13 (preview only) it drops the old notes-only
+`ai.post_chunks`. Local dev creates the `ai` tables on first use (needs
 pgvector in the local Postgres) and Payload pushes the Site fields. Without
 `ai.answers`, search and answers still work, nothing is kept.
+
+## Database design
+
+One table holds every excerpt, whatever it comes from:
+
+| Column | Notes |
+|---|---|
+| `kind`, `doc_id` | `post`, `page` or `project` with the Payload id, or `about` / `stack` with the global's slug. Primary key with `locale` and `chunk` |
+| `slug` | The URL's last part (`''` for about and stack). The web app builds the link from `kind` + `slug` and `ROUTES`, so a section rename needs no reindex |
+| `content_hash` | Hash of the embedded text and the model; indexed, because a new excerpt first looks for a vector already stored for the same text |
+| `embedding` | `vector(1024)`, exact cosine scan |
+
+Considered and not done (2026-11-15), because at this size they save nothing
+that matters: about 500 rows (≈ 2 MB of vectors) against Neon Free's 0.5 GB,
+and an exact scan of them takes well under a millisecond.
+
+- `halfvec` (half the vector size): needs pgvector 0.7+; the saving is about
+  1 MB.
+- A separate vectors table keyed by `content_hash`, so an untranslated
+  document's three languages share one vector: saves about 1 MB and adds a
+  join to every search.
+- An ANN index (HNSW): add one when the table nears 10k rows; with the
+  `locale` filter it can return fewer rows than asked below that.
+
+What costs on Neon Free is compute (each wake-up), not storage: the Runtime
+Cache in front of `/api/ai/search` and the kept answers are what keep that
+down.
 
 ## Payload 4.0
 
 The design keeps the index outside Payload so the 4.0 upgrade does not touch it:
 
-- `ai.post_chunks` lives in its own schema, not in a Payload collection: no
+- `ai.chunks` and `ai.answers` live in their own schema, not in Payload collections: no
   `generate:types`, no migration and no push ever sees it, and Payload 4.0's
   schema changes cannot drop it.
 - The only database coupling is `payload.db.pool` (`store.ts` `dbOf`), a
   pg-style `query()`. If 4.0 renames it, that one line changes.
-- "Published" comes from Payload itself: the indexer reads each post per
+- "Published" comes from Payload itself: the indexer reads each document per
   language as an anonymous visitor (Local API, `overrideAccess: false`), so
-  4.0's per-locale publish status is followed with no code change (a post
+  4.0's per-locale publish status is followed with no code change (a note
   published only in English drops out of the ja/zh index, or falls back,
   whatever Payload returns).
 - No Payload job task (a new task slug would change the `payload_jobs` enum,
   i.e. manual SQL now and a migration later); indexing runs in `after()`.
 - The hooks use only `afterChange` / `afterDelete` arguments that are the same
-  in 3 and 4 (`doc`, `previousDoc`, `req`, `req.context`).
+  in 3 and 4 (`doc`, `previousDoc`, `req`, `req.context`), for collections and
+  globals alike.
 - The settings (`aiModel`, `aiPresets`) are ordinary Site global fields (a
   select and a localized array with one text field), so the 4.0 migration
   carries them like the other Site fields. The web reads them through

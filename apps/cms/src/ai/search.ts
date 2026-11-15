@@ -109,7 +109,7 @@ export const semanticSearch = async (payload: Payload, request: SearchRequest): 
           answerModel: request.answerModel,
           model,
         }).catch((error: unknown) => {
-          // ai.answers is newer than ai.post_chunks: search still works without it.
+          // Without ai.answers (created by hand) search still works.
           if (isMissingTable(error)) return []
           throw error
         })

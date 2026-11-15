@@ -32,8 +32,9 @@ const haystack = posts.map((post) =>
     .toLowerCase(),
 )
 
-// AI search (by meaning, and questions answered from the notes) shows only
-// when the web deployment can write answers; see docs/AI_SEARCH.md.
+// AI search (by meaning, and questions answered from the notes and the other
+// pages: about, builds, stacks) shows only when the CMS index is reachable;
+// see docs/AI_SEARCH.md.
 const enabledModes = aiModes()
 const withAi = enabledModes.length > 0
 const withMeaning = enabledModes.includes('meaning')
@@ -44,8 +45,9 @@ const presets = withAsk ? site.aiPresets : []
 // One cached page for every query: ISR keys the cache by path and ignores
 // ?q= and ?mode=, so the server renders every post and the browser does the
 // rest. The Search tab filters the rows by keyword as you type and, on Enter,
-// asks /api/ai/search for the notes closest in meaning (?mode=meaning) and
-// reorders the rows; Ask AI answers on Enter. Typing never reaches a function.
+// asks /api/ai/search for the notes and pages closest in meaning
+// (?mode=meaning): notes reorder their rows, other pages get rows made in the
+// browser. Ask AI answers on Enter. Typing never reaches a function.
 // Search results are thin, query-dependent pages: Google asks sites to keep
 // them out of the index (links on them are still followed).
 const meta = { ...routeMeta(t.searchTitle, lp('/search'), site), noindex: true }
@@ -72,6 +74,10 @@ const strings = {
   errorBuilding: ai.errorBuilding,
   errorRefused: ai.errorRefused,
   errorFailed: ai.errorFailed,
+  kindPage: ai.kindPage,
+  kindProject: ai.kindProject,
+  kindAbout: ai.kindAbout,
+  kindStack: ai.kindStack,
 }
 // Two tabs: Search (keyword as you type, by meaning on Enter) and Ask AI.
 // Without Ask AI there is nothing to switch between, so no tabs.
@@ -202,12 +208,20 @@ const modes = withAsk
     | 'errorDisabled'
     | 'errorBuilding'
     | 'errorRefused'
-    | 'errorFailed',
+    | 'errorFailed'
+    | 'kindPage'
+    | 'kindProject'
+    | 'kindAbout'
+    | 'kindStack',
     string
   >
   type Mode = 'keyword' | 'meaning' | 'ask'
-  type PostHit = { slug: string; href: string; title: string; heading: string | null; snippet: string }
-  type Source = { n: number; slug: string; title: string; href: string; heading: string | null }
+  type Kind = 'post' | 'page' | 'project' | 'about' | 'stack'
+  /** A note or a page found by meaning (`key` is `kind:slug`). */
+  type SearchHit = { kind: Kind; key: string; slug: string; href: string; title: string; heading: string | null; snippet: string }
+  type Source = { n: number; kind: Kind; slug: string; title: string; href: string; heading: string | null }
+  /** What a result row needs: notes reuse their row on the page, other pages get one made for them. */
+  type Shown = { kind: Kind; slug: string; href: string; title: string; snippet?: string }
   type AnswerEvent =
     | { type: 'sources'; sources: Source[] }
     | { type: 'text'; text: string }
@@ -278,8 +292,40 @@ const modes = withAsk
       if (emptyText) emptyText.textContent = text ?? emptyText.dataset.default ?? ''
     }
 
+    /** Drop the snippets under rows and the rows made for pages that are not notes. */
     const clearSnippets = () => {
-      for (const node of page.querySelectorAll('[data-ai-snippet]')) node.remove()
+      for (const node of page.querySelectorAll('[data-ai-snippet], [data-ai-extra]')) node.remove()
+    }
+
+    const kindLabel: Record<Kind, string> = {
+      post: '',
+      page: strings.kindPage,
+      project: strings.kindProject,
+      about: strings.kindAbout,
+      stack: strings.kindStack,
+    }
+
+    /** A row like a note's (PostList), for a page found by meaning or cited by an answer. */
+    const extraRow = (item: Shown) => {
+      const row = document.createElement('li')
+      row.dataset.aiExtra = ''
+      const link = document.createElement('a')
+      link.className = 'post-row'
+      link.href = item.href
+      link.dataset.postRow = ''
+      const marker = document.createElement('span')
+      marker.className = 'post-row-marker hidden sm:inline'
+      marker.setAttribute('aria-hidden', 'true')
+      marker.textContent = '❯'
+      const label = document.createElement('span')
+      label.className = 'w-full shrink-0 font-mono sm:w-24 text-[13.5px] text-base-content/65'
+      label.textContent = kindLabel[item.kind]
+      const title = document.createElement('span')
+      title.className = 'post-row-title min-w-0 flex-1 basis-full text-base leading-relaxed sm:basis-0'
+      title.textContent = item.title
+      link.append(marker, label, title)
+      row.append(link)
+      return row
     }
 
     /** Put every row back in its original order, all shown. */
@@ -289,19 +335,19 @@ const modes = withAsk
       for (const row of rows) row.hidden = false
     }
 
-    /** Show only the rows for `slugs`, in that order. */
-    const showRows = (slugs: string[], snippets?: Map<string, string>) => {
+    /** Show only the rows for `items`, in that order: notes' own rows, and new rows for other pages. */
+    const showRows = (items: Shown[]) => {
       clearSnippets()
       const bySlug = new Map(rows.map((row) => [row.dataset.slug, row]))
       for (const row of rows) row.hidden = true
       let shown = 0
-      for (const slug of slugs) {
-        const row = bySlug.get(slug)
+      for (const item of items) {
+        const row = item.kind === 'post' ? bySlug.get(item.slug) : extraRow(item)
         if (!row || !list) continue
         list.append(row)
         row.hidden = false
         shown += 1
-        const snippet = snippets?.get(slug)
+        const snippet = item.snippet
         if (snippet) {
           const line = document.createElement('p')
           line.className = 'ai-snippet'
@@ -381,18 +427,17 @@ const modes = withAsk
       setStatus(page.querySelector<HTMLElement>('[data-ai-status-text]')?.dataset.searching ?? '')
       try {
         const res = await post('/api/ai/search', query, signal)
-        const body = (await res.json().catch(() => ({}))) as { posts?: PostHit[]; error?: { code?: string } }
+        const body = (await res.json().catch(() => ({}))) as { results?: SearchHit[]; error?: { code?: string } }
         if (signal.aborted) return
         setStatus(null)
-        if (!res.ok || !body.posts) {
+        if (!res.ok || !body.results) {
           shown = undefined
           resetRows()
           setPrompt(query, rows.length)
           setError(errorFor(body.error?.code, res.status))
           return
         }
-        const snippets = new Map(body.posts.map((hit) => [hit.slug, hit.snippet]))
-        const count = showRows(body.posts.map((hit) => hit.slug), snippets)
+        const count = showRows(body.results)
         setPrompt(query, count)
         setEmpty(count === 0, strings.noMatch)
       } catch (error) {
@@ -465,7 +510,7 @@ const modes = withAsk
         const handle = (event: AnswerEvent) => {
           if (event.type === 'sources') {
             sources = event.sources
-            const count = showRows(sources.map((source) => source.slug))
+            const count = showRows(sources)
             setPrompt(query, count)
             if (!sources.length) {
               setStatus(null)

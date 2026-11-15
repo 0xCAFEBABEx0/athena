@@ -8,16 +8,39 @@ import { cmsProtectionBypass, cmsURL, env } from './env'
 import { isLocale, localizePath, type Locale } from './i18n'
 
 /**
- * AI search on /search: posts found by meaning, and answers written from
- * them. The CMS keeps the index (ai.post_chunks, apps/cms/src/ai) and answers
- * POST /api/ai/search with the nearest post excerpts; this app turns those
+ * AI search on /search: notes and pages found by meaning, and answers
+ * written from them. The CMS keeps the index (ai.chunks, apps/cms/src/ai) and
+ * answers POST /api/ai/search with the nearest excerpts; this app turns those
  * into results and, for questions, asks Claude (lib/ai-answer.ts). See
  * docs/AI_SEARCH.md.
  */
 
+/** What an excerpt comes from (apps/cms/src/ai/store.ts DOC_KINDS). */
+export const DOC_KINDS = ['post', 'page', 'project', 'about', 'stack'] as const
+export type DocKind = (typeof DOC_KINDS)[number]
+
+const SLUG = /^[\w-]{1,200}$/
+
+/**
+ * The public path (without the language prefix) of a document in the index,
+ * built here from ROUTES so a section rename needs no reindex; null for an
+ * unknown kind or a slug that is not a plain path segment.
+ */
+export const docPath = (kind: unknown, slug: unknown): string | null => {
+  if (kind === 'about') return ROUTES.about
+  if (kind === 'stack') return ROUTES.stack
+  if (typeof slug !== 'string' || !SLUG.test(slug)) return null
+  if (kind === 'post') return `${ROUTES.posts}/${slug}`
+  if (kind === 'project') return `${ROUTES.work}/${slug}`
+  if (kind === 'page') return `/${slug}`
+  return null
+}
+
 /** One excerpt from POST ${CMS_URL}/api/ai/search, best first. */
 export type ChunkHit = {
-  postId: string
+  kind: DocKind
+  docId: string
+  /** '' for about and stack. */
   slug: string
   title: string
   heading: string | null
@@ -59,7 +82,7 @@ export type AiMode = 'meaning' | 'ask'
 
 /**
  * The AI modes this deployment offers. By meaning needs only the CMS (its
- * VOYAGE_API_KEY and the ai.post_chunks table; this server reaches it with
+ * VOYAGE_API_KEY and the ai.chunks table; this server reaches it with
  * REVALIDATE_SECRET); Ask AI also needs ANTHROPIC_API_KEY here.
  * AI_SEARCH=off hides both.
  */
@@ -153,7 +176,10 @@ export const searchCms = async (
     // empty answer is not cached until the next publish.
     if (body.building) throw new AiSearchError('The AI search index is being built.', 503, 'building')
     return {
-      results: Array.isArray(body.results) ? body.results : [],
+      // Only excerpts this app can link to (an older CMS sends no kind: notes).
+      results: (Array.isArray(body.results) ? body.results : [])
+        .map((hit) => ({ ...hit, kind: hit.kind ?? 'post' }))
+        .filter((hit) => docPath(hit.kind, hit.slug) !== null),
       answers: Array.isArray(body.answers) ? body.answers : [],
     }
   }
@@ -200,7 +226,11 @@ export const searchChunks = async (
   options: { beforeLoad?: () => Promise<void>; fetchImpl?: typeof fetch } = {},
 ): Promise<ChunkHit[]> => (await searchCms(query, limit, options)).results
 
-export type PostHit = {
+/** One result of a search by meaning: a note or a page. */
+export type SearchHit = {
+  kind: DocKind
+  /** `kind:slug`, the same for every excerpt of one document. */
+  key: string
   slug: string
   href: string
   title: string
@@ -221,27 +251,32 @@ export const snippetOf = (content: string): string => {
 const RELATIVE_CUT = 0.15
 /** Nothing below this similarity is shown, however few results that leaves. */
 const ABSOLUTE_FLOOR = 0.2
-const MAX_POSTS = 10
+const MAX_HITS = 10
+
+/** The same for every excerpt of one document. */
+export const hitKey = (chunk: Pick<ChunkHit, 'kind' | 'slug'>): string => `${chunk.kind}:${chunk.slug}`
 
 /**
- * One result per post (its best excerpt), best first, keeping only posts
- * close to the best match: a query about one topic should not list every
- * post just because each is a little similar.
+ * One result per document (its best excerpt), best first, keeping only
+ * documents close to the best match: a query about one topic should not list
+ * every page just because each is a little similar.
  */
-export const rankPosts = (chunks: ChunkHit[], locale: Locale): PostHit[] => {
+export const rankHits = (chunks: ChunkHit[], locale: Locale): SearchHit[] => {
   const best = new Map<string, ChunkHit>()
   for (const chunk of chunks) {
-    const seen = best.get(chunk.slug)
-    if (!seen || chunk.score > seen.score) best.set(chunk.slug, chunk)
+    const seen = best.get(hitKey(chunk))
+    if (!seen || chunk.score > seen.score) best.set(hitKey(chunk), chunk)
   }
   const ranked = [...best.values()].sort((a, b) => b.score - a.score)
   const top = ranked[0]?.score ?? 0
   return ranked
     .filter((chunk) => chunk.score >= ABSOLUTE_FLOOR && chunk.score >= top - RELATIVE_CUT)
-    .slice(0, MAX_POSTS)
+    .slice(0, MAX_HITS)
     .map((chunk) => ({
+      kind: chunk.kind,
+      key: hitKey(chunk),
       slug: chunk.slug,
-      href: localizePath(locale, `${ROUTES.posts}/${chunk.slug}`),
+      href: localizePath(locale, docPath(chunk.kind, chunk.slug) ?? '/'),
       title: chunk.title,
       heading: chunk.heading,
       snippet: snippetOf(chunk.content),
@@ -255,7 +290,7 @@ const ANSWER_SPREAD = 0.25
 
 /**
  * The excerpts worth answering from: the nearest ones, minus those clearly
- * unrelated to the question (every post is a little similar to anything).
+ * unrelated to the question (every page is a little similar to anything).
  */
 export const relevantChunks = (chunks: ChunkHit[]): ChunkHit[] => {
   const top = chunks.reduce((best, chunk) => Math.max(best, chunk.score), 0)

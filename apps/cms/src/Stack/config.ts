@@ -1,5 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
+import { indexGlobalAfterChange } from '@/ai/hooks'
+
 import { fillStackIcons } from './hooks/fillStackIcons'
 import { revalidateStack } from './hooks/revalidateStack'
 
@@ -132,6 +134,6 @@ export const Stack: GlobalConfig = {
   ],
   hooks: {
     beforeChange: [fillStackIcons()],
-    afterChange: [revalidateStack],
+    afterChange: [revalidateStack, indexGlobalAfterChange('stack')],
   },
 }

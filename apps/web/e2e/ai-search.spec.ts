@@ -35,6 +35,7 @@ const requireAsk = async (page: Page) => {
 const answerStream = (slugs: string[], prefix = '') => {
   const sources = slugs.slice(0, 2).map((slug, i) => ({
     n: i + 1,
+    kind: 'post',
     slug,
     title: `Source ${i + 1}`,
     href: `${prefix}/notes/${slug}`,
@@ -100,14 +101,20 @@ test.describe('/search with AI (browser calls stubbed)', () => {
       expect(route.request().postDataJSON()).toEqual({ q: 'how it works', locale: 'en' })
       await route.fulfill({
         json: {
-          posts: picked.map((slug, i) => ({
-            slug,
-            href: `/notes/${slug}`,
-            title: slug,
-            heading: null,
-            snippet: `Snippet ${i + 1}`,
-            score: 0.5 - i / 10,
-          })),
+          results: [
+            ...picked.map((slug, i) => ({
+              kind: 'post',
+              key: `post:${slug}`,
+              slug,
+              href: `/notes/${slug}`,
+              title: slug,
+              heading: null,
+              snippet: `Snippet ${i + 1}`,
+              score: 0.5 - i / 10,
+            })),
+            // A page that is not a note gets a row of its own.
+            { kind: 'about', key: 'about:', slug: '', href: '/about', title: 'About me', heading: null, snippet: 'Who I am', score: 0.2 },
+          ],
         },
       })
     })
@@ -118,10 +125,17 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     expect(bodies).toBe(0)
     await expect(page.locator('[data-prompt-line]')).toHaveText('grep -ri "how it works" notes/')
     await input.press('Enter')
-    await expect(page.locator('[data-prompt-line]')).toHaveText('search --meaning "how it works" notes/')
+    await expect(page.locator('[data-prompt-line]')).toHaveText('search --meaning "how it works"')
     await expect(visibleRows(page)).toHaveCount(picked.length)
     expect(await visibleRows(page).evaluateAll((els) => els.map((el) => el.getAttribute('data-slug')))).toEqual(picked)
     await expect(visibleRows(page).first().locator('[data-ai-snippet]')).toHaveText('Snippet 1')
+    const about = page.locator('[data-ai-extra]')
+    await expect(about).toHaveCount(1)
+    await expect(about.locator('a')).toHaveAttribute('href', '/about')
+    await expect(about).toContainText('about')
+    await expect(about).toContainText('About me')
+    await expect(about.locator('[data-ai-snippet]')).toHaveText('Who I am')
+    await expect(page.locator('[data-prompt-count]').first()).toHaveText(String(picked.length + 1))
     await expect(page).toHaveURL(/q=how\+it\+works.*mode=meaning|mode=meaning.*q=how\+it\+works/)
     // The same query again is not sent twice.
     await input.press('Enter')
@@ -131,6 +145,7 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await input.fill('')
     await expect(visibleRows(page)).toHaveCount(slugs.length)
     await expect(page.locator('[data-ai-snippet]')).toHaveCount(0)
+    await expect(page.locator('[data-ai-extra]')).toHaveCount(0)
     await expect(page).not.toHaveURL(/mode=/)
     expect(bodies).toBe(1)
   })
@@ -163,10 +178,10 @@ test.describe('/search with AI (browser calls stubbed)', () => {
       await expect(ask).toHaveCount(0)
     }
     expect(requests).toEqual([])
-    await page.route('**/api/ai/search', (route) => route.fulfill({ json: { posts: [] } }))
+    await page.route('**/api/ai/search', (route) => route.fulfill({ json: { results: [] } }))
     await input.press('Enter')
     await expect(page).toHaveURL(/\/search\?.*mode=meaning/)
-    await expect(page.locator('[data-prompt-line]')).toHaveText('search --meaning "how it works" notes/')
+    await expect(page.locator('[data-prompt-line]')).toHaveText('search --meaning "how it works"')
 
     // The "/" popup: never selects Ask Hoo by itself.
     await open(page, '/', { view: 'cli' })

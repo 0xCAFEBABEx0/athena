@@ -1,9 +1,14 @@
 import { after } from 'next/server'
-import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload, PayloadRequest } from 'payload'
+import type {
+  CollectionAfterChangeHook,
+  CollectionAfterDeleteHook,
+  GlobalAfterChangeHook,
+  Payload,
+  PayloadRequest,
+} from 'payload'
 
-import type { Post } from '@/payload-types'
-import { indexPost, removePost } from './indexer'
-import { isMissingTable } from './store'
+import { indexDoc, removeDoc } from './indexer'
+import { type DocKind, isMissingTable } from './store'
 
 /**
  * Run `task` once the save is committed, like invalidateWeb: inside a request
@@ -13,16 +18,23 @@ import { isMissingTable } from './store'
  * same transaction, so it is given `req`.
  *
  * Never throws: indexing must not break a publish. A missed update is picked
- * up by the next publish of that post or by POST /api/ai/reindex.
+ * up by the next save of that document or by POST /api/ai/reindex.
  */
-const defer = (payload: Payload, label: string, task: (req?: PayloadRequest) => Promise<unknown>, req: PayloadRequest) => {
+const defer = (
+  payload: Payload,
+  label: string,
+  task: (req?: PayloadRequest) => Promise<unknown>,
+  req: PayloadRequest,
+) => {
   const run = async (inline?: PayloadRequest) => {
     try {
       const result = await task(inline)
       if (result) payload.logger.info({ msg: `AI index: ${label}`, result })
     } catch (error) {
       if (isMissingTable(error)) {
-        payload.logger.warn('AI index skipped: table ai.post_chunks does not exist (run the SQL in docs/AI_SEARCH.md)')
+        payload.logger.warn(
+          'AI index skipped: table ai.chunks does not exist (run the SQL in docs/AI_SEARCH.md)',
+        )
       } else {
         payload.logger.error({ err: error, msg: `AI index failed: ${label}` })
       }
@@ -36,22 +48,51 @@ const defer = (payload: Payload, label: string, task: (req?: PayloadRequest) => 
   }
 }
 
-/**
- * After a post is published, unpublished or republished, re-embed what
- * changed. Draft saves and autosaves never change what the public reads, so
- * they are skipped (autosave runs every two seconds while editing).
- */
-export const indexPostAfterChange: CollectionAfterChangeHook<Post> = async ({ doc, previousDoc, req }) => {
-  if (req.context.skipAiIndex) return doc
-  if (req.query?.autosave === 'true') return doc
-  const touchesPublished = doc._status === 'published' || previousDoc?._status === 'published'
-  if (!touchesPublished) return doc
-  await defer(req.payload, `post ${doc.id}`, (inline) => indexPost(req.payload, doc.id, inline), req)
-  return doc
-}
+type Saved = { id: string | number; _status?: string | null }
 
-export const removePostAfterDelete: CollectionAfterDeleteHook<Post> = async ({ doc, req }) => {
-  if (req.context.skipAiIndex) return doc
-  await defer(req.payload, `delete post ${doc.id}`, () => removePost(req.payload, doc.id).then(() => 'removed'), req)
-  return doc
-}
+/**
+ * After a document is saved, re-embed what changed. For notes and pages
+ * (drafts on), only a save that is or was published changes what the public
+ * reads; draft saves and autosaves (every two seconds while editing) are
+ * skipped. Builds have no drafts: every save counts, and the GitHub sync's
+ * saves cost one SELECT per excerpt unless the text changed.
+ */
+export const indexAfterChange =
+  (kind: Exclude<DocKind, 'about' | 'stack'>): CollectionAfterChangeHook<Saved> =>
+  async ({ doc, previousDoc, req }) => {
+    if (req.context.skipAiIndex) return doc
+    if (req.query?.autosave === 'true') return doc
+    if (kind !== 'project') {
+      const touchesPublished = doc._status === 'published' || previousDoc?._status === 'published'
+      if (!touchesPublished) return doc
+    }
+    await defer(
+      req.payload,
+      `${kind} ${doc.id}`,
+      (inline) => indexDoc(req.payload, kind, doc.id, inline),
+      req,
+    )
+    return doc
+  }
+
+export const removeAfterDelete =
+  (kind: Exclude<DocKind, 'about' | 'stack'>): CollectionAfterDeleteHook<Saved> =>
+  async ({ doc, req }) => {
+    if (req.context.skipAiIndex) return doc
+    await defer(
+      req.payload,
+      `delete ${kind} ${doc.id}`,
+      () => removeDoc(req.payload, kind, doc.id).then(() => 'removed'),
+      req,
+    )
+    return doc
+  }
+
+/** /about and /stacks: one document each, re-read on every save. */
+export const indexGlobalAfterChange =
+  (kind: 'about' | 'stack'): GlobalAfterChangeHook =>
+  async ({ doc, req }) => {
+    if (req.context.skipAiIndex) return doc
+    await defer(req.payload, kind, (inline) => indexDoc(req.payload, kind, kind, inline), req)
+    return doc
+  }

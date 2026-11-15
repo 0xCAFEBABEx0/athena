@@ -17,8 +17,9 @@ const json = (body: unknown, status = 200) =>
  * With `answerModel` (Ask AI), `answers` lists the answers that model wrote
  * before for this question or one meaning nearly the same (ai.answers).
  *
- * Semantic search over published posts: embeds the query and returns the
- * nearest post excerpts, best first. Called server-side by the web app
+ * Semantic search over what visitors can read (notes, pages, builds, about,
+ * stacks): embeds the query and returns the nearest excerpts, best first.
+ * Called server-side by the web app
  * (Authorization: Bearer REVALIDATE_SECRET, the secret both deployments
  * already share) or by a logged-in editor; every call costs an embedding
  * request, so it is not open to the public.
@@ -37,7 +38,7 @@ export async function POST(request: Request): Promise<Response> {
     if (indexEmpty) {
       // First search after the table was created or the embedding model
       // changed: build the index in the background, so the next search finds
-      // posts without anyone calling /api/ai/reindex.
+      // documents without anyone calling /api/ai/reindex.
       after(async () => {
         try {
           payload.logger.info({ msg: 'AI index: built on first search', result: await reindexAll(payload) })

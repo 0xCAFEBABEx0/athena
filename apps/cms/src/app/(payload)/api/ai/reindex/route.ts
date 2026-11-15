@@ -9,7 +9,7 @@ const json = (body: unknown, status = 200) => Response.json(body, { status })
 /**
  * POST /api/ai/reindex
  *
- * Rebuild the AI search index from every published post. Needed once after
+ * Rebuild the AI search index from everything visitors can read. Needed once after
  * the table is created, and after changing the embedding provider or model.
  * Unchanged excerpts are skipped, so running it again is cheap. Any logged-in
  * user (an editor's session cookie, or an API key such as the web-frontend

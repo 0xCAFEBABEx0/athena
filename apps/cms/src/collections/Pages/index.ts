@@ -8,6 +8,7 @@ import { Content } from '@/blocks/Content/config'
 import { FormBlock } from '@/blocks/Form/config'
 import { MediaBlock } from '@/blocks/MediaBlock/config'
 import { hero } from '@/heros/config'
+import { indexAfterChange, removeAfterDelete } from '@/ai/hooks'
 import { slugField } from '@/fields/slug'
 import { translateUIField } from '@/translation/translate'
 import { populatePublishedAt } from '@/hooks/populatePublishedAt'
@@ -132,9 +133,9 @@ export const Pages: CollectionConfig<'pages'> = {
     translateUIField,
   ],
   hooks: {
-    afterChange: [revalidatePage],
+    afterChange: [revalidatePage, indexAfterChange('page')],
     beforeChange: [populatePublishedAt],
-    afterDelete: [revalidateDelete],
+    afterDelete: [revalidateDelete, removeAfterDelete('page')],
   },
   versions: {
     drafts: {

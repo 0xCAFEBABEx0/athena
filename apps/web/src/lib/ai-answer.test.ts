@@ -21,8 +21,14 @@ import {
   systemPrompt,
 } from './ai-answer'
 
-const chunk = (slug: string, heading: string | null = null, content = `About ${slug}.`): ChunkHit => ({
-  postId: slug,
+const chunk = (
+  slug: string,
+  heading: string | null = null,
+  content = `About ${slug}.`,
+  kind: ChunkHit['kind'] = 'post',
+): ChunkHit => ({
+  kind,
+  docId: slug,
   slug,
   title: slug.toUpperCase(),
   heading,
@@ -62,13 +68,18 @@ const collect = async (events: AsyncIterable<AnswerEvent>) => {
 }
 
 describe('TC-U-60 AI answers', () => {
-  test('posts are numbered in order of first appearance; excerpts of one post share its number', () => {
-    const { sources, sourceOf } = numberSources([chunk('a', 'One'), chunk('b'), chunk('a', 'Two')], 'zh')
+  test('pages are numbered in order of first appearance; excerpts of one page share its number', () => {
+    const { sources, sourceOf } = numberSources(
+      [chunk('a', 'One'), chunk('b'), chunk('a', 'Two'), chunk('a', null, 'A build.', 'project'), chunk('', null, 'Me.', 'about')],
+      'zh',
+    )
     expect(sources).toEqual([
-      { n: 1, slug: 'a', title: 'A', href: '/zh/notes/a', heading: 'One' },
-      { n: 2, slug: 'b', title: 'B', href: '/zh/notes/b', heading: null },
+      { n: 1, kind: 'post', slug: 'a', title: 'A', href: '/zh/notes/a', heading: 'One' },
+      { n: 2, kind: 'post', slug: 'b', title: 'B', href: '/zh/notes/b', heading: null },
+      { n: 3, kind: 'project', slug: 'a', title: 'A', href: '/zh/builds/a', heading: null },
+      { n: 4, kind: 'about', slug: '', title: '', href: '/zh/about', heading: null },
     ])
-    expect(sourceOf).toEqual([1, 2, 1])
+    expect(sourceOf).toEqual([1, 2, 1, 3, 4])
   })
 
   test('excerpts go to Claude as cited search results, followed by the question; the answer language is the page language', () => {
@@ -183,7 +194,7 @@ describe('TC-U-60 AI answers', () => {
 
   test('a kept answer replays at the pace of a written one: pauses to search and read, then a few words at a time', async () => {
     const answer: StoredAnswer = {
-      sources: [{ n: 1, slug: 'a', title: 'A', href: '/notes/a', heading: null }],
+      sources: [{ n: 1, kind: 'post', slug: 'a', title: 'A', href: '/notes/a', heading: null }],
       parts: [{ text: 'One two three four five six seven eight.' }, { cite: 1 }],
     }
     const waits: number[] = []
@@ -214,17 +225,22 @@ describe('TC-U-60 AI answers', () => {
 
   test('a kept answer is checked and its links are built again from the slugs for the page language', () => {
     const stored = {
-      sources: [{ n: 1, slug: 'deploy', title: 'Deploy', href: 'https://evil.example', heading: 'Steps' }],
+      sources: [{ n: 1, kind: 'post', slug: 'deploy', title: 'Deploy', href: 'https://evil.example', heading: 'Steps' }],
       parts: [{ text: 'Hi.' }, { cite: 1 }],
     }
     expect(restoreAnswer(stored, 'ja')?.sources[0]?.href).toBe('/ja/notes/deploy')
+    const stack = { ...stored, sources: [{ ...stored.sources[0], kind: 'stack', slug: '' }] }
+    expect(restoreAnswer(stack, 'ja')?.sources[0]?.href).toBe('/ja/stacks')
     expect(restoreAnswer({ ...stored, sources: [{ ...stored.sources[0], slug: '../x' }] }, 'en')).toBeNull()
+    // Kept before pages were indexed (no kind), or of a kind this app does not know: unusable.
+    expect(restoreAnswer({ ...stored, sources: [{ ...stored.sources[0], kind: undefined }] }, 'en')).toBeNull()
+    expect(restoreAnswer({ ...stored, sources: [{ ...stored.sources[0], kind: 'user' }] }, 'en')).toBeNull()
     expect(restoreAnswer({ ...stored, parts: [{ cite: 9 }] }, 'en')).toBeNull()
     expect(restoreAnswer(null, 'en')).toBeNull()
     expect(restoreAnswer('nope', 'en')).toBeNull()
   })
 
-  test('the key of what an answer depends on changes with the excerpts, their order, the post and the model only', () => {
+  test('the key of what an answer depends on changes with the excerpts, their order, the page and the model only', () => {
     const a = chunk('a')
     const b = chunk('b')
     expect(sourceKey([a, b], 'm')).toBe(sourceKey([{ ...a, score: 0.9 }, b], 'm'))
@@ -232,6 +248,7 @@ describe('TC-U-60 AI answers', () => {
     expect(sourceKey([a, b], 'm')).not.toBe(sourceKey([b, a], 'm'))
     expect(sourceKey([a], 'm')).not.toBe(sourceKey([{ ...a, hash: 'edited' }], 'm'))
     expect(sourceKey([a], 'm')).not.toBe(sourceKey([{ ...a, slug: 'renamed' }], 'm'))
+    expect(sourceKey([a], 'm')).not.toBe(sourceKey([{ ...a, kind: 'project' }], 'm'))
     expect(sourceKey([a], 'm')).not.toBe(sourceKey([a], 'other'))
   })
 })

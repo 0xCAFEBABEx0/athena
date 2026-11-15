@@ -12,6 +12,7 @@ import type { Project } from '@athena/shared/payload-types'
 import { CACHE_TAGS, ROUTES } from '@athena/shared/constants'
 
 import { authenticated } from '@/access/authenticated'
+import { indexAfterChange, removeAfterDelete } from '@/ai/hooks'
 import { fetchRepos, isRepoName } from '@/github/sync'
 import { translateUIField } from '@/translation/translate'
 import { invalidateWeb } from '@/utilities/invalidateWeb'
@@ -265,7 +266,7 @@ export const Projects: CollectionConfig<'projects'> = {
   ],
   hooks: {
     beforeChange: [fillFromGitHub],
-    afterChange: [revalidateProject],
-    afterDelete: [revalidateProjectDelete],
+    afterChange: [revalidateProject, indexAfterChange('project')],
+    afterDelete: [revalidateProjectDelete, removeAfterDelete('project')],
   },
 }

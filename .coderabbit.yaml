@@ -131,9 +131,11 @@ reviews:
         against the limits. The CMS /api/ai/search accepts only the
         REVALIDATE_SECRET bearer (timing-safe) or a logged-in user. The
         index must stay outside Payload (schema `ai`, no collection or job
-        task) and must read posts as an anonymous visitor
-        (`overrideAccess: false`), so drafts never reach the index or an
-        answer. Indexing must never fail a save. Links shown to readers are
+        task) and must read every kind it holds (notes, pages, builds,
+        About, Stack; apps/cms/src/ai/sources.ts) as an anonymous visitor
+        (`overrideAccess: false`, `_status: published` where drafts exist)
+        and only when the web app shows the page, so drafts, hidden builds
+        and 404 pages never reach the index or an answer. Indexing must never fail a save. Links shown to readers are
         built from ROUTES, never from model output. A kept answer
         (ai.answers) is reused only when its source_key matches the excerpts
         the question would be answered from now, and its replay must look

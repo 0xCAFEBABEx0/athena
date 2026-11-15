@@ -9,7 +9,8 @@ import {
   normalizeQuery,
   parseAiRequest,
   queryKey,
-  rankPosts,
+  docPath,
+  rankHits,
   relevantChunks,
   saveAnswer,
   searchChunks,
@@ -30,8 +31,15 @@ const restoreEnv = () => {
   }
 }
 
-const hit = (slug: string, score: number, content = `About ${slug}.`, heading: string | null = null): ChunkHit => ({
-  postId: slug,
+const hit = (
+  slug: string,
+  score: number,
+  content = `About ${slug}.`,
+  heading: string | null = null,
+  kind: ChunkHit['kind'] = 'post',
+): ChunkHit => ({
+  kind,
+  docId: slug,
   slug,
   title: slug.toUpperCase(),
   heading,
@@ -59,8 +67,8 @@ describe('TC-U-57 AI search (web): queries and ranking', () => {
     expect(queryKey('en', 'deploy')).toMatch(/^en:[0-9a-f]{32}$/)
   })
 
-  test('one result per post (its best excerpt), best first, only posts near the best one', () => {
-    const posts = rankPosts(
+  test('one result per document (its best excerpt), best first, only those near the best one', () => {
+    const posts = rankHits(
       [
         hit('a', 0.5, 'weaker excerpt of a'),
         hit('b', 0.62, 'best of b', 'Setup'),
@@ -73,10 +81,33 @@ describe('TC-U-57 AI search (web): queries and ranking', () => {
       ['b', 'best of b', 0.62],
       ['a', 'best of a', 0.6],
     ])
-    expect(posts[0]).toMatchObject({ href: '/ja/notes/b', title: 'B', heading: 'Setup' })
+    expect(posts[0]).toMatchObject({ kind: 'post', key: 'post:b', href: '/ja/notes/b', title: 'B', heading: 'Setup' })
     // Nothing similar enough at all: no results.
-    expect(rankPosts([hit('a', 0.18)], 'en')).toEqual([])
-    expect(rankPosts([], 'en')).toEqual([])
+    expect(rankHits([hit('a', 0.18)], 'en')).toEqual([])
+    expect(rankHits([], 'en')).toEqual([])
+  })
+
+  test('pages, builds, /about and /stacks are results of their own, linked through ROUTES', () => {
+    const hits = rankHits(
+      [
+        hit('athena', 0.6, 'a build', null, 'project'),
+        hit('athena', 0.59, 'a note with the same slug'),
+        hit('', 0.58, 'who I am', null, 'about'),
+        hit('', 0.57, 'tools', null, 'stack'),
+        hit('contact', 0.56, 'a page', null, 'page'),
+      ],
+      'zh',
+    )
+    expect(hits.map((h) => [h.key, h.href])).toEqual([
+      ['project:athena', '/zh/builds/athena'],
+      ['post:athena', '/zh/notes/athena'],
+      ['about:', '/zh/about'],
+      ['stack:', '/zh/stacks'],
+      ['page:contact', '/zh/contact'],
+    ])
+    expect(docPath('page', '../admin')).toBeNull()
+    expect(docPath('post', '')).toBeNull()
+    expect(docPath('user', 'x')).toBeNull()
   })
 
   test('snippets drop code blocks and are cut at 140 characters', () => {

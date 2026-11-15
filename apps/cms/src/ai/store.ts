@@ -1,25 +1,37 @@
 import type { Payload } from 'payload'
 
 /**
- * The AI search index: one table, ai.post_chunks, in the CMS database.
+ * The AI search index: ai.chunks (excerpts of everything a visitor can read:
+ * notes, pages, builds, /about, /stacks) and ai.answers (answers kept for
+ * reuse), in the CMS database.
  *
- * It lives in its own `ai` schema, outside the `public` schema Payload owns,
- * so Payload's dev schema push and its migrations never see it, and a Payload
- * major upgrade (4.0 renames and moves columns) leaves it alone. Nothing here
- * reads Payload's tables: the indexer reads posts through the Local API.
+ * They live in their own `ai` schema, outside the `public` schema Payload
+ * owns, so Payload's dev schema push and its migrations never see them, and a
+ * Payload major upgrade (4.0 renames and moves columns) leaves them alone.
+ * Nothing here reads Payload's tables: the indexer reads documents through
+ * the Local API.
  *
- * Production and the preview Neon branch need SCHEMA_SQL run by hand once
- * (docs/AI_SEARCH.md, docs/UPGRADE_NOTES.md). In local dev it is created on
- * first use.
+ * One table for every kind of document: `kind` + `doc_id` say where an
+ * excerpt comes from, and the web app turns `kind` + `slug` into a link, so
+ * a section rename (ROUTES) never needs a reindex.
+ *
+ * Production and the preview Neon branch need docs/sql/2026-11-15-ai.sql run
+ * by hand once (docs/AI_SEARCH.md, docs/UPGRADE_NOTES.md). In local dev the
+ * tables are created on first use.
  */
+
+/** What an excerpt belongs to. Globals use their own slug as `doc_id`. */
+export const DOC_KINDS = ['post', 'page', 'project', 'about', 'stack'] as const
+export type DocKind = (typeof DOC_KINDS)[number]
 
 export const SCHEMA_SQL = `CREATE EXTENSION IF NOT EXISTS vector;
 CREATE SCHEMA IF NOT EXISTS ai;
-CREATE TABLE IF NOT EXISTS ai.post_chunks (
-  post_id      text        NOT NULL,
+CREATE TABLE IF NOT EXISTS ai.chunks (
+  kind         text        NOT NULL,
+  doc_id       text        NOT NULL,
   locale       text        NOT NULL,
   chunk        integer     NOT NULL,
-  slug         text        NOT NULL,
+  slug         text        NOT NULL DEFAULT '',
   title        text        NOT NULL,
   heading      text,
   content      text        NOT NULL,
@@ -27,8 +39,9 @@ CREATE TABLE IF NOT EXISTS ai.post_chunks (
   model        text        NOT NULL,
   embedding    vector(1024) NOT NULL,
   updated_at   timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (post_id, locale, chunk)
+  PRIMARY KEY (kind, doc_id, locale, chunk)
 );
+CREATE INDEX IF NOT EXISTS chunks_content_hash_idx ON ai.chunks (content_hash);
 CREATE TABLE IF NOT EXISTS ai.answers (
   locale       text        NOT NULL,
   question     text        NOT NULL,
@@ -58,13 +71,13 @@ export const dbOf = (payload: Payload): Db => {
   return pool as Db
 }
 
-/** Postgres "relation does not exist": the index table was never created. */
+/** Postgres "relation does not exist": the index tables were never created. */
 export const isMissingTable = (error: unknown): boolean =>
   typeof error === 'object' && error !== null && (error as { code?: unknown }).code === '42P01'
 
 let ensured: Promise<void> | null = null
 
-/** Create the table in local dev; elsewhere it is created by hand (see SCHEMA_SQL). */
+/** Create the tables in local dev; elsewhere they are created by hand (see SCHEMA_SQL). */
 export const ensureSchema = (db: Db): Promise<void> => {
   if (process.env.NODE_ENV === 'production') return Promise.resolve()
   ensured ??= db.query(SCHEMA_SQL).then(
@@ -81,51 +94,47 @@ const toVector = (values: number[]): string => `[${values.join(',')}]`
 
 export type StoredChunk = {
   chunk: number
-  slug: string
-  title: string
   heading: string | null
   content: string
   hash: string
   embedding: number[]
 }
 
-/** Hash of every stored chunk of one post in one language, by chunk number. */
-export const storedHashes = async (
-  db: Db,
-  postId: string,
-  locale: string,
-  model: string,
-): Promise<Map<number, string>> => {
+/** One document in the index: a post, a page, a build, or a global (about, stack). */
+export type DocRef = { kind: DocKind; id: string }
+
+/** Hash of every stored chunk of one document in one language, by chunk number. */
+export const storedHashes = async (db: Db, doc: DocRef, locale: string, model: string): Promise<Map<number, string>> => {
   const { rows } = await db.query(
-    'SELECT chunk, content_hash FROM ai.post_chunks WHERE post_id = $1 AND locale = $2 AND model = $3',
-    [postId, locale, model],
+    'SELECT chunk, content_hash FROM ai.chunks WHERE kind = $1 AND doc_id = $2 AND locale = $3 AND model = $4',
+    [doc.kind, doc.id, locale, model],
   )
   return new Map(rows.map((row) => [Number(row.chunk), String(row.content_hash)]))
 }
 
 /**
- * Vectors already stored for these hashes (any post, any language). An
- * untranslated post shows English in ja and zh too, so the same excerpt is
- * stored three times; it is embedded once.
+ * Vectors already stored for these hashes (any document, any language). An
+ * untranslated document shows English in ja and zh too, so the same excerpt
+ * is stored three times; it is embedded once.
  */
 export const knownVectors = async (db: Db, hashes: string[]): Promise<Map<string, number[]>> => {
   if (!hashes.length) return new Map()
   const { rows } = await db.query(
     `SELECT DISTINCT ON (content_hash) content_hash, embedding::text AS embedding
-       FROM ai.post_chunks WHERE content_hash = ANY($1::text[])`,
+       FROM ai.chunks WHERE content_hash = ANY($1::text[])`,
     [hashes],
   )
   return new Map(rows.map((row) => [String(row.content_hash), JSON.parse(String(row.embedding)) as number[]]))
 }
 
 /**
- * Make the stored chunks of one post in one language exactly `chunks`:
+ * Make the stored chunks of one document in one language exactly `chunks`:
  * insert or replace them, refresh slug and title on unchanged ones (cheap),
  * and drop chunk numbers past the end and rows of other models.
  */
 export const replaceChunks = async (
   db: Db,
-  postId: string,
+  doc: DocRef,
   locale: string,
   model: string,
   meta: { slug: string; title: string },
@@ -134,19 +143,20 @@ export const replaceChunks = async (
 ): Promise<void> => {
   for (const chunk of changed) {
     await db.query(
-      `INSERT INTO ai.post_chunks
-         (post_id, locale, chunk, slug, title, heading, content, content_hash, model, embedding, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::vector, now())
-       ON CONFLICT (post_id, locale, chunk) DO UPDATE SET
+      `INSERT INTO ai.chunks
+         (kind, doc_id, locale, chunk, slug, title, heading, content, content_hash, model, embedding, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::vector, now())
+       ON CONFLICT (kind, doc_id, locale, chunk) DO UPDATE SET
          slug = EXCLUDED.slug, title = EXCLUDED.title, heading = EXCLUDED.heading,
          content = EXCLUDED.content, content_hash = EXCLUDED.content_hash,
          model = EXCLUDED.model, embedding = EXCLUDED.embedding, updated_at = now()`,
       [
-        postId,
+        doc.kind,
+        doc.id,
         locale,
         chunk.chunk,
-        chunk.slug,
-        chunk.title,
+        meta.slug,
+        meta.title,
         chunk.heading,
         chunk.content,
         chunk.hash,
@@ -156,41 +166,46 @@ export const replaceChunks = async (
     )
   }
   await db.query(
-    'UPDATE ai.post_chunks SET slug = $3, title = $4 WHERE post_id = $1 AND locale = $2 AND (slug <> $3 OR title <> $4)',
-    [postId, locale, meta.slug, meta.title],
+    `UPDATE ai.chunks SET slug = $4, title = $5
+      WHERE kind = $1 AND doc_id = $2 AND locale = $3 AND (slug <> $4 OR title <> $5)`,
+    [doc.kind, doc.id, locale, meta.slug, meta.title],
   )
   await db.query(
-    'DELETE FROM ai.post_chunks WHERE post_id = $1 AND locale = $2 AND (chunk >= $3 OR model <> $4)',
-    [postId, locale, count, model],
+    'DELETE FROM ai.chunks WHERE kind = $1 AND doc_id = $2 AND locale = $3 AND (chunk >= $4 OR model <> $5)',
+    [doc.kind, doc.id, locale, count, model],
   )
 }
 
-/** Drop a post from the index, in one language or (no locale) in all. */
-export const deletePostChunks = async (db: Db, postId: string, locale?: string): Promise<void> => {
+/** Drop a document from the index, in one language or (no locale) in all. */
+export const deleteDocChunks = async (db: Db, doc: DocRef, locale?: string): Promise<void> => {
   if (locale) {
-    await db.query('DELETE FROM ai.post_chunks WHERE post_id = $1 AND locale = $2', [postId, locale])
+    await db.query('DELETE FROM ai.chunks WHERE kind = $1 AND doc_id = $2 AND locale = $3', [doc.kind, doc.id, locale])
   } else {
-    await db.query('DELETE FROM ai.post_chunks WHERE post_id = $1', [postId])
+    await db.query('DELETE FROM ai.chunks WHERE kind = $1 AND doc_id = $2', [doc.kind, doc.id])
   }
 }
 
-/** Drop every post not in `keep` (posts deleted while a hook was missed). */
-export const deleteOtherPosts = async (db: Db, keep: string[]): Promise<number> => {
+/** Drop every document of `kind` not in `keep` (deleted while a hook was missed), and kinds no longer indexed. */
+export const deleteOtherDocs = async (db: Db, kind: DocKind, keep: string[]): Promise<number> => {
   const { rows } = await db.query(
-    'DELETE FROM ai.post_chunks WHERE NOT (post_id = ANY($1::text[])) RETURNING 1',
-    [keep],
+    `DELETE FROM ai.chunks
+      WHERE (kind = $1 AND NOT (doc_id = ANY($2::text[]))) OR NOT (kind = ANY($3::text[]))
+      RETURNING 1`,
+    [kind, keep, [...DOC_KINDS]],
   )
   return rows.length
 }
 
 /** True when no row was written by `model` (a new table, or a new embedding model). */
 export const isEmptyFor = async (db: Db, model: string): Promise<boolean> => {
-  const { rows } = await db.query('SELECT 1 FROM ai.post_chunks WHERE model = $1 LIMIT 1', [model])
+  const { rows } = await db.query('SELECT 1 FROM ai.chunks WHERE model = $1 LIMIT 1', [model])
   return rows.length === 0
 }
 
 export type ChunkHit = {
-  postId: string
+  kind: DocKind
+  docId: string
+  /** '' for about and stack. */
   slug: string
   title: string
   heading: string | null
@@ -213,15 +228,16 @@ export const nearestChunks = async (
   // millisecond, and an HNSW index combined with the locale filter can
   // return fewer than `limit` rows. Add one when the table reaches ~10k rows.
   const { rows } = await db.query(
-    `SELECT post_id, slug, title, heading, content, content_hash, 1 - (embedding <=> $1::vector) AS score
-       FROM ai.post_chunks
+    `SELECT kind, doc_id, slug, title, heading, content, content_hash, 1 - (embedding <=> $1::vector) AS score
+       FROM ai.chunks
       WHERE locale = $2 AND model = $3
       ORDER BY embedding <=> $1::vector
       LIMIT $4`,
     [toVector(vector), locale, model, limit],
   )
   return rows.map((row) => ({
-    postId: String(row.post_id),
+    kind: String(row.kind) as DocKind,
+    docId: String(row.doc_id),
     slug: String(row.slug),
     title: String(row.title),
     heading: row.heading == null ? null : String(row.heading),

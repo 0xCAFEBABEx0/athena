@@ -10,7 +10,7 @@
  *   (EMBEDDING_BASE_URL), OPENAI_API_KEY, model text-embedding-3-small.
  *
  * EMBEDDING_MODEL overrides the model. Every vector has EMBEDDING_DIMENSIONS
- * numbers, the size of the ai.post_chunks column: changing the provider or
+ * numbers, the size of the ai.chunks column: changing the provider or
  * model needs a full reindex (POST /api/ai/reindex), and rows written by
  * another model are ignored until then.
  */

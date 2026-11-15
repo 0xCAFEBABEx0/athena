@@ -10,7 +10,7 @@ import {
 } from '@payloadcms/richtext-lexical'
 
 import { authenticated } from '@/access/authenticated'
-import { indexPostAfterChange, removePostAfterDelete } from '@/ai/hooks'
+import { indexAfterChange, removeAfterDelete } from '@/ai/hooks'
 import { authenticatedOrPublished } from '@/access/authenticatedOrPublished'
 import { Banner } from '@/blocks/Banner/config'
 import { Code } from '@/blocks/Code/config'
@@ -230,9 +230,9 @@ export const Posts: CollectionConfig<'posts'> = {
     translateUIField,
   ],
   hooks: {
-    afterChange: [revalidatePost, indexPostAfterChange],
+    afterChange: [revalidatePost, indexAfterChange('post')],
     afterRead: [populateAuthors],
-    afterDelete: [revalidateDelete, removePostAfterDelete],
+    afterDelete: [revalidateDelete, removeAfterDelete('post')],
   },
   versions: {
     drafts: {

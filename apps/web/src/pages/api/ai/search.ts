@@ -6,7 +6,7 @@ import {
   clientAddress,
   isCrossSite,
   parseAiRequest,
-  rankPosts,
+  rankHits,
   searchChunks,
   searchFailure,
 } from '@/lib/ai'
@@ -14,11 +14,12 @@ import { allowToday, allowVisitor } from '@/lib/ai-limits'
 
 /**
  * POST /api/ai/search  { "q": "deploying without downtime", "locale": "en" }
- *   → { "posts": [{ slug, href, title, heading, snippet, score }] }
+ *   → { "results": [{ kind, key, slug, href, title, heading, snippet, score }] }
  *
- * Posts found by meaning, best first. Repeated queries come from the Runtime
- * Cache (lib/ai.ts searchChunks) and skip the limits; a new one counts
- * against the same per-visitor and daily limits as questions.
+ * Notes and pages (about, builds, stacks, CMS pages) found by meaning, best
+ * first. Repeated queries come from the Runtime Cache (lib/ai.ts
+ * searchChunks) and skip the limits; a new one counts against the same
+ * per-visitor and daily limits as questions.
  */
 
 const MAX_BODY = 2_048
@@ -50,7 +51,7 @@ export const POST: APIRoute = async ({ request }) => {
         if (!(await allowToday())) throw new AiSearchError('Daily limit reached.', 429, 'daily')
       },
     })
-    return json({ posts: rankPosts(chunks, query.locale) })
+    return json({ results: rankHits(chunks, query.locale) })
   } catch (cause) {
     const { status, code } = searchFailure(cause)
     if (status !== 429 && code !== 'building') {
