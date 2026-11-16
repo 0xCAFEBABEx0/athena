@@ -491,6 +491,12 @@ const modes = withAsk
         return
       }
       shown = `ask\n${query}`
+      // Sent, like a chat: the question moves from the box to the prompt
+      // line above the answer. It comes back to the box when asking fails.
+      if (input && input.value.trim() === query) input.value = ''
+      const giveBack = () => {
+        if (input && !input.value) input.value = query
+      }
       controller = new AbortController()
       const { signal } = controller
       setPrompt(query, 0)
@@ -510,6 +516,7 @@ const modes = withAsk
           resetRows()
           setPrompt(query, rows.length)
           setError(errorFor(body.error?.code, res.status))
+          giveBack()
           return
         }
         const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
@@ -554,6 +561,7 @@ const modes = withAsk
             setStatus(null)
             shown = undefined
             setError(errorFor(event.code, 200))
+            giveBack()
           }
         }
         for (;;) {
@@ -573,6 +581,7 @@ const modes = withAsk
         shown = undefined
         setStatus(null)
         setError(errorFor(undefined, 0))
+        giveBack()
         console.error(error)
       }
     }

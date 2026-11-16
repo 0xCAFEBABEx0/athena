@@ -4,6 +4,14 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.6.1] - 2026-11-16
+
+### Fixed
+
+- Ask AI: a question sent with Enter or a suggested question leaves the
+  search box and shows only on the prompt line above the answer, so it no
+  longer looks unsent. If asking fails, the question goes back into the box.
+
 ## [1.6.0] - 2026-11-16
 
 ### Added

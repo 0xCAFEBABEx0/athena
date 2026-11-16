@@ -249,6 +249,8 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await page.locator('[data-search-input]').press('Enter')
     await expect(page.locator('[data-ai-error]')).toBeVisible()
     await expect(page.locator('[data-ai-answer]')).toBeHidden()
+    // Not sent after all: the question is back in the box to try again.
+    await expect(page.locator('[data-search-input]')).toHaveValue('もう一度')
 
     // A spending limit (Anthropic or Cloudflare AI Gateway, 429 from Claude) arrives in the stream.
     await page.unroute('**/api/ai/ask')
@@ -280,7 +282,9 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     })
     const question = (await presets.first().getAttribute('data-ai-preset')) ?? ''
     await presets.first().click()
-    await expect(page.locator('[data-search-input]')).toHaveValue(question)
+    // Sent: the question leaves the box for the prompt line, as in a chat.
+    await expect(page.locator('[data-prompt-question]')).toHaveText(question)
+    await expect(page.locator('[data-search-input]')).toHaveValue('')
     await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
     expect(asked).toEqual([question])
     // Not offered in Search.
@@ -337,6 +341,7 @@ test.describe('/search?mode=ask from elsewhere', () => {
     expect(asked).toEqual([])
     await page.locator('[data-search-input]').press('Enter')
     await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
+    await expect(page.locator('[data-search-input]')).toHaveValue('')
     expect(asked).toEqual(['how it works'])
 
     // The composer's Ask Hoo row on this site: asked on arrival.
