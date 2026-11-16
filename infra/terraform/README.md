@@ -54,7 +54,7 @@ prints, and writes nothing to disk. `op.env` sets `VERCEL_API_TOKEN`,
 values are [template references](https://www.1password.dev/cli/secrets-template-syntax)
 (`{{ op://... }}`), which op run resolves inside a value.
 
-The references assume a vault `athena` with the items `terraform-vercel` and
+The references assume the vault `Development` with the items `terraform-vercel` and
 `terraform-cloudflare` (field `credential`) and `athena-terraform` (one field
 per key of `TF_VAR_secrets`); edit `op.env` to match yours. Every referenced
 field must exist (an empty `cf_aig_token` is fine until the gateway has a
