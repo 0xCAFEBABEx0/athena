@@ -42,3 +42,19 @@ existing = {
 #   spend_limit_usd = 5
 #   vercel_targets  = ["preview"] # then ["production", "preview"]
 # }
+
+# Version 2 re-sends every secret: on 2026-11-16 the first apply sent the
+# unresolved op:// reference text instead of the values (see README,
+# Credentials). Bump a key again to rotate it later.
+secret_versions = {
+  revalidate_secret     = 2
+  preview_secret        = 2
+  payload_api_key       = 2
+  payload_secret        = 2
+  cron_secret           = 2
+  web_protection_bypass = 2
+  cms_protection_bypass = 2
+  github_token          = 2
+  voyage_api_key        = 2
+  cf_aig_token          = 2
+}

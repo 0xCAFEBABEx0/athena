@@ -48,16 +48,22 @@ Not managed here:
 `op run --env-file=op.env -- terraform ...`
 ([Load secrets into the environment](https://www.1password.dev/cli/secrets-environment-variables)):
 1Password CLI resolves the references in `op.env` and gives the values to
-that one terraform process as environment variables, masks any secret it
-prints, and writes nothing to disk. `op.env` sets `VERCEL_API_TOKEN`,
-`CLOUDFLARE_API_TOKEN` and `TF_VAR_secrets`, the last one a JSON map whose
-values are [template references](https://www.1password.dev/cli/secrets-template-syntax)
-(`{{ op://... }}`), which op run resolves inside a value.
+one child process as environment variables, masks any secret it prints, and
+writes nothing to disk. `op.env` sets `VERCEL_API_TOKEN`,
+`CLOUDFLARE_API_TOKEN` and one `TF_SECRET_<key>` per key of `var.secrets`,
+each a whole-value `op://` reference. The child builds `TF_VAR_secrets` from
+the `TF_SECRET_*` variables with jq (so any character in a value is escaped),
+stops if any value is still an `op://` reference, and execs terraform. A
+plan also stops on an empty or unresolved secret (precondition in `env.tf`).
+
+Do not put `{{ op://... }}` templates inside an env file value: on
+2026-11-16 op run 2.42.0 passed such a JSON value through unresolved, and the
+first apply sent the reference text to Vercel as every secret.
 
 The references assume the vault `Development` with the items `vercel-terraform` and
 `cloudflare-terraform` (field `credential`), `athena-github-repo-read` (field
 `credential`, the GitHub token) and `athena-terraform` (one field per other key
-of `TF_VAR_secrets`); edit `op.env` to match yours. Every referenced
+of `var.secrets`); edit `op.env` to match yours. Every referenced
 field must exist (an empty `cf_aig_token` is fine until the gateway has a
 token). Needs the 1Password CLI signed in: the desktop app integration, or a
 [service account](https://www.1password.dev/service-accounts/) limited to that

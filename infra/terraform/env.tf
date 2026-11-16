@@ -14,10 +14,11 @@ resource "vercel_project_environment_variable" "this" {
   value_wo_version = try(each.value.secret, null) == null ? null : lookup(var.secret_versions, each.value.secret, 1)
 
   lifecycle {
-    # An empty field in 1Password would otherwise reach Vercel as an empty value.
+    # An empty field, or a 1Password reference that was not resolved, would
+    # otherwise reach Vercel as the value.
     precondition {
-      condition     = try(each.value.secret, null) == null || trimspace(lookup(var.secrets, try(each.value.secret, ""), "")) != ""
-      error_message = "secrets.${coalesce(try(each.value.secret, null), "?")} (for ${each.key}) is empty or missing. Fill it in before planning."
+      condition     = try(each.value.secret, null) == null || (trimspace(lookup(var.secrets, try(each.value.secret, ""), "")) != "" && !strcontains(lookup(var.secrets, try(each.value.secret, ""), ""), "op://"))
+      error_message = "secrets.${coalesce(try(each.value.secret, null), "?")} (for ${each.key}) is empty, missing or an unresolved op:// reference. Fix it before planning."
     }
   }
 }
