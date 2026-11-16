@@ -4,7 +4,14 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
-## [1.6.1] - 2026-11-16
+## [1.7.0] - 2026-11-16
+
+### Added
+
+- The suggested questions (Site → "AI search: suggested questions") also
+  show in the search box's menu on other pages and in the "/" popup while the
+  box is empty. Picking one (click, or ↓ and Enter) opens it in Ask AI, where
+  it is asked right away. None is picked by itself.
 
 ### Fixed
 

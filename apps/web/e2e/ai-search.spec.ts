@@ -218,6 +218,63 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await expect(page).toHaveURL(/\/search\?.*mode=meaning/)
   })
 
+  test('TC-E-71 the composer and the "/" popup offer the suggested questions while empty; one opens in Ask AI and is asked once', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 })
+    await open(page, '/search?mode=ask', { view: 'cli' })
+    const slugs = await requireAi(page)
+    await requireAsk(page)
+    const questions = await page.locator('[data-ai-preset]').evaluateAll((els) => els.map((el) => el.getAttribute('data-ai-preset') ?? ''))
+    test.skip(questions.length === 0, 'no suggested questions in the Site settings')
+    const asked: string[] = []
+    await page.route('**/api/ai/ask', async (route) => {
+      asked.push(String(route.request().postDataJSON()?.q))
+      await route.fulfill({ contentType: 'application/x-ndjson', body: answerStream(slugs) })
+    })
+
+    // The home composer (ADE): focusing the empty box lists them, none picked.
+    await open(page, '/', { view: 'modern' })
+    const input = page.locator('[data-search-prompt] [data-search-input]').first()
+    await input.focus()
+    const rows = page.locator('[data-search-prompt] [data-prompt-preset]')
+    await expect(rows.first()).toBeVisible()
+    await expect(rows).toHaveCount(questions.length)
+    await expect(page.locator('[data-search-prompt] [data-prompt-preset][aria-selected="true"]')).toHaveCount(0)
+    expect(await overflowX(page)).toBeLessThanOrEqual(0)
+    // Typing hides them (the Ask Hoo row is for what is typed).
+    await input.fill('x')
+    await expect(rows.first()).toBeHidden()
+    await input.fill('')
+    await expect(rows.first()).toBeVisible()
+    expect(asked).toEqual([])
+    // ↓ picks the first, ↑ goes back to none; ↓ and Enter open it in Ask AI.
+    await input.press('ArrowDown')
+    await expect(rows.first()).toHaveAttribute('aria-selected', 'true')
+    await input.press('ArrowUp')
+    await expect(rows.first()).toHaveAttribute('aria-selected', 'false')
+    await input.press('ArrowDown')
+    await input.press('Enter')
+    await expect(page).toHaveURL(/\/search\?.*mode=ask/)
+    await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
+    expect(asked).toEqual([questions[0]])
+
+    // The "/" popup: listed above the newest posts while the box is empty, never selected.
+    await open(page, '/', { view: 'cli' })
+    await page.keyboard.press('/')
+    const hits = page.locator('[data-search-results] [data-ask]')
+    await expect(hits).toHaveCount(questions.length)
+    await expect(hits.first()).toHaveAttribute('aria-selected', 'false')
+    await expect(hits.first()).toHaveAttribute('href', /mode=ask/)
+    expect(await overflowX(page)).toBeLessThanOrEqual(0)
+    await page.locator('[data-search-query]').fill('zzzz-no-such-post')
+    await expect(hits).toHaveCount(1)
+    await page.locator('[data-search-query]').fill('')
+    await hits.last().click()
+    await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
+    expect(asked).toEqual([questions[0], questions[questions.length - 1]])
+  })
+
   test('TC-E-64 Ask AI streams the answer with numbered citations linking to the posts; errors show as an alert', async ({
     page,
   }) => {

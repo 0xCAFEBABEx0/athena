@@ -6,10 +6,14 @@
  * Enter with nothing selected opens the full /search page (by meaning, with
  * AI search on). With Ask AI on, an "Ask Hoo" row on top opens the question in
  * /search's Ask AI; it is never selected by itself, so Enter costs no answer.
+ * With the box empty, the Site's suggested questions (`presets`, from the
+ * Layout) show above the newest posts as rows of the same kind.
  */
 import { aiModes } from '@/lib/ai'
 import { aiText } from '@/lib/ai-text'
 import { dict, localeOf, localizePath } from '@/lib/i18n'
+
+type Props = { presets?: string[] }
 
 const locale = localeOf(Astro)
 const t = dict(locale)
@@ -18,6 +22,8 @@ const modes = aiModes()
 const strings = {
   askHoo: modes.includes('ask') ? ai.askHoo : '',
   askHooHint: ai.askHooHint,
+  presets: modes.includes('ask') ? (Astro.props.presets ?? []) : [],
+  presetsLabel: ai.presets,
   posts: t.groupPosts,
   pages: t.groupPages,
   loading: t.searchLoading,
@@ -99,6 +105,8 @@ const strings = {
   type Strings = {
     askHoo: string
     askHooHint: string
+    presets: string[]
+    presetsLabel: string
     posts: string
     pages: string
     loading: string
@@ -153,7 +161,8 @@ const strings = {
       url.searchParams.set('mode', 'ask')
       return url.href
     }
-    const renderAsk = (q: string) => {
+    /** One row that opens `query` in Ask AI; a suggested question shows as itself. */
+    const renderAsk = (q: string, preset = false) => {
       const query = q.replace(/\s+/g, ' ').trim()
       if (!strings.askHoo || !query || query.startsWith('/')) return
       const option = document.createElement('a')
@@ -169,16 +178,22 @@ const strings = {
       glyph.textContent = '✦'
       const title = document.createElement('span')
       title.className = 'min-w-0 flex-1 truncate'
-      const name = document.createElement('span')
-      name.className = 'font-semibold'
-      name.textContent = strings.askHoo
-      const text = document.createElement('span')
-      text.className = 'text-base-content/65'
-      text.textContent = `“${query}”`
-      title.append(name, ' ', text)
+      if (preset) {
+        // A whole question: two lines before it is cut, not one.
+        title.className = 'line-clamp-2 min-w-0 flex-1 break-words'
+        title.textContent = query
+      } else {
+        const name = document.createElement('span')
+        name.className = 'font-semibold'
+        name.textContent = strings.askHoo
+        const text = document.createElement('span')
+        text.className = 'text-base-content/65'
+        text.textContent = `“${query}”`
+        title.append(name, ' ', text)
+      }
       const hint = document.createElement('span')
       hint.className = 'hidden shrink-0 text-xs text-base-content/65 sm:inline'
-      hint.textContent = strings.askHooHint
+      hint.textContent = preset ? strings.askHoo : strings.askHooHint
       const enter = document.createElement('span')
       enter.className = 'search-hit-enter'
       enter.setAttribute('aria-hidden', 'true')
@@ -237,6 +252,14 @@ const strings = {
       options = []
       renderCommands(q)
       renderAsk(q)
+      if (!q.trim() && strings.askHoo && strings.presets.length > 0) {
+        const label = document.createElement('p')
+        label.className = 'px-3 pb-1 pt-2 text-xs text-base-content/65'
+        label.textContent = strings.presetsLabel
+        label.setAttribute('role', 'presentation')
+        list.append(label)
+        for (const preset of strings.presets) renderAsk(preset, true)
+      }
       const offset = options.length
       for (const group of ['posts', 'pages'] as const) {
         const hits: SearchHit[] = data[group]
