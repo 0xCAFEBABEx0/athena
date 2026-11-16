@@ -36,12 +36,12 @@ existing = {
 
 # Cloudflare AI Gateway in front of Claude (docs/AI_SEARCH.md). Uncomment
 # after the Cloudflare account ID is known (dashboard home, right column).
-# ai_gateway = {
-#   account_id      = "<cloudflare account id>"
-#   gateway_id      = "whoa"
-#   spend_limit_usd = 5
-#   vercel_targets  = ["preview"] # then ["production", "preview"]
-# }
+ai_gateway = {
+  account_id      = "6b3d305816ba5b9c7629ce019a22cfde"
+  gateway_id      = "whoa"
+  spend_limit_usd = 5
+  vercel_targets  = ["preview"] # then ["production", "preview"] after the 1.6.0 release
+}
 
 # Version 2 re-sends every secret: on 2026-11-16 the first apply sent the
 # unresolved op:// reference text instead of the values (see README,
