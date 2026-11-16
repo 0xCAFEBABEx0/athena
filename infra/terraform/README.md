@@ -55,8 +55,9 @@ values are [template references](https://www.1password.dev/cli/secrets-template-
 (`{{ op://... }}`), which op run resolves inside a value.
 
 The references assume the vault `Development` with the items `vercel-terraform` and
-`cloudflare-terraform` (field `credential`) and `athena-terraform` (one field
-per key of `TF_VAR_secrets`); edit `op.env` to match yours. Every referenced
+`cloudflare-terraform` (field `credential`), `athena-github-repo-read` (field
+`credential`, the GitHub token) and `athena-terraform` (one field per other key
+of `TF_VAR_secrets`); edit `op.env` to match yours. Every referenced
 field must exist (an empty `cf_aig_token` is fine until the gateway has a
 token). Needs the 1Password CLI signed in: the desktop app integration, or a
 [service account](https://www.1password.dev/service-accounts/) limited to that
