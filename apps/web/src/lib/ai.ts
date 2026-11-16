@@ -19,7 +19,11 @@ import { isLocale, localizePath, type Locale } from './i18n'
 export const DOC_KINDS = ['post', 'page', 'project', 'about', 'stack'] as const
 export type DocKind = (typeof DOC_KINDS)[number]
 
-const SLUG = /^[\w-]{1,200}$/
+/**
+ * One plain path segment: the characters CMS slugs use (builds keep a
+ * repository's dots, e.g. `foo.js`), never `.` or `..`.
+ */
+const SLUG = /^(?!\.{1,2}$)[\w.-]{1,200}$/
 
 /**
  * The public path (without the language prefix) of a document in the index,

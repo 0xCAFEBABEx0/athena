@@ -138,7 +138,9 @@ reviews:
         and 404 pages never reach the index or an answer. Indexing must never fail a save. An index change must be
         followed by the `ai_index` invalidation (it runs after the publish's own
         one), saves must not index while the index is empty, and the first
-        build stays one transaction under its advisory lock. Links shown to readers are
+        build stays one transaction under its advisory lock; every write of
+        one document's rows (indexDoc, removeDoc, reindex) holds that
+        document's lock and reads the document only after taking it. Links shown to readers are
         built from ROUTES, never from model output. A kept answer
         (ai.answers) is reused only when its source_key matches the excerpts
         the question would be answered from now, and its replay must look

@@ -80,7 +80,10 @@ POST /api/ai/search  ◄──────────────── Bearer 
   the web app's cached CMS data (AI results and answers among them): the
   publish's own invalidation ran seconds earlier, before the embedding call,
   so a search in between would otherwise keep the old excerpts (even an
-  unpublished note's) for a day.
+  unpublished note's) for a day. Updates of one document run one at a time
+  (a Postgres advisory lock per document, held while it is read, embedded
+  and written), so a publish still waiting on its embeddings cannot write
+  its text back after a later unpublish or delete removed it.
 - **First run**: the index starts empty. The first search on a deployment
   whose index is empty answers `building: true` and indexes everything public
   in the background; the page says the site is being indexed (not cached),

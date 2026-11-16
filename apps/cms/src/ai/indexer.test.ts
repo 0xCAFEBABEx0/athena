@@ -315,6 +315,27 @@ suite('TC-U-56 AI index: Postgres', () => {
     expect(await rows()).toEqual([])
   })
 
+  test('updates of one document run one at a time and read it only once they hold its lock', async () => {
+    const a: Doc = { id: 8, slug: 'a', title: 'A', content: body('Alpha.') }
+    published = { en: [a], ja: [a], zh: [a] }
+    await indexDoc(fakePayload(), 'post', 8)
+    expect(await rows()).toHaveLength(3)
+
+    // A publish whose update is still running holds the lock; the update that
+    // follows (here, after an unpublish) waits, then reads the new state.
+    const holder = await pool.connect()
+    await holder.query('BEGIN')
+    await holder.query("SELECT pg_advisory_xact_lock(hashtext('ai.chunks post 8'))")
+    const pending = indexDoc(fakePayload(), 'post', 8)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(await rows()).toHaveLength(3)
+    published = {}
+    await holder.query('COMMIT')
+    holder.release()
+    expect((await pending)?.changed).toBe(3)
+    expect(await rows()).toEqual([])
+  })
+
   test('kept answers: found by the same wording or a question meaning nearly the same, per language and model', async () => {
     const v = (dim: number, tilt = 0) => {
       const x = new Array(EMBEDDING_DIMENSIONS).fill(0)

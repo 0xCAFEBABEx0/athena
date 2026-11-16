@@ -126,13 +126,24 @@ export const indexDoc = async (
   const doc: DocRef = { kind, id: String(id) }
   const result: IndexResult = { kind, id: doc.id, locales: {}, changed: 0 }
   if (options.untilBuilt && (await isEmptyFor(db, modelId(config)))) return { ...result, waiting: true }
-  for (const locale of LOCALES) {
-    const { result: done, changed } = await indexLocale(payload, db, config, doc, locale, req)
-    result.locales[locale] = done
-    result.changed += changed
-  }
-  return result
+  // One update of a document at a time, each reading the document only once
+  // it holds the lock: a publish still waiting on its embeddings can then not
+  // write its text back after a later unpublish or delete removed it.
+  return inTransaction(
+    payload,
+    async (locked) => {
+      for (const locale of LOCALES) {
+        const { result: done, changed } = await indexLocale(payload, locked, config, doc, locale, req)
+        result.locales[locale] = done
+        result.changed += changed
+      }
+      return result
+    },
+    { key: docLockKey(doc), wait: true },
+  )
 }
+
+const docLockKey = (doc: DocRef) => `ai.chunks ${doc.kind} ${doc.id}`
 
 /** Remove a deleted document from the index; returns the rows removed. */
 export const removeDoc = async (
@@ -140,9 +151,11 @@ export const removeDoc = async (
   kind: DocKind,
   id: string | number,
 ): Promise<number> => {
-  const db = dbOf(payload)
-  await ensureSchema(db)
-  return deleteDocChunks(db, { kind, id: String(id) })
+  await ensureSchema(dbOf(payload))
+  const doc: DocRef = { kind, id: String(id) }
+  return (
+    (await inTransaction(payload, (locked) => deleteDocChunks(locked, doc), { key: docLockKey(doc), wait: true })) ?? 0
+  )
 }
 
 export type ReindexResult = { docs: number; embedded: number; removed: number }
@@ -167,11 +180,34 @@ export const reindexAll = async (
   if (!config) return null
   const db = dbOf(payload)
   await ensureSchema(db)
-  const build = (target: Db) => reindexInto(payload, target, config)
-  return options.atomic ? inTransaction(payload, build, BUILD_LOCK) : build(db)
+  if (options.atomic) {
+    return inTransaction(payload, (locked) => reindexInto(payload, locked, config, true), { key: BUILD_LOCK })
+  }
+  return reindexInto(payload, db, config, false)
 }
 
-const reindexInto = async (payload: Payload, db: Db, config: EmbeddingConfig): Promise<ReindexResult> => {
+/**
+ * Each document is updated under its own lock (see indexDoc): inside the
+ * atomic build's transaction, or in a short transaction of its own.
+ */
+const reindexInto = async (
+  payload: Payload,
+  db: Db,
+  config: EmbeddingConfig,
+  inside: boolean,
+): Promise<ReindexResult> => {
+  const indexAllLocales = async (target: Db, doc: DocRef) => {
+    let shown = false
+    let count = 0
+    for (const locale of LOCALES) {
+      const { result } = await indexLocale(payload, target, config, doc, locale)
+      if (result !== 'removed') {
+        shown = true
+        count += result.embedded
+      }
+    }
+    return { shown, count }
+  }
   let docs = 0
   let embedded = 0
   let removed = 0
@@ -181,15 +217,13 @@ const reindexInto = async (payload: Payload, db: Db, config: EmbeddingConfig): P
       for (const id of await listIds(payload, kind, locale)) ids.add(id)
     }
     for (const id of ids) {
-      let shown = false
-      for (const locale of LOCALES) {
-        const { result } = await indexLocale(payload, db, config, { kind, id }, locale)
-        if (result !== 'removed') {
-          shown = true
-          embedded += result.embedded
-        }
-      }
-      if (shown) docs += 1
+      const doc: DocRef = { kind, id }
+      const lock = { key: docLockKey(doc), wait: true }
+      const done = inside
+        ? await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [lock.key]).then(() => indexAllLocales(db, doc))
+        : await inTransaction(payload, (locked) => indexAllLocales(locked, doc), lock)
+      if (done?.shown) docs += 1
+      embedded += done?.count ?? 0
     }
     removed += await deleteOtherDocs(db, kind, [...ids])
   }

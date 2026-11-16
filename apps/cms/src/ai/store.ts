@@ -75,21 +75,24 @@ type PoolClient = Db & { release: () => void }
 
 /**
  * Run `task` in one transaction on one pooled connection: all of its writes
- * land together or not at all. With `lockKey`, only one such transaction
- * runs at a time; another one gets `null` at once instead of waiting.
+ * land together or not at all. With `lock`, only one transaction holding
+ * that key runs at a time: with `wait` the next one waits its turn,
+ * otherwise it gets `null` at once.
  */
 export const inTransaction = async <T>(
   payload: Payload,
   task: (db: Db) => Promise<T>,
-  lockKey?: string,
+  lock?: { key: string; wait?: boolean },
 ): Promise<T | null> => {
   const pool = dbOf(payload) as Db & { connect?: () => Promise<PoolClient> }
   if (typeof pool.connect !== 'function') throw new Error('AI search needs a pg Pool with connect()')
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    if (lockKey) {
-      const { rows } = await client.query('SELECT pg_try_advisory_xact_lock(hashtext($1)) AS locked', [lockKey])
+    if (lock?.wait) {
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [lock.key])
+    } else if (lock) {
+      const { rows } = await client.query('SELECT pg_try_advisory_xact_lock(hashtext($1)) AS locked', [lock.key])
       if (!rows[0]?.locked) {
         await client.query('ROLLBACK')
         return null

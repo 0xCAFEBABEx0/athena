@@ -106,6 +106,10 @@ describe('TC-U-57 AI search (web): queries and ranking', () => {
       ['page:contact', '/zh/contact'],
     ])
     expect(docPath('page', '../admin')).toBeNull()
+    expect(docPath('project', 'foo.js')).toBe('/builds/foo.js')
+    expect(docPath('page', '..')).toBeNull()
+    expect(docPath('page', '.')).toBeNull()
+    expect(docPath('page', 'a/b')).toBeNull()
     expect(docPath('post', '')).toBeNull()
     expect(docPath('user', 'x')).toBeNull()
   })
