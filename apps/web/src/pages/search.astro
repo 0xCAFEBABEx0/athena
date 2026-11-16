@@ -480,6 +480,8 @@ const modes = withAsk
     const ask = async (query: string) => {
       resetAi()
       if (!query) {
+        // The answer is gone: asking the same question again must ask again.
+        shown = undefined
         resetRows()
         setEmpty(rows.length === 0)
         setPrompt('', rows.length)
@@ -498,6 +500,8 @@ const modes = withAsk
         const res = await post('/api/ai/ask', query, signal)
         if (!res.ok || !res.body) {
           const body = (await res.json().catch(() => ({}))) as { error?: { code?: string } }
+          // Cancelled while the error body was read: a newer request owns the page.
+          if (signal.aborted) return
           shown = undefined
           setStatus(null)
           resetRows()
@@ -627,7 +631,16 @@ const modes = withAsk
       selectMode(next)
       const query = input?.value.trim() ?? ''
       syncUrl(query)
-      run(query)
+      if (next === 'ask') {
+        // Choosing the tab asks nothing: the question waits for Enter (or a
+        // suggested question), as AI requests only start from the visitor.
+        shown = undefined
+        resetAi()
+        keyword('')
+        setPrompt('', rows.length)
+      } else {
+        run(query)
+      }
       return true
     }
 

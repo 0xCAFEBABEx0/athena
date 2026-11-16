@@ -67,7 +67,7 @@ export const parseAnswerRequest = (body: unknown): AnswerRequest | null => {
   if (typeof answer !== 'object' || answer === null) return null
   const { sources, parts } = answer as Record<string, unknown>
   if (!Array.isArray(sources) || !Array.isArray(parts)) return null
-  if (JSON.stringify(answer).length > MAX_ANSWER_BYTES) return null
+  if (Buffer.byteLength(JSON.stringify(answer), 'utf8') > MAX_ANSWER_BYTES) return null
   return { q: search.q, locale: search.locale, answerModel: search.answerModel, sourceKey, answer }
 }
 

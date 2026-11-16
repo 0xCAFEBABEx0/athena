@@ -14,10 +14,11 @@ import { type DocKind, isMissingTable } from './store'
 
 /**
  * Run `task` once the save is committed, like invalidateWeb: inside a request
+ * (the admin, REST, and Payload jobs, which run in /api/payload-jobs/run)
  * Next's `after()` defers it until the response is sent (Payload has
- * committed by then, so a fresh read sees the change). Outside a request
- * (jobs, scripts) `after()` throws, and the task runs right away inside the
- * same transaction, so it is given `req`.
+ * committed by then, so a fresh read sees the change). Outside a request (a
+ * script) `after()` throws: the task runs right away only when the save has
+ * no transaction to wait for.
  *
  * When the task changed any row, the web app's cached AI results are expired
  * afterwards: the publish's own invalidation ran before the index caught up.
@@ -50,6 +51,13 @@ const defer = (
     after(() => run())
     return Promise.resolve()
   } catch {
+    // Outside a request (a script). Inside the save's transaction the index
+    // write (its own connection) could commit while the save rolls back, so
+    // it is skipped; POST /api/ai/reindex, or the next save, catches up.
+    if (req.transactionID) {
+      payload.logger.warn(`AI index skipped outside a request: ${label} (POST /api/ai/reindex to catch up)`)
+      return Promise.resolve()
+    }
     return run(req)
   }
 }

@@ -83,7 +83,13 @@ POST /api/ai/search  ◄──────────────── Bearer 
   unpublished note's) for a day. Updates of one document run one at a time
   (a Postgres advisory lock per document, held while it is read, embedded
   and written), so a publish still waiting on its embeddings cannot write
-  its text back after a later unpublish or delete removed it.
+  its text back after a later unpublish or delete removed it. A save made
+  outside a request (a script) inside a transaction is not indexed (the
+  index write would commit on its own even if the save rolled back); Payload
+  jobs run in `/api/payload-jobs/run`, a request, so they are indexed. A
+  reindex reads again, under its lock, every document it would drop, so one
+  published while the reindex ran stays. A page's hero counts only when the
+  web app renders it (high, medium or low impact, not "none").
 - **First run**: the index starts empty. The first search on a deployment
   whose index is empty answers `building: true` and indexes everything public
   in the background; the page says the site is being indexed (not cached),

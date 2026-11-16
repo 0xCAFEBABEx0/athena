@@ -105,6 +105,8 @@ const readPost: Reader = async (payload, id, locale, req) => {
   }
 }
 
+const HERO_TYPES = new Set(['highImpact', 'mediumImpact', 'lowImpact'])
+
 const readPage: Reader = async (payload, id, locale, req) => {
   const page = await findPublished(payload, 'pages', id, locale, req)
   const slug = text(page?.slug)
@@ -114,7 +116,9 @@ const readPage: Reader = async (payload, id, locale, req) => {
     slug,
     title: text(page.title) || slug,
     description: descriptionOf(page),
-    sections: richTextSections([page.hero, page.layout]),
+    // The web app renders a hero only for these types (RenderHero.astro); a
+    // hero switched to "none" keeps its text in the data, unseen.
+    sections: richTextSections([HERO_TYPES.has(String(isObject(page.hero) ? page.hero.type : '')) ? page.hero : null, page.layout]),
   }
 }
 

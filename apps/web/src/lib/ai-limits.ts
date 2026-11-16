@@ -51,6 +51,9 @@ export const allowToday = async (
   store: CmsCacheStore | null = runtimeCache(),
 ): Promise<boolean> => {
   const day = now.toISOString().slice(0, 10)
+  // On Vercel without the shared cache, a count per instance would allow
+  // the daily budget on every instance: refuse instead (fails closed).
+  if (!store && process.env.VERCEL) return false
   const used = await bumpCounter(`ai:daily:${day}`, 2 * 24 * 60 * 60, 1, store)
   return used <= dailyLimit()
 }

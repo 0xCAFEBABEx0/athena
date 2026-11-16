@@ -86,6 +86,12 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await expect(visibleRows(page)).toHaveCount(0)
     // No keyword match: the empty line points at Enter (search by meaning).
     await expect(page.locator('[data-search-empty]')).toContainText('Enter')
+    if ((await tabs.count()) === 2) {
+      // Choosing Ask AI with a question typed asks nothing until Enter.
+      await tabs.nth(1).click()
+      await expect(page).toHaveURL(/[?&]mode=ask/)
+      await page.waitForTimeout(300)
+    }
     expect(requests).toEqual([])
   })
 

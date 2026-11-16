@@ -37,6 +37,8 @@ let others: {
   stack?: Record<string, unknown>
 } = {}
 let embedded: string[] = []
+/** Ids a list read (no id in `where`) leaves out: published after a reindex listed the ids. */
+let unlisted = new Set<number>()
 let pool: Pool
 
 type Where = { id?: { equals?: unknown }; _status?: { equals?: unknown }; and?: Where[] }
@@ -67,7 +69,9 @@ const fakePayload = () =>
           : collection === 'pages'
             ? (others.pages ?? [])
             : (others.projects ?? [])
+      const listing = all.every((c) => c.id?.equals === undefined)
       const docs = source.filter((doc) =>
+        !(listing && unlisted.has(doc.id)) &&
         all.every(
           (c) =>
             (c.id?.equals === undefined || String(doc.id) === String(c.id.equals)) &&
@@ -87,11 +91,18 @@ const vectorFor = (text: string) => {
 }
 
 const realFetch = globalThis.fetch
+/** Embedding settings the suite pins (an inherited EMBEDDING_PROVIDER or model would change the model id). */
+const EMBEDDING_ENV = ['VOYAGE_API_KEY', 'EMBEDDING_PROVIDER', 'EMBEDDING_MODEL', 'EMBEDDING_BASE_URL'] as const
+const savedEnv: Partial<Record<(typeof EMBEDDING_ENV)[number], string>> = {}
 
 suite('TC-U-56 AI index: Postgres', () => {
   beforeAll(async () => {
     pool = new Pool({ connectionString: url })
     await pool.query(SCHEMA_SQL)
+    for (const name of EMBEDDING_ENV) {
+      savedEnv[name] = process.env[name]
+      delete process.env[name]
+    }
     process.env.VOYAGE_API_KEY = 'test'
     globalThis.fetch = (async (_url: string, init: RequestInit) => {
       const { input } = JSON.parse(String(init.body)) as { input: string[] }
@@ -104,7 +115,10 @@ suite('TC-U-56 AI index: Postgres', () => {
 
   afterAll(async () => {
     globalThis.fetch = realFetch
-    delete process.env.VOYAGE_API_KEY
+    for (const name of EMBEDDING_ENV) {
+      if (savedEnv[name] === undefined) delete process.env[name]
+      else process.env[name] = savedEnv[name]
+    }
     await pool.end()
   })
 
@@ -113,6 +127,7 @@ suite('TC-U-56 AI index: Postgres', () => {
     embedded = []
     published = {}
     others = {}
+    unlisted = new Set()
   })
 
   const rows = async () =>
@@ -198,6 +213,15 @@ suite('TC-U-56 AI index: Postgres', () => {
     published = { en: [b], ja: [b], zh: [b] }
     expect(await reindexAll(fakePayload())).toEqual({ docs: 1, embedded: 0, removed: 3 })
 
+    // A post published after the reindex listed the ids (its hook indexed it) is read again, not dropped.
+    published = { en: [a, b], ja: [a, b], zh: [a, b] }
+    await indexDoc(fakePayload(), 'post', 3)
+    unlisted = new Set([3])
+    expect(await reindexAll(fakePayload())).toEqual({ docs: 2, embedded: 0, removed: 0 })
+    unlisted = new Set()
+    published = { en: [b], ja: [b], zh: [b] }
+    await removeDoc(fakePayload(), 'post', 3)
+
     const hits = await nearestChunks(pool, vectorFor('Bravo'), 'ja', 'voyage:voyage-4-lite:1024', 5)
     expect(hits.map((hit) => [hit.kind, hit.slug, Math.round(hit.score)])).toEqual([
       ['post', 'b', 1],
@@ -206,7 +230,7 @@ suite('TC-U-56 AI index: Postgres', () => {
   })
 
   test('pages, builds, /about and /stacks are indexed as visitors see them; search tells them apart by kind', async () => {
-    const hero = { richText: body('Echo hero.') }
+    const hero = { type: 'lowImpact', richText: body('Echo hero.') }
     const layout = [
       { blockType: 'content', columns: [{ richText: body('Foxtrot column.') }] },
       { blockType: 'mediaBlock', media: 3 },
@@ -214,6 +238,14 @@ suite('TC-U-56 AI index: Postgres', () => {
     others = {
       pages: [
         { id: 10, slug: 'contact', title: 'Contact', hero, layout },
+        // A hero set to "none" is not rendered: only the blocks count.
+        {
+          id: 13,
+          slug: 'plain',
+          title: 'Plain',
+          hero: { type: 'none', richText: body('Zulu unseen.') },
+          layout: [{ blockType: 'content', columns: [{ richText: body('Quebec.') }] }],
+        },
         // Not routed by the web app.
         { id: 11, slug: 'home', title: 'Home', hero: { richText: body('Golf.') } },
         {
@@ -255,12 +287,13 @@ suite('TC-U-56 AI index: Postgres', () => {
         ],
       },
     }
-    expect(await reindexAll(fakePayload())).toMatchObject({ docs: 4 })
+    expect(await reindexAll(fakePayload())).toMatchObject({ docs: 5 })
     const en = (await rows()).filter((row) => row.locale === 'en')
     expect(en.map((row) => [row.kind, row.doc_id, row.slug, row.title, row.content])).toEqual([
       ['about', 'about', '', 'About me', 'Mike lead.'],
       ['about', 'about', '', 'About me', 'November story.'],
       ['page', '10', 'contact', 'Contact', 'Echo hero.\n\nFoxtrot column.'],
+      ['page', '13', 'plain', 'Plain', 'Quebec.'],
       ['project', '20', 'athena', 'Athena', 'India site.\n\nJuliet brief.'],
       ['stack', 'stack', '', 'Stacks', 'Oscar intro.'],
       ['stack', 'stack', '', 'Stacks', '- Papa: daily'],

@@ -20,6 +20,7 @@ import {
   streamPieces,
   systemPrompt,
 } from './ai-answer'
+import { ROUTES } from '@athena/shared/constants'
 
 const chunk = (
   slug: string,
@@ -74,10 +75,10 @@ describe('TC-U-60 AI answers', () => {
       'zh',
     )
     expect(sources).toEqual([
-      { n: 1, kind: 'post', slug: 'a', title: 'A', href: '/zh/notes/a', heading: 'One' },
-      { n: 2, kind: 'post', slug: 'b', title: 'B', href: '/zh/notes/b', heading: null },
-      { n: 3, kind: 'project', slug: 'a', title: 'A', href: '/zh/builds/a', heading: null },
-      { n: 4, kind: 'about', slug: '', title: '', href: '/zh/about', heading: null },
+      { n: 1, kind: 'post', slug: 'a', title: 'A', href: `/zh${ROUTES.posts}/a`, heading: 'One' },
+      { n: 2, kind: 'post', slug: 'b', title: 'B', href: `/zh${ROUTES.posts}/b`, heading: null },
+      { n: 3, kind: 'project', slug: 'a', title: 'A', href: `/zh${ROUTES.work}/a`, heading: null },
+      { n: 4, kind: 'about', slug: '', title: '', href: `/zh${ROUTES.about}`, heading: null },
     ])
     expect(sourceOf).toEqual([1, 2, 1, 3, 4])
   })
@@ -89,7 +90,7 @@ describe('TC-U-60 AI answers', () => {
     const content = message?.content as Anthropic.Beta.BetaContentBlockParam[]
     expect(content[0]).toEqual({
       type: 'search_result',
-      source: '/ja/notes/a',
+      source: `/ja${ROUTES.posts}/a`,
       title: 'A — Setup',
       content: [{ type: 'text', text: 'About a.' }],
       citations: { enabled: true },
@@ -194,7 +195,7 @@ describe('TC-U-60 AI answers', () => {
 
   test('a kept answer replays at the pace of a written one: pauses to search and read, then a few words at a time', async () => {
     const answer: StoredAnswer = {
-      sources: [{ n: 1, kind: 'post', slug: 'a', title: 'A', href: '/notes/a', heading: null }],
+      sources: [{ n: 1, kind: 'post', slug: 'a', title: 'A', href: `${ROUTES.posts}/a`, heading: null }],
       parts: [{ text: 'One two three four five six seven eight.' }, { cite: 1 }],
     }
     const waits: number[] = []
@@ -228,9 +229,9 @@ describe('TC-U-60 AI answers', () => {
       sources: [{ n: 1, kind: 'post', slug: 'deploy', title: 'Deploy', href: 'https://evil.example', heading: 'Steps' }],
       parts: [{ text: 'Hi.' }, { cite: 1 }],
     }
-    expect(restoreAnswer(stored, 'ja')?.sources[0]?.href).toBe('/ja/notes/deploy')
+    expect(restoreAnswer(stored, 'ja')?.sources[0]?.href).toBe(`/ja${ROUTES.posts}/deploy`)
     const stack = { ...stored, sources: [{ ...stored.sources[0], kind: 'stack', slug: '' }] }
-    expect(restoreAnswer(stack, 'ja')?.sources[0]?.href).toBe('/ja/stacks')
+    expect(restoreAnswer(stack, 'ja')?.sources[0]?.href).toBe(`/ja${ROUTES.stack}`)
     expect(restoreAnswer({ ...stored, sources: [{ ...stored.sources[0], slug: '../x' }] }, 'en')).toBeNull()
     // Kept before pages were indexed (no kind), or of a kind this app does not know: unusable.
     expect(restoreAnswer({ ...stored, sources: [{ ...stored.sources[0], kind: undefined }] }, 'en')).toBeNull()

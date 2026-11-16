@@ -26,6 +26,7 @@ import {
 } from '@/lib/ai-answer'
 import { allowToday, allowVisitor } from '@/lib/ai-limits'
 import { peekCms, storeCms } from '@/lib/cms-cache'
+import { readBody } from '@/lib/read-body'
 import { getSite } from '@/lib/site'
 
 /**
@@ -67,8 +68,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (isCrossSite(request)) return error(403, 'forbidden', 'Cross-site request.')
   if (!aiModeEnabled('ask')) return error(503, 'disabled', 'AI search is not set up.')
 
-  const raw = await request.text()
-  if (raw.length > MAX_BODY) return error(413, 'too_large', 'Question is too long.')
+  const raw = await readBody(request, MAX_BODY)
+  if (raw === null) return error(413, 'too_large', 'Question is too long.')
   const ask = parseAiRequest((() => {
     try {
       return JSON.parse(raw)

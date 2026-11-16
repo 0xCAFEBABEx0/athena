@@ -93,6 +93,9 @@ describe('TC-U-55 AI search: request checks', () => {
     expect(parseAnswerRequest({ ...ok, sourceKey: 'xyz' })).toBeNull()
     expect(parseAnswerRequest({ ...ok, answer: { parts: [] } })).toBeNull()
     expect(parseAnswerRequest({ ...ok, answer: { sources: [], parts: [{ text: 'x'.repeat(40_000) }] } })).toBeNull()
+    // Bytes, not characters: 12,000 Japanese characters are 36,000 bytes in UTF-8.
+    expect(parseAnswerRequest({ ...ok, answer: { sources: [], parts: [{ text: 'あ'.repeat(12_000) }] } })).toBeNull()
+    expect(parseAnswerRequest({ ...ok, answer: { sources: [], parts: [{ text: 'あ'.repeat(10_000) }] } })).not.toBeNull()
   })
 
   test('only the shared REVALIDATE_SECRET as a bearer token counts as the web server', () => {

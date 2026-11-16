@@ -20,6 +20,7 @@ import {
 } from './ai'
 import { allowToday, allowVisitor, dailyLimit, resetVisitorLimits } from './ai-limits'
 import { bumpCounter, peekCms, storeCms, type CmsCacheStore } from './cms-cache'
+import { ROUTES } from '@athena/shared/constants'
 
 /** Set environment variables for one test and put the old values back after it. */
 const envKeys = ['REVALIDATE_SECRET', 'CMS_URL', 'CMS_PROTECTION_BYPASS', 'AI_DAILY_LIMIT', 'AI_SEARCH', 'ANTHROPIC_API_KEY'] as const
@@ -81,7 +82,7 @@ describe('TC-U-57 AI search (web): queries and ranking', () => {
       ['b', 'best of b', 0.62],
       ['a', 'best of a', 0.6],
     ])
-    expect(posts[0]).toMatchObject({ kind: 'post', key: 'post:b', href: '/ja/notes/b', title: 'B', heading: 'Setup' })
+    expect(posts[0]).toMatchObject({ kind: 'post', key: 'post:b', href: `/ja${ROUTES.posts}/b`, title: 'B', heading: 'Setup' })
     // Nothing similar enough at all: no results.
     expect(rankHits([hit('a', 0.18)], 'en')).toEqual([])
     expect(rankHits([], 'en')).toEqual([])
@@ -99,14 +100,14 @@ describe('TC-U-57 AI search (web): queries and ranking', () => {
       'zh',
     )
     expect(hits.map((h) => [h.key, h.href])).toEqual([
-      ['project:athena', '/zh/builds/athena'],
-      ['post:athena', '/zh/notes/athena'],
-      ['about:', '/zh/about'],
-      ['stack:', '/zh/stacks'],
+      ['project:athena', `/zh${ROUTES.work}/athena`],
+      ['post:athena', `/zh${ROUTES.posts}/athena`],
+      ['about:', `/zh${ROUTES.about}`],
+      ['stack:', `/zh${ROUTES.stack}`],
       ['page:contact', '/zh/contact'],
     ])
     expect(docPath('page', '../admin')).toBeNull()
-    expect(docPath('project', 'foo.js')).toBe('/builds/foo.js')
+    expect(docPath('project', 'foo.js')).toBe(`${ROUTES.work}/foo.js`)
     expect(docPath('page', '..')).toBeNull()
     expect(docPath('page', '.')).toBeNull()
     expect(docPath('page', 'a/b')).toBeNull()
@@ -326,5 +327,14 @@ describe('TC-U-59 AI search (web): limits and stored answers', () => {
     expect(await bumpCounter('c', 60, 1, broken)).toBe(Number.POSITIVE_INFINITY)
     expect(await allowToday(new Date(), broken)).toBe(false)
     expect(await allowToday(new Date(), memoryStore())).toBe(true)
+    // On Vercel with no shared cache at all, a per-instance count would not bound the site: refuse.
+    const vercel = process.env.VERCEL
+    process.env.VERCEL = '1'
+    try {
+      expect(await allowToday(new Date(), null)).toBe(false)
+    } finally {
+      if (vercel === undefined) delete process.env.VERCEL
+      else process.env.VERCEL = vercel
+    }
   })
 })

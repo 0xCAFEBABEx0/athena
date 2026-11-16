@@ -230,14 +230,24 @@ export const deleteDocChunks = async (db: Db, doc: DocRef, locale?: string): Pro
   return rows.length
 }
 
-/** Drop every document of `kind` not in `keep` (deleted while a hook was missed), and kinds no longer indexed. */
-export const deleteOtherDocs = async (db: Db, kind: DocKind, keep: string[]): Promise<number> => {
+/**
+ * Documents of `kind` in the index but not in `keep`: deleted or hidden while
+ * a hook was missed, or published since `keep` was listed. The caller checks
+ * each one again before removing it.
+ */
+export const otherDocIds = async (db: Db, kind: DocKind, keep: string[]): Promise<string[]> => {
   const { rows } = await db.query(
-    `DELETE FROM ai.chunks
-      WHERE (kind = $1 AND NOT (doc_id = ANY($2::text[]))) OR NOT (kind = ANY($3::text[]))
-      RETURNING 1`,
-    [kind, keep, [...DOC_KINDS]],
+    'SELECT DISTINCT doc_id FROM ai.chunks WHERE kind = $1 AND NOT (doc_id = ANY($2::text[]))',
+    [kind, keep],
   )
+  return rows.map((row) => String(row.doc_id))
+}
+
+/** Drop rows of kinds no longer indexed; returns the rows removed. */
+export const deleteUnknownKinds = async (db: Db): Promise<number> => {
+  const { rows } = await db.query('DELETE FROM ai.chunks WHERE NOT (kind = ANY($1::text[])) RETURNING 1', [
+    [...DOC_KINDS],
+  ])
   return rows.length
 }
 

@@ -13,11 +13,12 @@ import {
   type StoredChunk,
   dbOf,
   deleteDocChunks,
-  deleteOtherDocs,
+  deleteUnknownKinds,
   ensureSchema,
   inTransaction,
   isEmptyFor,
   knownVectors,
+  otherDocIds,
   replaceChunks,
   storedHashes,
 } from './store'
@@ -188,7 +189,10 @@ export const reindexAll = async (
 
 /**
  * Each document is updated under its own lock (see indexDoc): inside the
- * atomic build's transaction, or in a short transaction of its own.
+ * atomic build's transaction, or in a short transaction of its own. A
+ * document in the index but not in the list read at the start is read again
+ * under its lock before its rows go, so one published meanwhile (and indexed
+ * by its hook) stays.
  */
 const reindexInto = async (
   payload: Payload,
@@ -199,14 +203,23 @@ const reindexInto = async (
   const indexAllLocales = async (target: Db, doc: DocRef) => {
     let shown = false
     let count = 0
+    let dropped = 0
     for (const locale of LOCALES) {
-      const { result } = await indexLocale(payload, target, config, doc, locale)
-      if (result !== 'removed') {
+      const { result, changed } = await indexLocale(payload, target, config, doc, locale)
+      if (result === 'removed') {
+        dropped += changed
+      } else {
         shown = true
         count += result.embedded
       }
     }
-    return { shown, count }
+    return { shown, count, dropped }
+  }
+  const underLock = async (doc: DocRef) => {
+    const lock = { key: docLockKey(doc), wait: true }
+    if (!inside) return inTransaction(payload, (locked) => indexAllLocales(locked, doc), lock)
+    await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [lock.key])
+    return indexAllLocales(db, doc)
   }
   let docs = 0
   let embedded = 0
@@ -217,15 +230,19 @@ const reindexInto = async (
       for (const id of await listIds(payload, kind, locale)) ids.add(id)
     }
     for (const id of ids) {
-      const doc: DocRef = { kind, id }
-      const lock = { key: docLockKey(doc), wait: true }
-      const done = inside
-        ? await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [lock.key]).then(() => indexAllLocales(db, doc))
-        : await inTransaction(payload, (locked) => indexAllLocales(locked, doc), lock)
+      const done = await underLock({ kind, id })
       if (done?.shown) docs += 1
       embedded += done?.count ?? 0
     }
-    removed += await deleteOtherDocs(db, kind, [...ids])
+    for (const id of await otherDocIds(db, kind, [...ids])) {
+      const done = await underLock({ kind, id })
+      removed += done?.dropped ?? 0
+      if (done?.shown) {
+        docs += 1
+        embedded += done.count
+      }
+    }
   }
+  removed += await deleteUnknownKinds(db)
   return { docs, embedded, removed }
 }

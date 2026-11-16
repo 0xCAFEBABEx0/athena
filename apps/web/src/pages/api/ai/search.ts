@@ -11,6 +11,7 @@ import {
   searchFailure,
 } from '@/lib/ai'
 import { allowToday, allowVisitor } from '@/lib/ai-limits'
+import { readBody } from '@/lib/read-body'
 
 /**
  * POST /api/ai/search  { "q": "deploying without downtime", "locale": "en" }
@@ -32,8 +33,8 @@ export const POST: APIRoute = async ({ request }) => {
   if (isCrossSite(request)) return json({ error: { code: 'forbidden' } }, 403)
   if (!aiModeEnabled('meaning')) return json({ error: { code: 'disabled' } }, 503)
 
-  const raw = await request.text()
-  if (raw.length > MAX_BODY) return json({ error: { code: 'too_large' } }, 413)
+  const raw = await readBody(request, MAX_BODY)
+  if (raw === null) return json({ error: { code: 'too_large' } }, 413)
   let body: unknown = null
   try {
     body = JSON.parse(raw)
