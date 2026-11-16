@@ -1,3 +1,4 @@
+import { ROUTES } from '@athena/shared/constants'
 import { LOCALE_LABEL, LOCALES, localizePath } from './i18n'
 
 /** One line of Markdown: no line breaks, and no brackets that would end a link. */
@@ -25,8 +26,8 @@ export const buildLlmsTxt = ({ origin, site, posts, work }: LlmsInput): string =
   const languages = LOCALES.map((code) => `${LOCALE_LABEL[code]} (${url(localizePath(code, '/'))})`).join(', ')
   const recent = posts
     .filter((post) => post.slug)
-    .map((post) => entry(post.title || post.slug || '', `/posts/${post.slug}`, post.meta?.description))
-  const projects = work.map((item) => entry(item.title, `/work/${item.slug}`, item.description))
+    .map((post) => entry(post.title || post.slug || '', `${ROUTES.posts}/${post.slug}`, post.meta?.description))
+  const projects = work.map((item) => entry(item.title, `${ROUTES.work}/${item.slug}`, item.description))
 
   const sections = [
     `# ${llmsLine(site.siteName)}`,
@@ -40,12 +41,12 @@ export const buildLlmsTxt = ({ origin, site, posts, work }: LlmsInput): string =
     [
       '## Main sections',
       '',
-      `- [Home](${url('/')}): Introduction, newest posts and pinned projects`,
-      `- [Posts](${url('/posts')}): Every published post, newest first`,
-      `- [Work](${url('/work')}): Projects and their GitHub activity`,
-      `- [Search](${url('/search')}): Search across posts`,
+      `- [Home](${url('/')}): Introduction, newest notes and pinned projects`,
+      `- [Notes](${url(ROUTES.posts)}): Every published note, newest first`,
+      `- [Builds](${url(ROUTES.work)}): Projects and their GitHub activity`,
+      `- [Search](${url('/search')}): Search across notes`,
     ].join('\n'),
-    recent.length > 0 ? ['## Recent posts', '', ...recent].join('\n') : '',
+    recent.length > 0 ? ['## Recent notes', '', ...recent].join('\n') : '',
     projects.length > 0 ? ['## Projects', '', ...projects].join('\n') : '',
     [
       '## Optional',

@@ -23,7 +23,7 @@ bun run --filter @athena/web check   # astro check (types)
 | `PREVIEW_SECRET` | Shared with the CMS; validates `/api/preview` requests before the draft cookie is set. |
 | `REVALIDATE_SECRET` | Shared with the CMS; bearer token for `POST /api/invalidate`, also used as the ISR bypass token. |
 | `PAYLOAD_API_KEY` | API key of the CMS `web-frontend` service-account user (Users collection, "Enable API Key"). Lets draft preview fetch unpublished content over REST. Server-side only. |
-| `CMS_PROTECTION_BYPASS` | Optional. Copy of the athena-cms **Protection Bypass for Automation** secret. Sent as `x-vercel-protection-bypass` so server-side REST fetches still work if the CMS deployment is SSO-protected. Browser form posts to the CMS still need a public API. |
+| `CMS_PROTECTION_BYPASS` | Optional. Copy of the athena-cms **Protection Bypass for Automation** secret. Sent as `x-vercel-protection-bypass` on every server-side CMS request (REST reads and form forwarding), so the site keeps working when the CMS deployment is SSO-protected. Required wherever athena-cms is protected. |
 
 `PREVIEW_SECRET` and `REVALIDATE_SECRET` must be byte-identical to the CMS
 deployment's values — drift shows up as silent 401s (the CMS's

@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro'
 
-import { CACHE_TAGS, type CacheTag } from '@athena/shared/constants'
-
+import { CACHE_TAGS, ROUTES, type CacheTag } from '@athena/shared/constants'
 import { invalidateContent } from '@/lib/cache'
+import { expireCmsData } from '@/lib/cms-cache'
 import { env, webURL } from '@/lib/env'
 import { LOCALES, localizePath } from '@/lib/i18n'
 import { isrBypassToken } from '@/lib/isr-bypass.mjs'
@@ -14,6 +14,7 @@ import { isrBypassToken } from '@/lib/isr-bypass.mjs'
  *   POST /api/invalidate
  *   Authorization: Bearer ${REVALIDATE_SECRET}
  *   { "paths": ["/posts/foo"], "tags": ["posts", "sitemap"] }
+ *   { "tags": ["ai_index"] }   (AI index updated: expire cached CMS data only)
  *
  * Vercel caches every rendered page, feed and sitemap (ISR) under one cache
  * tag (see lib/cache.ts). Any change first marks that tag stale, so every
@@ -26,16 +27,16 @@ import { isrBypassToken } from '@/lib/isr-bypass.mjs'
  * The response waits for those re-renders, so when the CMS logs
  * "Web invalidated" the changed pages are already fresh: answering earlier
  * would let a visitor get the stale copy in between. The CMS sends this call
- * after its response (Next `after()`) and allows it 30 s, so a bulk publish
+ * after its response (Next `after()`) and allows it 25 s, so a bulk publish
  * (one call per document, up to ~15 localized paths each) does not slow down
  * the admin. On a deployment behind Vercel Authentication (Preview), the
  * re-render requests carry Vercel's own `VERCEL_AUTOMATION_BYPASS_SECRET`.
  */
 const TAG_PATH_MAP: Partial<Record<CacheTag, string[]>> = {
   [CACHE_TAGS.sitemap]: ['/pages-sitemap.xml', '/posts-sitemap.xml'],
-  [CACHE_TAGS.posts]: ['/', '/posts', '/rss.xml', '/search-index.json'],
+  [CACHE_TAGS.posts]: ['/', ROUTES.posts, '/rss.xml', '/search-index.json'],
   [CACHE_TAGS.pages]: ['/search-index.json'],
-  [CACHE_TAGS.site]: ['/', '/posts', '/rss.xml'],
+  [CACHE_TAGS.site]: ['/', ROUTES.posts, '/rss.xml'],
   // Site settings, header/footer and redirects also affect every other page;
   // the cache-tag invalidation covers those.
 }
@@ -54,6 +55,20 @@ export const POST: APIRoute = async ({ request }) => {
   } catch {
     return new Response('Invalid JSON body', { status: 400 })
   }
+  // The AI search index changed after the publish's own invalidation: only
+  // the cached CMS responses (AI results and answers among them) go stale;
+  // pages are already fresh, so nothing is re-rendered.
+  const tags = body.tags ?? []
+  if (!body.paths?.length && tags.length && tags.every((tag) => tag === CACHE_TAGS.aiIndex)) {
+    return Response.json({
+      invalidated: false,
+      cmsData: await expireCmsData(),
+      revalidated: [],
+      failed: [],
+      tags,
+    })
+  }
+
   const bypassToken = isrBypassToken(secret) ?? ''
 
   const paths = new Set<string>(
@@ -69,14 +84,17 @@ export const POST: APIRoute = async ({ request }) => {
     for (const locale of LOCALES) paths.add(localizePath(locale, path))
   }
 
-  // Before the re-renders below, so they are not marked stale again.
+  // Before the re-renders below, so they are not marked stale again. The
+  // cached CMS responses go first: every page re-rendered from now on (these
+  // paths, and every other page on its next visit) must read the new content.
+  const cmsData = await expireCmsData()
   const invalidated = await invalidateContent()
 
   const failed = await rerender([...paths], bypassToken)
   const revalidated = [...paths].filter((path) => !failed.includes(path))
   if (failed.length) console.warn(`[invalidate] re-render failed: ${failed.join(', ')}`)
 
-  return Response.json({ invalidated, revalidated, failed, tags: body.tags ?? [] })
+  return Response.json({ invalidated, cmsData, revalidated, failed, tags: body.tags ?? [] })
 }
 
 /** Re-render and re-cache `paths` now; returns the paths that failed. */
@@ -93,7 +111,8 @@ const rerender = async (paths: string[], bypassToken: string): Promise<string[]>
           redirect: 'manual',
           signal: AbortSignal.timeout(10_000),
         })
-        if (!res.ok) failed.push(path)
+        // 404: the page is gone (an unpublished post), which is its new state.
+        if (!res.ok && res.status !== 404) failed.push(path)
       } catch {
         failed.push(path)
       }

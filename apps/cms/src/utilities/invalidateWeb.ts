@@ -1,7 +1,7 @@
 import { after } from 'next/server'
 import type { Payload } from 'payload'
 
-import type { CacheTag } from '@athena/shared/constants'
+import { CACHE_TAGS, type CacheTag } from '@athena/shared/constants'
 
 type InvalidateArgs = {
   paths?: string[]
@@ -25,7 +25,7 @@ type InvalidateArgs = {
  * `after()` until the response has been sent. Hooks run before Payload
  * commits the transaction, so a web re-render started from the hook could
  * read the old data and cache it again: a bulk unpublish on 2026-11-11 left
- * the posts listed on /posts that way. Outside a request (scripts, jobs,
+ * the posts listed on /notes that way. Outside a request (scripts, jobs,
  * tests) `after()` throws and the call runs right away.
  */
 export const invalidateWeb = async (args: InvalidateArgs): Promise<void> => {
@@ -36,6 +36,17 @@ export const invalidateWeb = async (args: InvalidateArgs): Promise<void> => {
     await sendInvalidation(args)
   }
 }
+
+/**
+ * The AI search index changed: expire the web app's cached AI results and
+ * answers (the Runtime Cache), with no page re-render. Called once the index
+ * update is written, which is seconds after the publish's own invalidation
+ * (the embedding call sits in between): a search in that window would
+ * otherwise keep the old excerpts, even an unpublished note's, cached for a
+ * day. Sent right away: callers already run after the save is committed.
+ */
+export const invalidateWebAiResults = (payload: Payload): Promise<void> =>
+  sendInvalidation({ tags: [CACHE_TAGS.aiIndex], payload })
 
 const sendInvalidation = async ({ paths = [], tags = [], payload }: InvalidateArgs) => {
   const webURL = process.env.WEB_URL
@@ -59,8 +70,9 @@ const sendInvalidation = async ({ paths = [], tags = [], payload }: InvalidateAr
       body: JSON.stringify({ paths, tags }),
       // The web app answers once the changed pages are re-rendered (up to
       // ~15 localized paths); this runs after the admin's response, so a
-      // generous limit costs the editor nothing.
-      signal: AbortSignal.timeout(30_000),
+      // generous limit costs the editor nothing. It must stay below the API
+      // route's maxDuration (apps/cms/vercel.json), which also covers the save.
+      signal: AbortSignal.timeout(25_000),
     })
     if (!res.ok) {
       const where = res.headers.get('location')

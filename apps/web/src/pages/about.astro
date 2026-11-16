@@ -1,0 +1,68 @@
+---
+import { ROUTES } from '@athena/shared/constants'
+import Layout from '@/layouts/Layout.astro'
+import Media from '@/components/Media.astro'
+import Prompt from '@/components/Prompt.astro'
+import RichText from '@/components/RichText.astro'
+import SearchPrompt from '@/components/SearchPrompt.astro'
+import { aboutHasContent, loadAbout } from '@/lib/about'
+import { dict, localeOf, localizePath } from '@/lib/i18n'
+import { routeMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
+
+const locale = localeOf(Astro)
+const t = dict(locale)
+const [site, about] = await Promise.all([getSite(Astro.locals, locale), loadAbout(locale)])
+
+// Hidden until the CMS has a lead or a story. A CMS failure throws above: the
+// 500 page is not cached, while this 404 is kept by the CDN for a day.
+if (!aboutHasContent(about)) {
+  return Astro.rewrite('/404')
+}
+
+const heading = about.heading || t.aboutTitle
+const meta = routeMeta(
+  about.heading || t.aboutTitle,
+  localizePath(locale, ROUTES.about),
+  site,
+  about.lead || t.aboutDescription(site.authorName || site.siteName),
+)
+---
+
+<Layout meta={meta}>
+  <div class="container">
+    <Prompt class="mt-8" command="cat about.md" question={t.askAbout} heading={heading} as="h1" id="about" />
+    <div class:list={['about-intro', { 'about-intro-portrait': about.portrait }]} data-about-intro>
+      {about.lead && <p class="about-lead">{about.lead}</p>}
+      {
+        about.portrait && (
+          <figure class="about-portrait" data-about-portrait>
+            <Media resource={about.portrait} loading="eager" sizes="(max-width: 640px) 10rem, 12rem" />
+            {about.portraitCaption && <figcaption>{about.portraitCaption}</figcaption>}
+          </figure>
+        )
+      }
+    </div>
+    {about.body && <RichText class="about-body" data={about.body} enableGutter={false} />}
+    {
+      site.socialLinks.length > 0 && (
+        <section class="about-links" aria-labelledby="about-links">
+          <h2 id="about-links" class="font-mono text-[13px] text-base-content/65">
+            <span class="cli-only" aria-hidden="true">## </span>
+            {t.aboutLinks}
+          </h2>
+          <ul class="mt-1.5 flex flex-wrap gap-x-4 font-mono text-[13px]">
+            {site.socialLinks.map((link) => (
+              <li>
+                <a class="link-term" href={link.url} rel="me noopener">
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+    <SearchPrompt class="modern-only mt-11" />
+  </div>
+</Layout>

@@ -9,12 +9,13 @@ import {
   lexicalEditor,
 } from '@payloadcms/richtext-lexical'
 
-import { authenticated } from '../../access/authenticated'
-import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
-import { Banner } from '../../blocks/Banner/config'
-import { Code } from '../../blocks/Code/config'
-import { MediaBlock } from '../../blocks/MediaBlock/config'
-import { generatePreviewPath } from '../../utilities/generatePreviewPath'
+import { authenticated } from '@/access/authenticated'
+import { indexAfterChange, removeAfterDelete } from '@/ai/hooks'
+import { authenticatedOrPublished } from '@/access/authenticatedOrPublished'
+import { Banner } from '@/blocks/Banner/config'
+import { Code } from '@/blocks/Code/config'
+import { MediaBlock } from '@/blocks/MediaBlock/config'
+import { generatePreviewPath } from '@/utilities/generatePreviewPath'
 import { populateAuthors } from './hooks/populateAuthors'
 import { revalidateDelete, revalidatePost } from './hooks/revalidatePost'
 
@@ -30,6 +31,8 @@ import { translateUIField } from '@/translation/translate'
 
 export const Posts: CollectionConfig<'posts'> = {
   slug: 'posts',
+  // Shown as Notes, like the public section (/notes).
+  labels: { singular: 'Note', plural: 'Notes' },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -49,7 +52,7 @@ export const Posts: CollectionConfig<'posts'> = {
     },
   },
   admin: {
-    defaultColumns: ['title', 'slug', 'updatedAt'],
+    defaultColumns: ['title', 'publishedAt'],
     livePreview: {
       url: ({ data, req }) => {
         const path = generatePreviewPath({
@@ -75,6 +78,8 @@ export const Posts: CollectionConfig<'posts'> = {
       type: 'text',
       localized: true,
       required: true,
+      // The editor shows the title without its label (custom.scss), so the placeholder names it.
+      admin: { components: { Cell: '@/components/PostRowCell' }, placeholder: 'Title' },
     },
     {
       type: 'tabs',
@@ -225,14 +230,17 @@ export const Posts: CollectionConfig<'posts'> = {
     translateUIField,
   ],
   hooks: {
-    afterChange: [revalidatePost],
+    afterChange: [revalidatePost, indexAfterChange('post')],
     afterRead: [populateAuthors],
-    afterDelete: [revalidateDelete],
+    afterDelete: [revalidateDelete, removeAfterDelete('post')],
   },
   versions: {
     drafts: {
       autosave: {
-        interval: 100, // We set this interval for optimal live preview
+        // Every autosave is a CMS function call and a database write; the
+        // template's 100 ms saved on almost every keystroke. Payload's default
+        // (2 s) still refreshes live preview soon after typing stops.
+        interval: 2000,
       },
       schedulePublish: true,
     },

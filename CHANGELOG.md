@@ -4,6 +4,241 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.6.0] - 2026-11-16
+
+### Added
+
+- Claude can be reached through Cloudflare AI Gateway with the Anthropic key
+  stored there (BYOK), so a spending limit can cap what Ask AI and the
+  Translate button cost. Set `ANTHROPIC_BASE_URL` and `CF_AIG_TOKEN` on both
+  apps instead of `ANTHROPIC_API_KEY`; without them nothing changes. Setup:
+  `docs/AI_SEARCH.md`.
+
+### Changed
+
+- When Claude refuses for a rate or spending limit, Ask AI says the limit is
+  reached instead of a generic error, and the Translate button answers 429.
+
+## [1.5.0] - 2026-11-13
+
+### Added
+
+- Search by meaning: `/search` still narrows the notes by keyword as you
+  type, and Enter now searches the whole site for what you mean, not only the
+  words you typed: notes, /about, /builds, /stacks and other pages, best
+  first, with the closest passage under each title. Enter in the search box
+  on every page and in the "/" popup does the same.
+- **Ask AI** tab on `/search`: answers a question from the site (the notes
+  and the about, builds and stacks pages), in the page's language, with
+  numbered citations that link to the pages it used.
+  While you type in the search box or the "/" popup, an **Ask Hoo** row opens
+  your question there.
+- Suggested questions under Ask AI, set per language in the CMS (Site).
+- Answers are kept and reused for the same question, or one meaning nearly
+  the same, as long as the pages they came from have not changed, so common
+  questions cost nothing after the first time; uncached questions are
+  limited per visitor and per day.
+- The answer model is chosen in the CMS (Site) and takes effect on save,
+  no deploy.
+- The CMS keeps an index of the text visitors can read (one pgvector table
+  outside Payload's own, for notes, pages, builds, About and Stack), updated
+  on publish. Needs `docs/sql/2026-11-15-ai.sql` and the `VOYAGE_API_KEY` /
+  `ANTHROPIC_API_KEY` settings ([`docs/AI_SEARCH.md`](docs/AI_SEARCH.md));
+  without them `/search` stays as it was.
+
+### Changed
+
+- The search boxes, the sidebar's search button and the home tips no longer
+  say "Search notes": they say "Search", or "Search, or ask Hoo" where Ask
+  AI is on, and an AI error now points to the keyword search that still works
+  as you type, not to the old Keyword tab.
+
+### Security
+
+- Pages can no longer be shown in a frame by other sites (only the site
+  itself and the CMS's Live Preview), and a link from another site to an AI
+  question waits for Enter instead of asking it.
+- A kept answer is reused for a reworded question only when it was written
+  for one of the suggested questions; the daily AI limit refuses requests
+  when it cannot count them.
+
+## [1.4.0] - 2026-11-13
+
+### Changed
+
+- CMS admin redesigned in a Ghost-like style: cool greys, Inter, ink pill
+  buttons, drafts in pink, a quiet floating sidebar, a big borderless title
+  in the editor, and dark mode to match.
+- The admin dashboard opens with your name, links to the site and a new
+  note, draft / published / build counts, and the five latest notes.
+- The Notes list shows each note as one row with its image (none, and no
+  empty box, when it has no hero image, as in Ghost), title,
+  author, how long ago it changed, and Draft or Published.
+- The note and page editors show the title big and without a label, with
+  a `Title` placeholder on a new one; other forms (Builds) keep a labelled
+  title field.
+- The sidebar is grouped into Content, Site, Forms and System; Posts are
+  called Notes and Projects Builds, like the site's sections.
+- The admin's own components use daisyUI (Tailwind with a `tw:` prefix),
+  built so the move to Payload 4.0 only renames `custom.scss` and redoes
+  its Payload 3 overrides ([`docs/ADMIN.md`](docs/ADMIN.md)).
+
+### Removed
+
+- The template's welcome box on the admin dashboard.
+
+## [1.3.2] - 2026-11-13
+
+### Changed
+
+- CLI header on phones and tablets (below 768px): `[ade] [en] [dark]` sit
+  on the right of the site name row, and the section links take the row
+  below. The switches are a little tighter there so all three fit beside
+  the name from 320px.
+
+## [1.3.1] - 2026-11-13
+
+### Fixed
+
+- CLI header on phones: the switches `[ade] [en] [dark]` now wrap as one
+  group onto their own row under the section links, instead of `[dark]`
+  (or `[en] [dark]`) dropping onto a line of its own. Wider screens keep
+  everything on one row.
+
+## [1.3.0] - 2026-11-12
+
+### Added
+
+- `h` / `l` go to the previous / next section of the header nav (home,
+  notes, builds, stacks, about), in both views. The Keys tab in `/status`,
+  the shortcut hints and the home banner's "Tips for getting started" list
+  them, with `j` / `k`.
+- `g` then `h` goes to the home page (in the page's language) from anywhere
+  on the site. It is listed in the same places.
+
+### Fixed
+
+- `j` / `k` now move through the tools on `/stacks`, including tools without
+  a link, and through the home project list. The hints say "move through the
+  list" instead of "move between notes".
+- Typing in the `/status` panel's Config list no longer triggers page
+  shortcuts (for example `t` toggling the theme while searching for it).
+
+## [1.2.0] - 2026-11-12
+
+### Added
+
+- A **GitHub contribution graph** on the home page: the last year of
+  contributions, one square per day in the site's accent, with the yearly
+  total; the whole graph links to the profile. Set the GitHub username in the CMS under
+  Globals → Site → GitHub contributions; the CMS reads the graph from GitHub
+  when you save and every 6 hours after, and visitors load nothing from
+  GitHub. On phones the graph shows the last 6 months (4 below 360 px).
+- An **About** page (`/about`, `/ja/about`, `/zh/about`): a greeting, a short
+  lead, an optional portrait with a caption, and the longer story in rich
+  text, followed by the social links from Site. The CLI view prints it as
+  `cat about.md`; the ADE view puts the lead and portrait in a card. Write
+  it in the CMS under Globals → About; the page stays hidden until it has a
+  lead or a story. Add an `/about` link to the Header nav to show it in the
+  menu.
+
+### Changed
+
+- The three sections have new names and addresses: posts are **Notes** at
+  `/notes`, projects are **Builds** at `/builds`, and the tools page is
+  **Stacks** at `/stacks` (also under `/ja` and `/zh`). Headings, page
+  titles, the CLI commands (`ls notes`, `ls ~/builds`, `stacks --tree`), the
+  sitemap, RSS, `llms.txt` and the search index use the new names.
+- Old addresses (`/posts/...`, `/work/...`, `/stack`, in every language)
+  redirect permanently (308) to the new ones, with their query string, so
+  existing links and search results keep working. A CMS redirect written for
+  an old address still takes precedence, also when it is reached through
+  its new address (a CMS link typed with the old path). Header links saved in the CMS with
+  an old path point at the new page directly. RSS items keep their old IDs,
+  so feed readers do not list every post again.
+
+## [1.1.0] - 2026-11-12
+
+### Added
+
+- A **Stack** page (`/stack`, `/ja/stack`, `/zh/stack`) listing the tools
+  behind the site in groups, each with a one-line note, the year it came in
+  and a link to its site. The CLI view prints it as a `stack --tree`; the ADE
+  view lists it like /work, with each tool's favicon. Tools you are trying
+  get a small label, and tools you no longer use fold into a "Former" group
+  at the end. Everything is edited in the CMS under Globals → Stack.
+- Favicons are fetched by the CMS when you save a tool with a link and kept
+  in Media, so visitors load them from the site's own storage. You can pick
+  another image instead; a site without a readable icon shows the tool's
+  initials.
+
+## [1.0.8] - 2026-11-12
+
+### Changed
+
+- Contact forms now send to the site itself (`/api/form-submissions`), which
+  passes the submission on to the CMS. Visitors' browsers no longer talk to
+  cms.whoa.me at all, so the CMS can be closed to the public with Vercel
+  Authentication (pages and forms keep working as long as athena-web has
+  `CMS_PROTECTION_BYPASS`). The forwarder only accepts a form id and up to 50
+  text fields (32 KB), and keeps showing the CMS's own messages, such as a
+  missing required field. This also fixes the form on the Preview site,
+  where the CMS is already protected.
+
+## [1.0.7] - 2026-11-11
+
+### Changed
+
+- The site keeps the content it reads from the CMS (site settings, menus,
+  recent posts, work, redirects, the lists of published pages and posts) in
+  Vercel's Runtime Cache until the next CMS change. A page that is not cached
+  yet no longer asks the CMS up to seven times, and an address that does not
+  exist answers 404 from the cached list of pages and posts, so crawlers
+  trying made-up addresses no longer keep the database awake (the free plan's
+  100 compute hours a month). The CMS is still read once after each CMS
+  change or deploy, after a day, or when the cache is unavailable.
+- Speed Insights now measures a quarter of page views, so Vercel's free
+  10,000 events per 30 days last four times longer.
+- Posts and pages in the CMS autosave 2 seconds after you stop typing
+  (Payload's default) instead of 0.1 seconds, so a draft is no longer saved
+  on almost every keystroke. Live preview refreshes at the same time.
+
+## [1.0.6] - 2026-11-11
+
+### Added
+
+- ADE view on phones and tablets (below 1024px wide, where the sidebar is
+  hidden): sun | moon tabs in the top bar, next to CLI | ADE and the
+  language tabs, switch between light and dark. Before, the only way was
+  the status panel in the footer. On phones the top bar tabs are a little
+  narrower so the bar stays on one row.
+
+### Changed
+
+- The CLI header, the ADE top bar and the status panel now list their
+  switches in one order: view, language, theme. The CLI header reads
+  `[ade] [en] [dark]`; the ADE top bar has the sun | moon tabs last; the
+  status panel lists Language before Theme. Where the CLI language menu
+  sits at the start of a row on narrow phones, it opens to the right so it
+  stays on screen.
+
+## [1.0.5] - 2026-11-11
+
+### Fixed
+
+- In the CLI view, the header's language menu now reads `[en]` / `[jp]` /
+  `[zh]` in the same bracketed style, size and colour as the `[ade]` and
+  `[dark]` switches next to it (it was a bare `en` in the nav links' style).
+
+## [1.0.4] - 2026-11-11
+
+### Changed
+
+- The CMS and the site's server functions now run in Singapore (`sin1`),
+  next to the database, instead of Washington, D.C. (`iad1`). Each database
+  query used to travel between the US and Asia, which made the admin panel
+  slow.
+
 ## [1.0.3] - 2026-11-11
 
 ### Fixed
@@ -14,10 +249,14 @@ section of each new version as a GitHub Release.
   has finished.
 - Publishing or unpublishing several posts at once no longer logs
   "Web invalidation unreachable" in the CMS: the CMS sends the notice after
-  the save has finished and waits up to 30 s (was 5 s) for the site to
+  the save has finished and waits up to 25 s (was 5 s) for the site to
   re-render the changed pages.
 - On a deployment behind Vercel Authentication, those re-renders now pass the
-  project's Protection Bypass for Automation.
+  project's Protection Bypass for Automation. An unpublished post's page
+  answering 404 counts as re-rendered, and the CMS warns about pages that
+  could not be re-rendered instead of reporting success.
+- The CMS API functions may run for 60 s (was 30 s): a bulk save on a cold
+  preview database plus the site's re-renders could pass 30 s and be cut off.
 
 ## [1.0.2] - 2026-11-11
 

@@ -2,6 +2,169 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## AI search on `/search` — 2026-11-13 (pages added 2026-11-15)
+
+**CMS**
+
+- `src/ai/`: text of notes, pages, builds, About and Stack → chunks →
+  embeddings (Voyage `voyage-4-lite`, 1024 dimensions) in `ai.chunks`
+  (pgvector, one table with `kind` + `doc_id`). The `afterChange` /
+  `afterDelete` hooks of Posts, Pages and Projects and the `afterChange` hooks
+  of the About and Stack globals keep it in step after the commit; drafts and
+  autosaves are skipped. New routes `POST /api/ai/search` (web server or a logged-in
+  user) and `POST /api/ai/reindex` (logged-in user).
+- New route `POST /api/ai/answers` (web server only) keeps finished answers
+  in `ai.answers` for reuse.
+- No new collection or job task; the only Payload schema change is the two
+  Site fields above.
+
+**Web**
+
+- `/search` gets mode tabs (By meaning with `REVALIDATE_SECRET`, Ask AI
+  also with `ANTHROPIC_API_KEY`) and the suggested questions; `POST /api/ai/search` and `/api/ai/ask`
+  (NDJSON stream). New dependency `@anthropic-ai/sdk`. daisyUI `include:`
+  gains `alert`, `loading`, `link`.
+
+**Settings (Site global)**: `aiModel` (select: Opus 5.5 / Sonnet 5.5 /
+Haiku 5.5, takes effect on save) and `aiPresets` (localized array of
+suggested questions, up to 6). These are Payload fields, so they are in
+`payload-types.ts` and need the SQL below.
+
+**Database (manual, schema push is off)**
+
+Run [`docs/sql/2026-11-15-ai.sql`](./sql/2026-11-15-ai.sql) (pgvector,
+schema `ai`, tables `ai.chunks` and `ai.answers`, enum `enum_site_ai_model`,
+column `site.ai_model`, table `site_ai_presets`) on the preview Neon branch,
+then production, before the CMS deploys: the CMS reads the Site columns on
+every Site read. It replaces the two files of 2026-11-13, which only ever ran
+on the preview branch; there it also drops their notes-only
+`ai.post_chunks` (the index is rebuilt by the next search). Checked: it runs
+twice on a database that ran the old files; the Site part is exactly what
+Payload's push creates for the Site fields.
+
+**Environment**
+
+- athena-cms: `VOYAGE_API_KEY` (Preview + Production).
+- athena-web: `ANTHROPIC_API_KEY` (Preview + Production); optional
+  `AI_DAILY_LIMIT` (default 100 uncached questions a day), `AI_ANSWER_MODEL`.
+
+**After deploying**
+
+The index fills on the first search by meaning (or `POST /api/ai/reindex`
+from a logged-in admin). Details and the Payload 4.0 notes:
+[`docs/AI_SEARCH.md`](./AI_SEARCH.md).
+
+## About page — 2026-11-12
+
+**CMS**
+
+- New global `about` (`About/config.ts`): `heading`, `lead`,
+  `portraitCaption` and `body` (rich text) localized, `portrait` (upload →
+  Media). Saving invalidates `/about` and the sitemap.
+
+**Web**
+
+- `pages/about.astro` at `/about` (`ROUTES.about`), from `lib/about.ts`.
+  Answers 404 and stays out of the sitemap until the lead or the story has
+  text. A CMS page with the slug `about` is no longer reachable (none exists
+  in production).
+
+**Database (manual, schema push is off)**
+
+Run [`docs/sql/2026-11-12-about.sql`](./sql/2026-11-12-about.sql) (tables
+`about` and `about_locales`) on the preview Neon branch and then production,
+before the CMS deploys. Checked: applied twice to a copy of the schema with
+the GitHub graph columns, it gives the same schema as a push of the new
+config.
+
+**After deploying (content)**
+
+- Globals → About: write the heading, lead and story (English first, then
+  switch the locale for 日本語 and 中文), optionally upload a portrait.
+- Globals → Header: add an `/about` link to the nav if it should be in the
+  menu.
+
+## GitHub contribution graph on the home page — 2026-11-12
+
+**CMS**
+
+- Site global: new group `github` (`username`; `contributions` json, hidden;
+  `syncedAt`, `syncError` read-only). `github/contributions.ts` reads the
+  calendar with one GraphQL request (`GITHUB_TOKEN`, the same token as
+  /builds) when the username is saved, and `syncGitHub` refreshes it every
+  6 hours, saving the Site global only when the calendar changed.
+
+**Web**
+
+- `components/GitHubContributions.astro` on `/` (below the projects), from
+  `site.contributions` (`lib/site.ts`).
+
+**Database (manual, schema push is off)**
+
+Run [`docs/sql/2026-11-12-github-contributions.sql`](./sql/2026-11-12-github-contributions.sql)
+(four columns on `site`) on the preview Neon branch and then production,
+before the CMS deploys. Checked: applied twice to a copy of the 1.1.0 schema,
+it gives the same schema as a push of the new config.
+
+**After deploying (content)**
+
+- Globals → Site → GitHub contributions: enter the GitHub username and save.
+
+## Sections renamed: `/notes`, `/builds`, `/stacks` — 2026-11-12
+
+**Web**
+
+- Posts moved from `/posts` to `/notes`, projects from `/work` to `/builds`,
+  the Stack page from `/stack` to `/stacks` (the CLI, ADE, titles, feeds,
+  sitemap and `llms.txt` follow). The paths live in `ROUTES`
+  (`packages/shared/src/constants.ts`).
+- `middleware.ts` answers the old paths in every language with a 308 to the
+  new one (query string kept), cached at the CDN for a day.
+- Links in the CMS typed with an old path (`/posts`, `/work`, `/stack`)
+  resolve to the new route, so nothing breaks before they are edited.
+
+**CMS**
+
+- Invalidation paths and the draft preview path for posts use `ROUTES`.
+
+**After deploying (content, no SQL)**
+
+- Globals → Header: change the link labels (and, for tidiness, the URLs) to
+  notes / builds / stacks, in each language.
+- Search Console: nothing to do; the sitemap lists only the new URLs and the
+  old ones redirect permanently.
+
+## `/stack` page and the Stack global — 2026-11-12
+
+**CMS**
+
+- New global **`stack`** (`Stack/config.ts`): `intro`, `groups` (title,
+  description) and their `items` (name, link, note, year, status, icon).
+  Details in [CONTENT_MODEL.md](./CONTENT_MODEL.md#4-globals).
+- On save, items with a link and no icon get the site's favicon, fetched by
+  the CMS and stored in Media (Vercel Blob) as a 64×64 PNG, so visitors
+  never request it from the tool's site or Google. Uses the existing `sharp`.
+- New cache tag `global_stack` (`packages/shared/src/constants.ts`).
+
+**Web**
+
+- `/stack` (`pages/stack.astro`, `components/stack/StackList.astro`,
+  `lib/stack.ts`) in both views and all three languages; listed in the pages
+  sitemap while it has a tool. Add a `/stack` link to Globals → Header to
+  show it in the menu.
+
+**Database (manual, push is off)**
+
+Run [`docs/sql/2026-11-12-stack.sql`](./sql/2026-11-12-stack.sql) (creates
+`stack`, `stack_locales`, `stack_groups`, `stack_groups_locales`,
+`stack_groups_items`, `stack_groups_items_locales` and the
+`enum_stack_groups_items_status` type) on the preview Neon branch and then
+production, **before** the CMS deploy. Without it the CMS cannot load the
+Stack global; the rest of the site is unaffected and `/stack` answers 404.
+Idempotent; verified locally: applied twice to a copy of the previous
+schema, it gives the same `pg_dump --schema-only` as a fresh push of the new
+config.
+
 ## Security review of the 1.0.0 changes — 2026-11-11
 
 Review of everything between `main` and `development` before the release.

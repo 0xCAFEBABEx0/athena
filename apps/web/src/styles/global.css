@@ -9,7 +9,7 @@
      component whose name appears anywhere in the source ("table", "list",
      "footer", "steps"...), about 60 KB of CSS nobody uses. Add a name here
      before using a new component. */
-  include: properties, rootcolor, rootscrollgutter, rootscrolllock, scrollbar, svg, button, card, modal, menu, dropdown, tab, kbd, badge, input, select, textarea, checkbox, join, breadcrumbs, status, radius, typography;
+  include: properties, rootcolor, rootscrollgutter, rootscrolllock, scrollbar, svg, button, card, modal, menu, dropdown, tab, kbd, badge, input, select, textarea, checkbox, join, breadcrumbs, status, radius, typography, alert, loading, link;
 }
 
 /* Dark mode is driven by the data-theme attribute, not the OS media query. */
@@ -778,10 +778,14 @@ html:not([data-theme='dark']) .theme-when-dark {
     font-family: var(--font-mono);
   }
 
-  &:hover,
-  &:focus-visible {
+  &:is(button):hover,
+  &:is(button):focus-visible {
     background-color: var(--color-base-200);
     color: var(--color-base-content);
+  }
+
+  &:not(button) {
+    cursor: default;
   }
 }
 
@@ -1020,13 +1024,17 @@ html:not([data-theme='dark']) .theme-when-dark {
     padding-inline: 0.625rem;
     font-size: 0.8125rem;
 
-    /* 320px phones: keep the bar on one line. */
-    @media (max-width: 22rem) {
+    /* Phones: keep the bar (search, view, theme, language) on one line. */
+    @media (max-width: 40rem) {
       padding-inline: 0.375rem;
+    }
+
+    @media (max-width: 22rem) {
+      padding-inline: 0.25rem;
     }
   }
 
-  .topbar-search {
+  .topbar-icon {
     width: 2.5rem;
     height: 2.5rem;
     min-height: 2.5rem;
@@ -1039,6 +1047,24 @@ html:not([data-theme='dark']) .theme-when-dark {
       stroke-width: 2;
       stroke-linecap: round;
     }
+  }
+
+  /* Light | dark as icon tabs; the current theme is the selected tab. */
+  .topbar-theme > .tab {
+    svg {
+      width: 1rem;
+      height: 1rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+  }
+
+  &:not([data-theme='dark']) .theme-tab-light,
+  &[data-theme='dark'] .theme-tab-dark {
+    background-color: var(--modern-sel);
+    color: var(--color-base-content);
   }
 
   .modern-brand-compact {
@@ -1717,6 +1743,545 @@ html:not([data-view='modern']) {
   }
 }
 
+/* ------------------------------------------------------------------------
+   Home GitHub contribution graph (components/GitHubContributions.astro).
+   Weeks are columns of 7 days, shaded with the accent like GitHub's own
+   calendar. CLI: a plain block of squares under `gh contributions`. ADE: a
+   card with rounded squares. Below 640 px only the last 26 weeks show,
+   below 360 px the last 17. The whole box is one link to the GitHub
+   profile: hovering it tints the total and the label with the accent.
+   ------------------------------------------------------------------------ */
+.contrib-box {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
+  }
+}
+
+.contrib-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 1rem;
+}
+
+.contrib-label,
+.contrib-total {
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  transition: color 0.2s ease;
+}
+
+.contrib-box:hover {
+  .contrib-label,
+  .contrib-total {
+    color: var(--color-primary);
+  }
+}
+
+.contrib-grid {
+  display: flex;
+  gap: 3px;
+  margin-top: 0.75rem;
+}
+
+.contrib-week {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.contrib-day {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background-color: color-mix(in oklab, var(--color-base-content) 8%, transparent);
+
+  &[data-level='1'] {
+    background-color: color-mix(in oklab, var(--color-primary) 25%, transparent);
+  }
+
+  &[data-level='2'] {
+    background-color: color-mix(in oklab, var(--color-primary) 45%, transparent);
+  }
+
+  &[data-level='3'] {
+    background-color: color-mix(in oklab, var(--color-primary) 70%, transparent);
+  }
+
+  &[data-level='4'] {
+    background-color: var(--color-primary);
+  }
+}
+
+.contrib-pad {
+  visibility: hidden;
+}
+
+@media (max-width: 39.99rem) {
+  .contrib-week:nth-last-child(n + 27) {
+    display: none;
+  }
+}
+
+/* Phones narrower than 360 px: the last 17 weeks (about four months). */
+@media (max-width: 22.49rem) {
+  .contrib-week:nth-last-child(n + 18) {
+    display: none;
+  }
+}
+
+html:not([data-view='modern']) .contrib-day {
+  border-radius: 1px;
+}
+
+[data-view='modern'] {
+  .contrib-box {
+    padding: 1rem 1.25rem 1.125rem;
+    border-radius: 1rem;
+    background-color: var(--modern-card);
+    box-shadow: var(--modern-shadow);
+  }
+
+  .contrib-day {
+    border-radius: 3px;
+  }
+}
+
+/* ------------------------------------------------------------------------
+   /about (pages/about.astro). CLI: `cat about.md` printed under the prompt,
+   indented like the other command output. ADE: the lead and portrait in a
+   card, the story below it. The portrait sits beside the lead from 640 px,
+   and below it, smaller, on phones.
+   ------------------------------------------------------------------------ */
+.about-intro {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.about-lead {
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  white-space: pre-line;
+}
+
+.about-portrait {
+  margin: 0;
+  max-width: 10rem;
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--color-base-300);
+    border-radius: var(--radius-box);
+  }
+
+  figcaption {
+    margin-top: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  }
+}
+
+@media (min-width: 40rem) {
+  .about-intro-portrait {
+    grid-template-columns: minmax(0, 1fr) 12rem;
+    align-items: start;
+  }
+
+  .about-portrait {
+    grid-row: 1;
+    grid-column: 2;
+    max-width: none;
+  }
+}
+
+.about-body {
+  margin-top: 2.25rem;
+}
+
+.about-links {
+  margin-top: 2.5rem;
+}
+
+html:not([data-view='modern']) {
+  .about-intro,
+  .about-body,
+  .about-links {
+    padding-left: 1.25rem;
+  }
+}
+
+[data-view='modern'] {
+  .about-intro {
+    margin-top: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    background-color: var(--modern-card);
+    box-shadow: var(--modern-shadow);
+  }
+
+  .about-portrait img {
+    border-radius: 0.75rem;
+  }
+}
+
+/* ------------------------------------------------------------------------
+   /stacks (components/stack/StackList.astro). CLI: a `stacks --tree` print
+   (group dirs, ├─ └─ rows, year and ↗ on the right). ADE: /work-like list
+   with the tool's favicon in a tile, "Name — note" and "since 2025".
+   ------------------------------------------------------------------------ */
+.stack-intro {
+  margin-top: 0.5rem;
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+}
+
+.stack-rows {
+  list-style: none;
+  padding: 0;
+}
+
+.stack-group-heading {
+  display: flex;
+  flex-wrap: wrap;
+  cursor: pointer;
+  list-style: none;
+  align-items: baseline;
+  gap: 0 0.375rem;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+}
+
+.stack-row {
+  display: flex;
+  align-items: flex-start;
+  text-decoration: none;
+}
+
+.stack-main {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.stack-note,
+.stack-since,
+.stack-arrow,
+.stack-group-desc {
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+}
+
+.stack-end {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.stack-trying {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+}
+
+/* CLI ------------------------------------------------------------------- */
+html:not([data-view='modern']) {
+  .stack-icon,
+  .stack-dash,
+  .stack-group-count,
+  .stack-group-chevron {
+    display: none;
+  }
+
+  .stack-group {
+    margin-top: 1rem;
+  }
+
+  .stack-group-heading {
+    gap: 0 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .stack-group-title {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-transform: lowercase;
+
+    &::after {
+      content: '/';
+    }
+  }
+
+  /* "› former (3)", folded like /work's done group. */
+  .stack-former .stack-group-heading {
+    gap: 0 0.375rem;
+  }
+
+  .stack-former .stack-group-title {
+    font-weight: 400;
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+
+    &::before {
+      content: '⌄ ';
+    }
+
+    &::after {
+      content: none;
+    }
+  }
+
+  .stack-former:not([open]) .stack-group-title::before {
+    content: '› ';
+  }
+
+  .stack-former .stack-group-count {
+    display: inline;
+    font-family: var(--font-mono);
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+
+    &::before {
+      content: '(';
+    }
+
+    &::after {
+      content: ')';
+    }
+  }
+
+  .stack-rows {
+    margin-top: 0.25rem;
+  }
+
+  .stack-row {
+    align-items: baseline;
+    gap: 0 0.625rem;
+    margin-inline: -0.375rem;
+    border-radius: var(--radius-selector);
+    padding: 0.3125rem 0.375rem;
+  }
+
+  .stack-tree {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  }
+
+  .stack-name {
+    font-family: var(--font-mono);
+    font-size: 0.90625rem;
+    font-weight: 600;
+  }
+
+  .stack-note {
+    display: block;
+    font-size: 0.875rem;
+  }
+
+  .stack-trying {
+    font-family: var(--font-mono);
+  }
+
+  .stack-end {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stack-arrow {
+    width: 0.75rem;
+  }
+
+  .stack-former .stack-name {
+    font-weight: 400;
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  }
+
+  a.stack-row:hover .stack-name,
+  .stack-row:focus-visible .stack-name,
+  a.stack-row:hover .stack-arrow,
+  .stack-row:focus-visible .stack-arrow {
+    color: var(--color-primary);
+  }
+
+  .stack-row:focus-visible {
+    outline: none;
+    background-color: color-mix(in oklab, var(--color-primary) 10%, var(--color-base-100));
+  }
+
+  /* Name and note side by side once there is room for a column of names. */
+  @media (min-width: 40rem) {
+    .stack-main {
+      display: grid;
+      grid-template-columns: 17ch minmax(0, 1fr);
+      column-gap: 1rem;
+      align-items: baseline;
+    }
+
+    .stack-note {
+      font-size: 0.9375rem;
+    }
+  }
+}
+
+/* ADE ------------------------------------------------------------------- */
+[data-view='modern'] {
+  .stack-tree {
+    display: none;
+  }
+
+  .stack-intro {
+    margin-top: 0.75rem;
+    font-size: 0.9375rem;
+  }
+
+  .stack-group {
+    margin-top: 1.25rem;
+  }
+
+  .stack-group-heading {
+    font-size: 0.875rem;
+    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  }
+
+  .stack-group-count::before {
+    content: '· ';
+  }
+
+  .stack-group-chevron::before {
+    content: '⌄';
+    display: inline-block;
+    font-size: 0.8125rem;
+    line-height: 1;
+    transform: translateY(-0.125rem);
+  }
+
+  .stack-group:not([open]) .stack-group-chevron::before {
+    content: '›';
+    transform: none;
+  }
+
+  .stack-group-desc {
+    flex-basis: 100%;
+    font-size: 0.8125rem;
+  }
+
+  .stack-rows {
+    margin-top: 0.375rem;
+  }
+
+  .stack-row {
+    gap: 0 0.875rem;
+    margin-inline: -0.625rem;
+    border-radius: 0.625rem;
+    padding: 0.5rem 0.625rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+
+    &:is(a):hover,
+    &:focus-visible {
+      background-color: var(--modern-sel);
+      outline: none;
+    }
+  }
+
+  .stack-icon {
+    display: grid;
+    flex: 0 0 1.75rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid var(--color-base-300);
+    border-radius: 0.5rem;
+    /* Paper in both themes: many favicons are black and would vanish on the dark tile. */
+    background-color: #faf9f5;
+    color: #1f1e1b;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+
+    img {
+      width: 1.125rem;
+      height: 1.125rem;
+      object-fit: contain;
+    }
+  }
+
+  .stack-main {
+    padding-top: 0.0625rem;
+  }
+
+  .stack-head,
+  .stack-note {
+    display: inline;
+  }
+
+  .stack-name {
+    font-weight: 500;
+  }
+
+  .stack-trying {
+    display: inline-block;
+    border: 1px solid var(--color-base-300);
+    border-radius: 9999px;
+    padding: 0 0.4375rem;
+    font-size: 0.6875rem;
+    line-height: 1.25rem;
+    vertical-align: 0.0625rem;
+  }
+
+  .stack-note {
+    margin-left: 0.375rem;
+  }
+
+  .stack-end {
+    padding-top: 0.1875rem;
+    padding-left: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .stack-arrow {
+    display: none;
+  }
+
+  .stack-former .stack-row {
+    opacity: 0.7;
+  }
+
+  /* Phones: the year moves under the note, so the note keeps the width. */
+  @media (max-width: 39.99rem) {
+    .stack-row {
+      display: grid;
+      grid-template-columns: 1.75rem minmax(0, 1fr);
+    }
+
+    .stack-end {
+      grid-column: 2;
+      padding: 0;
+      font-size: 0.75rem;
+    }
+
+    .stack-end:not(:has(.stack-since)) {
+      display: none;
+    }
+  }
+}
+
 /* Thread page ---------------------------------------------------------- */
 .work-head {
   display: flex;
@@ -2096,7 +2661,8 @@ html:not([data-view='modern']) .work-page-list {
   }
 
   /* Group headings and footer links are small text but still tap targets. */
-  .work-group-heading {
+  .work-group-heading,
+  .stack-group-heading {
     min-height: 2.5rem;
   }
 
@@ -2135,5 +2701,149 @@ html:not([data-view='modern']) .work-page-list {
   .post-row:active,
   [data-post-row]:active {
     background-color: var(--modern-sel);
+  }
+}
+
+/* AI search on /search (docs/AI_SEARCH.md): mode tabs, answer card, snippets.
+   daisyUI tabs, card, alert, loading and badge; the CLI view strips them back
+   to terminal output. */
+.ai-answer-text p + p {
+  margin-top: 0.625rem;
+}
+
+.ai-answer-text p {
+  overflow-wrap: anywhere;
+}
+
+.ai-cite {
+  margin-inline: 0.125rem 0.25rem;
+  vertical-align: 0.0625rem;
+  text-decoration: none;
+}
+
+a.ai-cite:hover,
+a.ai-cite:focus-visible {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.ai-snippet {
+  margin: -0.25rem 0 0.375rem;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  overflow-wrap: anywhere;
+
+  @media (min-width: 40rem) {
+    padding-left: 8.75rem;
+  }
+}
+
+.ai-answer-mark {
+  color: var(--color-primary);
+}
+
+html:not([data-view='modern']) {
+  .search-modes .tabs-box {
+    gap: 0.25rem;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .search-modes .tab {
+    --tab-bg: transparent;
+    height: auto;
+    padding: 0.125rem 0.25rem;
+    font-size: 0.8125rem;
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  }
+
+  .search-modes .tab-active {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .ai-answer {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .ai-answer .card-body {
+    padding: 0;
+  }
+
+  .ai-answer-text,
+  .ai-answer .ai-sources,
+  .ai-answer .card-body > p {
+    border-left: 1px solid var(--color-base-300);
+    padding-left: 1rem;
+    margin-left: 0.25rem;
+  }
+
+  .ai-answer .card-body > p {
+    font-family: var(--font-mono);
+  }
+
+  /* Suggested questions read as `? question` lines of the terminal. */
+  .ai-presets .btn {
+    --btn-bg: transparent;
+    --btn-border: transparent;
+    --btn-shadow: none;
+    padding-inline: 0.25rem;
+    gap: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: color-mix(in oklab, var(--color-base-content) 75%, transparent);
+  }
+
+  .ai-presets .btn:hover,
+  .ai-presets .btn:focus-visible {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+}
+
+[data-view='modern'] {
+  .search-modes {
+    justify-content: center;
+  }
+
+  .ai-presets ul {
+    justify-content: center;
+  }
+
+  .ai-presets .btn {
+    border-radius: 999px;
+    padding-inline: 0.75rem;
+  }
+
+  .ai-answer {
+    border-color: var(--color-base-300);
+    border-radius: 0.875rem;
+    background-color: var(--modern-card);
+  }
+
+  .ai-answer-label {
+    font-family: var(--font-sans);
+  }
+
+  .ai-snippet {
+    padding: 0 1rem;
+
+    @media (min-width: 40rem) {
+      padding-left: 8rem;
+    }
+  }
+
+  .ai-status {
+    font-family: var(--font-sans);
   }
 }

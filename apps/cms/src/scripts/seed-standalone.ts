@@ -1,6 +1,6 @@
 import { getPayload } from 'payload'
-import config from '../payload.config'
-import { seed } from '../endpoints/seed'
+import config from '@/payload.config'
+import { seed } from '@/endpoints/seed'
 
 const runSeed = async () => {
   const payload = await getPayload({ config })

@@ -66,6 +66,7 @@ updates:
           - '@tailwindcss/*'
           - '@tailwindcss/typography'
           - '@tailwindcss/vite'
+          - '@tailwindcss/postcss'
           - daisyui
       # Everything else: batch minor/patch bumps into one PR per side.
       # The exclusions keep the named groups above out of these catch-alls.

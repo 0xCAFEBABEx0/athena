@@ -107,12 +107,16 @@ export interface Config {
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('en' | 'ja' | 'zh') | ('en' | 'ja' | 'zh')[];
   globals: {
     site: Site;
+    stack: Stack;
+    about: About;
     header: Header;
     footer: Footer;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
     site: SiteSelect<false> | SiteSelect<true>;
+    stack: StackSelect<false> | StackSelect<true>;
+    about: AboutSelect<false> | AboutSelect<true>;
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
@@ -287,6 +291,7 @@ export interface Media {
     };
     [k: string]: unknown;
   } | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -743,7 +748,7 @@ export interface Form {
   createdAt: string;
 }
 /**
- * Repositories shown at /work. Only entries added here appear; tick Hidden to take one off the site.
+ * Repositories shown at /builds. Only entries added here appear; tick Hidden to take one off the site.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "projects".
@@ -795,7 +800,7 @@ export interface Project {
    */
   hidden?: boolean | null;
   /**
-   * URL: /work/<slug>, from the repository name.
+   * URL: /builds/<slug>, from the repository name.
    */
   slug?: string | null;
   /**
@@ -1295,6 +1300,7 @@ export interface ProjectsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1694,7 +1700,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Name, intro, links, projects and X picks shown on the public site (whoa.me).
+ * Name, intro, links, projects, X picks and the GitHub graph shown on the public site (whoa.me).
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site".
@@ -1779,6 +1785,36 @@ export interface Site {
       }[]
     | null;
   /**
+   * The contribution graph on the home page. Enter a GitHub username and save: the last year is read from GitHub now and every 6 hours after. Leave it empty to hide the graph.
+   */
+  github?: {
+    username?: string | null;
+    syncedAt?: string | null;
+    syncError?: string | null;
+    contributions?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+  };
+  /**
+   * Writes the answers under "Ask AI" on /search. Takes effect on save, no deploy. Answers kept from another model are written again on their next ask.
+   */
+  aiModel?: ('claude-opus-5-5' | 'claude-sonnet-5-5' | 'claude-haiku-5-5') | null;
+  /**
+   * Offered under "Ask AI" on /search, in this language. Each answer is written once and kept until the notes it cites change. Empty: no suggestions.
+   */
+  aiPresets?:
+    | {
+        question: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
    * Home-page welcome box in the CLI view. Hoo, the owl, sits on the left; clicking it wakes it up and it says one of the tips.
    */
   banner?: {
@@ -1794,6 +1830,99 @@ export interface Site {
         }[]
       | null;
   };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Tools shown on /stacks. Add a /stacks link to the Header nav to show the page in the menu.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stack".
+ */
+export interface Stack {
+  id: number;
+  /**
+   * One line under the page title, also the page’s search-result snippet. Empty = a built-in line.
+   */
+  intro?: string | null;
+  /**
+   * Shown in this order. Drag to reorder.
+   */
+  groups?:
+    | {
+        title: string;
+        description?: string | null;
+        items?:
+          | {
+              /**
+               * Product name (not translated).
+               */
+              name: string;
+              /**
+               * Official site. Its favicon is fetched when you save.
+               */
+              url?: string | null;
+              /**
+               * What you use it for, in one line.
+               */
+              note?: string | null;
+              /**
+               * Year you started (optional).
+               */
+              since?: number | null;
+              status: 'current' | 'trying' | 'former';
+              /**
+               * Filled from the site’s favicon on save; pick another image to replace it. Initials are shown when the site has no readable icon.
+               */
+              icon?: (number | null) | Media;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Your profile on /about. Add an /about link to the Header nav to show the page in the menu. The links at the end of the page are Site → Social links.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about".
+ */
+export interface About {
+  id: number;
+  /**
+   * Page heading. Empty = “About”.
+   */
+  heading?: string | null;
+  /**
+   * Two or three sentences under the heading: who you are and what you build. Also the page’s search-result snippet.
+   */
+  lead?: string | null;
+  /**
+   * Optional photo or drawing beside the lead. Its Alt text is read aloud.
+   */
+  portrait?: (number | null) | Media;
+  portraitCaption?: string | null;
+  /**
+   * The longer story: background, what you work on now, what you are looking for. Use H2 headings for sections (e.g. Background, Now).
+   */
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1913,6 +2042,21 @@ export interface SiteSelect<T extends boolean = true> {
         lang?: T;
         id?: T;
       };
+  github?:
+    | T
+    | {
+        username?: T;
+        syncedAt?: T;
+        syncError?: T;
+        contributions?: T;
+      };
+  aiModel?: T;
+  aiPresets?:
+    | T
+    | {
+        question?: T;
+        id?: T;
+      };
   banner?:
     | T
     | {
@@ -1925,6 +2069,48 @@ export interface SiteSelect<T extends boolean = true> {
               id?: T;
             };
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stack_select".
+ */
+export interface StackSelect<T extends boolean = true> {
+  intro?: T;
+  groups?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        items?:
+          | T
+          | {
+              name?: T;
+              url?: T;
+              note?: T;
+              since?: T;
+              status?: T;
+              icon?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about_select".
+ */
+export interface AboutSelect<T extends boolean = true> {
+  heading?: T;
+  lead?: T;
+  portrait?: T;
+  portraitCaption?: T;
+  body?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

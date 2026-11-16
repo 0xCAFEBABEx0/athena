@@ -1,3 +1,4 @@
+import { ROUTES } from '@athena/shared/constants'
 import type { APIRoute } from 'astro'
 
 import { getSearchIndexDocs } from '@/lib/cms'
@@ -22,7 +23,7 @@ export const GET: APIRoute = async ({ locals }) => {
         .filter((post) => post.slug)
         .map((post) => ({
           title: post.title || post.meta?.title || post.slug || '',
-          href: localizePath(locale, `/posts/${post.slug}`),
+          href: localizePath(locale, `${ROUTES.posts}/${post.slug}`),
           tag: categoryTitles(post.categories)[0],
           text: [post.slug, post.meta?.title, post.meta?.description, ...categoryTitles(post.categories)]
             .filter(Boolean)

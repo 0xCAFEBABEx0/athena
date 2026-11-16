@@ -9,7 +9,7 @@
  */
 import { randomBytes, randomUUID } from 'crypto'
 
-import config from '../payload.config'
+import config from '@/payload.config'
 import { getPayload } from 'payload'
 
 const EMAIL = 'web-frontend@service.local'

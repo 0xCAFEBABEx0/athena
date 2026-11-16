@@ -1,17 +1,18 @@
 import type { CollectionConfig } from 'payload'
 
-import { authenticated } from '../../access/authenticated'
-import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
-import { Archive } from '../../blocks/ArchiveBlock/config'
-import { CallToAction } from '../../blocks/CallToAction/config'
-import { Content } from '../../blocks/Content/config'
-import { FormBlock } from '../../blocks/Form/config'
-import { MediaBlock } from '../../blocks/MediaBlock/config'
+import { authenticated } from '@/access/authenticated'
+import { authenticatedOrPublished } from '@/access/authenticatedOrPublished'
+import { Archive } from '@/blocks/ArchiveBlock/config'
+import { CallToAction } from '@/blocks/CallToAction/config'
+import { Content } from '@/blocks/Content/config'
+import { FormBlock } from '@/blocks/Form/config'
+import { MediaBlock } from '@/blocks/MediaBlock/config'
 import { hero } from '@/heros/config'
+import { indexAfterChange, removeAfterDelete } from '@/ai/hooks'
 import { slugField } from '@/fields/slug'
 import { translateUIField } from '@/translation/translate'
-import { populatePublishedAt } from '../../hooks/populatePublishedAt'
-import { generatePreviewPath } from '../../utilities/generatePreviewPath'
+import { populatePublishedAt } from '@/hooks/populatePublishedAt'
+import { generatePreviewPath } from '@/utilities/generatePreviewPath'
 import { revalidateDelete, revalidatePage } from './hooks/revalidatePage'
 
 import {
@@ -62,6 +63,8 @@ export const Pages: CollectionConfig<'pages'> = {
     {
       name: 'title',
       type: 'text',
+      // The editor shows the title without its label (custom.scss), so the placeholder names it.
+      admin: { placeholder: 'Title' },
       localized: true,
       required: true,
     },
@@ -130,14 +133,17 @@ export const Pages: CollectionConfig<'pages'> = {
     translateUIField,
   ],
   hooks: {
-    afterChange: [revalidatePage],
+    afterChange: [revalidatePage, indexAfterChange('page')],
     beforeChange: [populatePublishedAt],
-    afterDelete: [revalidateDelete],
+    afterDelete: [revalidateDelete, removeAfterDelete('page')],
   },
   versions: {
     drafts: {
       autosave: {
-        interval: 100, // We set this interval for optimal live preview
+        // Every autosave is a CMS function call and a database write; the
+        // template's 100 ms saved on almost every keystroke. Payload's default
+        // (2 s) still refreshes live preview soon after typing stops.
+        interval: 2000,
       },
       schedulePublish: true,
     },

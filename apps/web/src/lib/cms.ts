@@ -3,14 +3,17 @@ import { stringify } from 'qs-esm'
 import { DEFAULT_LOCALE, type Locale } from '@athena/shared/constants'
 
 import type {
+  About,
   Footer,
   Header,
   Page,
   Post,
   Redirect,
   Site,
+  Stack,
 } from '@athena/shared/payload-types'
 
+import { cachedCms } from './cms-cache'
 import { cmsProtectionBypass, cmsURL, env } from './env'
 
 /** Shape of Payload's paginated REST responses. */
@@ -71,7 +74,7 @@ export const isVercelSsoLocation = (location: string | null | undefined): boolea
 const ssoError = (path: string, status: number): CmsRequestError =>
   new CmsRequestError(
     `CMS is blocked by Vercel Deployment Protection (${path}). ` +
-      'Disable Production protection on the athena-cms project, or set CMS_PROTECTION_BYPASS on athena-web.',
+      'Set CMS_PROTECTION_BYPASS on athena-web (athena-cms Protection Bypass for Automation), or switch athena-cms back to Standard Protection.',
     { status, path },
   )
 
@@ -151,6 +154,18 @@ const cmsFetch = async <T>(
   const origin = cmsURL()
   const url = `${origin}/api${path}${qs}`
 
+  // Drafts are per editor and must be live; published responses are shared
+  // and kept in the Runtime Cache until the next CMS change (lib/cms-cache.ts).
+  if (draft) return requestCms<T>(url, path, origin, draft)
+  return cachedCms(url, () => requestCms<T>(url, path, origin, draft))
+}
+
+const requestCms = async <T>(
+  url: string,
+  path: string,
+  origin: string,
+  draft: boolean,
+): Promise<T> => {
   let res: Response
   try {
     res = await fetch(url, {
@@ -273,8 +288,8 @@ export const getArchivePosts = async (
   return result.docs
 }
 
-export const getGlobal = async <T extends Header | Footer | Site>(
-  slug: 'header' | 'footer' | 'site',
+export const getGlobal = async <T extends Header | Footer | Site | Stack | About>(
+  slug: 'header' | 'footer' | 'site' | 'stack' | 'about',
   opts: FetchOptions = {},
 ): Promise<T> => cmsFetch<T>(`/globals/${slug}`, { depth: 1 }, opts)
 
@@ -339,6 +354,24 @@ export const getAllSlugs = async (
     },
   )
   return result.docs
+}
+
+/**
+ * Slugs of the published documents, or null when the CMS cannot say. Lets a
+ * page route answer 404 for an unknown slug from the cached listing instead
+ * of asking the CMS (and waking its database) once per URL a crawler makes
+ * up. Draft preview must not use it: drafts are not in the listing.
+ */
+export const getPublishedSlugs = async (
+  collection: 'pages' | 'posts',
+): Promise<Set<string> | null> => {
+  try {
+    const docs = await getAllSlugs(collection)
+    return new Set(docs.map((doc) => doc.slug).filter((slug): slug is string => Boolean(slug)))
+  } catch (error) {
+    console.error(`[cms] failed to list ${collection} slugs`, error)
+    return null
+  }
 }
 
 /**

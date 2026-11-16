@@ -17,8 +17,9 @@ locals {
       framework      = "nextjs"
       root_directory = "apps/cms"
       build_command  = "bun run build"
-      # Never protect athena-cms Production (AGENTS.md pitfall 14).
-      vercel_authentication = "none"
+      # Every deployment, Production included (since 1.0.8). athena-web passes
+      # it with CMS_PROTECTION_BYPASS (AGENTS.md pitfall 14).
+      vercel_authentication = "all_deployments"
     }
   }
 
@@ -65,19 +66,22 @@ locals {
     "web:PREVIEW_SECRET"     = { project = "web", key = "PREVIEW_SECRET", target = ["production", "preview"], sensitive = true, secret = "preview_secret" }
     "web:REVALIDATE_SECRET"  = { project = "web", key = "REVALIDATE_SECRET", target = ["production", "preview"], sensitive = true, secret = "revalidate_secret" }
     "web:PAYLOAD_API_KEY"    = { project = "web", key = "PAYLOAD_API_KEY", target = ["production"], sensitive = true, secret = "payload_api_key" }
+    # athena-cms Protection Bypass for Automation (CMS reads and form forwarding).
+    "web:CMS_PROTECTION_BYPASS" = { project = "web", key = "CMS_PROTECTION_BYPASS", target = ["production", "preview", "development"], sensitive = true, secret = "cms_protection_bypass" }
 
     # --- athena-cms --------------------------------------------------------
-    "cms:WEB_URL:production"      = { project = "cms", key = "WEB_URL", target = ["production"], sensitive = false, value = local.urls.web_production, comment = "Astro web origin (invalidation webhook, preview, CORS, redirects)" }
-    "cms:CMS_URL:production"      = { project = "cms", key = "CMS_URL", target = ["production"], sensitive = false, value = local.urls.cms_production, comment = "This CMS origin" }
-    "cms:WEB_URL:preview"         = { project = "cms", key = "WEB_URL", target = ["preview"], sensitive = false, value = local.urls.web_preview, comment = "Astro web preview origin" }
-    "cms:CMS_URL:preview"         = { project = "cms", key = "CMS_URL", target = ["preview"], sensitive = false, value = local.urls.cms_preview, comment = "This CMS preview origin" }
-    "cms:REVALIDATE_SECRET"       = { project = "cms", key = "REVALIDATE_SECRET", target = ["production", "preview"], sensitive = true, secret = "revalidate_secret" }
-    "cms:PREVIEW_SECRET"          = { project = "cms", key = "PREVIEW_SECRET", target = ["production", "preview", "development"], sensitive = false, secret = "preview_secret" }
-    "cms:PAYLOAD_SECRET"          = { project = "cms", key = "PAYLOAD_SECRET", target = ["production", "preview", "development"], sensitive = false, secret = "payload_secret" }
-    "cms:CRON_SECRET"             = { project = "cms", key = "CRON_SECRET", target = ["production", "preview", "development"], sensitive = false, secret = "cron_secret" }
-    "cms:WEB_PROTECTION_BYPASS"   = { project = "cms", key = "WEB_PROTECTION_BYPASS", target = ["preview"], sensitive = true, secret = "web_protection_bypass" }
-    "cms:GITHUB_TOKEN:production" = { project = "cms", key = "GITHUB_TOKEN", target = ["production"], sensitive = true, secret = "github_token_production" }
-    "cms:GITHUB_TOKEN:preview"    = { project = "cms", key = "GITHUB_TOKEN", target = ["preview"], sensitive = true, secret = "github_token_preview" }
+    "cms:WEB_URL:production"    = { project = "cms", key = "WEB_URL", target = ["production"], sensitive = false, value = local.urls.web_production, comment = "Astro web origin (invalidation webhook, preview, CORS, redirects)" }
+    "cms:CMS_URL:production"    = { project = "cms", key = "CMS_URL", target = ["production"], sensitive = false, value = local.urls.cms_production, comment = "This CMS origin" }
+    "cms:WEB_URL:preview"       = { project = "cms", key = "WEB_URL", target = ["preview"], sensitive = false, value = local.urls.web_preview, comment = "Astro web preview origin" }
+    "cms:CMS_URL:preview"       = { project = "cms", key = "CMS_URL", target = ["preview"], sensitive = false, value = local.urls.cms_preview, comment = "This CMS preview origin" }
+    "cms:REVALIDATE_SECRET"     = { project = "cms", key = "REVALIDATE_SECRET", target = ["production", "preview", "development"], sensitive = true, secret = "revalidate_secret" }
+    "cms:PREVIEW_SECRET"        = { project = "cms", key = "PREVIEW_SECRET", target = ["production", "preview", "development"], sensitive = false, secret = "preview_secret" }
+    "cms:PAYLOAD_SECRET"        = { project = "cms", key = "PAYLOAD_SECRET", target = ["production", "preview", "development"], sensitive = false, secret = "payload_secret" }
+    "cms:CRON_SECRET"           = { project = "cms", key = "CRON_SECRET", target = ["production", "preview", "development"], sensitive = false, secret = "cron_secret" }
+    "cms:WEB_PROTECTION_BYPASS" = { project = "cms", key = "WEB_PROTECTION_BYPASS", target = ["production", "preview", "development"], sensitive = true, secret = "web_protection_bypass" }
+    "cms:GITHUB_TOKEN"          = { project = "cms", key = "GITHUB_TOKEN", target = ["production", "preview", "development"], sensitive = true, secret = "github_token" }
+    # AI search embeddings (docs/AI_SEARCH.md).
+    "cms:VOYAGE_API_KEY" = { project = "cms", key = "VOYAGE_API_KEY", target = ["production", "preview", "development"], sensitive = true, secret = "voyage_api_key" }
   }
 
   # Claude through Cloudflare AI Gateway with the Anthropic key stored there

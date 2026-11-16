@@ -1,0 +1,501 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
+
+import type { Payload } from 'payload'
+import { Pool } from 'pg'
+
+import { EMBEDDING_DIMENSIONS } from './embeddings'
+import { indexDoc, reindexAll, removeDoc } from './indexer'
+import { SCHEMA_SQL, nearestChunks, saveAnswer, storedAnswers } from './store'
+
+/**
+ * Runs against a real Postgres with pgvector, given as AI_TEST_POSTGRES_URL
+ * (a throwaway database: the test empties ai.chunks and ai.answers). Skipped without it.
+ */
+const url = process.env.AI_TEST_POSTGRES_URL
+const suite = url ? describe : describe.skip
+
+type Doc = {
+  id: number
+  slug: string
+  title: string
+  content?: unknown
+  meta?: { description?: string }
+  _status?: string
+  [field: string]: unknown
+}
+
+const paragraph = (text: string) => ({ type: 'paragraph', children: [{ type: 'text', text }] })
+const body = (...texts: string[]) => ({ root: { type: 'root', children: texts.map(paragraph) } })
+
+/** Published posts per language, as the Local API would return them to a visitor. */
+let published: Record<string, Doc[]> = {}
+/** Other collections and the globals, per language (same for every language when not split). */
+let others: {
+  pages?: Doc[]
+  projects?: Doc[]
+  about?: Record<string, unknown>
+  stack?: Record<string, unknown>
+} = {}
+let embedded: string[] = []
+/** Ids a list read (no id in `where`) leaves out: published after a reindex listed the ids. */
+let unlisted = new Set<number>()
+let pool: Pool
+
+type Where = { id?: { equals?: unknown }; _status?: { equals?: unknown }; and?: Where[] }
+const conditions = (where?: Where): Where[] =>
+  where ? [where, ...(where.and ?? []).flatMap(conditions)] : []
+
+/**
+ * The Local API, applying `where` on id and `_status`. Docs without
+ * `_status` are published; a draft is returned unless `where` asks for
+ * published ones, as for a request whose user can read drafts.
+ */
+const fakePayload = (db: Pool = pool) =>
+  ({
+    db: { pool: db },
+    find: async ({
+      collection,
+      locale,
+      where,
+    }: {
+      collection: string
+      locale: string
+      where?: Where
+    }) => {
+      const all = conditions(where)
+      const source =
+        collection === 'posts'
+          ? (published[locale] ?? [])
+          : collection === 'pages'
+            ? (others.pages ?? [])
+            : (others.projects ?? [])
+      const listing = all.every((c) => c.id?.equals === undefined)
+      const docs = source.filter((doc) =>
+        !(listing && unlisted.has(doc.id)) &&
+        all.every(
+          (c) =>
+            (c.id?.equals === undefined || String(doc.id) === String(c.id.equals)) &&
+            (c._status?.equals === undefined || (doc._status ?? 'published') === c._status.equals),
+        ),
+      )
+      return { docs }
+    },
+    findGlobal: async ({ slug }: { slug: 'about' | 'stack' }) => others[slug] ?? {},
+  }) as unknown as Payload
+
+/** One-hot-ish vectors: the first letter of a text picks the dimension. */
+const vectorFor = (text: string) => {
+  const v = new Array(EMBEDDING_DIMENSIONS).fill(0)
+  v[(text.split('\n\n').at(-1) ?? '').charCodeAt(0) % EMBEDDING_DIMENSIONS] = 1
+  return v
+}
+
+const realFetch = globalThis.fetch
+/** Embedding settings the suite pins (an inherited EMBEDDING_PROVIDER or model would change the model id). */
+const EMBEDDING_ENV = ['VOYAGE_API_KEY', 'EMBEDDING_PROVIDER', 'EMBEDDING_MODEL', 'EMBEDDING_BASE_URL'] as const
+const savedEnv: Partial<Record<(typeof EMBEDDING_ENV)[number], string>> = {}
+
+suite('TC-U-56 AI index: Postgres', () => {
+  beforeAll(async () => {
+    pool = new Pool({ connectionString: url })
+    await pool.query(SCHEMA_SQL)
+    for (const name of EMBEDDING_ENV) {
+      savedEnv[name] = process.env[name]
+      delete process.env[name]
+    }
+    process.env.VOYAGE_API_KEY = 'test'
+    globalThis.fetch = (async (_url: string, init: RequestInit) => {
+      const { input } = JSON.parse(String(init.body)) as { input: string[] }
+      embedded.push(...input)
+      return Response.json({
+        data: input.map((text, index) => ({ index, embedding: vectorFor(text) })),
+      })
+    }) as unknown as typeof fetch
+  })
+
+  afterAll(async () => {
+    globalThis.fetch = realFetch
+    for (const name of EMBEDDING_ENV) {
+      if (savedEnv[name] === undefined) delete process.env[name]
+      else process.env[name] = savedEnv[name]
+    }
+    await pool.end()
+  })
+
+  beforeEach(async () => {
+    await pool.query('TRUNCATE ai.chunks, ai.answers')
+    embedded = []
+    published = {}
+    others = {}
+    unlisted = new Set()
+  })
+
+  const rows = async () =>
+    (
+      await pool.query(
+        'SELECT kind, doc_id, locale, chunk, slug, title, content FROM ai.chunks ORDER BY kind, doc_id, locale, chunk',
+      )
+    ).rows
+
+  test('indexes every language, embeds a text once, and re-embeds only what changed', async () => {
+    const en: Doc = {
+      id: 1,
+      slug: 'deploy',
+      title: 'Deploy',
+      content: body('Alpha text.'),
+      meta: { description: 'Zulu summary.' },
+    }
+    // ja not translated: Payload falls back to the English text.
+    published = {
+      en: [en],
+      ja: [en],
+      zh: [{ ...en, title: '部署', content: body('Bravo 文本。') }],
+    }
+
+    const first = await indexDoc(fakePayload(), 'post', 1)
+    expect(first?.locales).toEqual({
+      en: { chunks: 2, embedded: 2 },
+      ja: { chunks: 2, embedded: 0 },
+      zh: { chunks: 2, embedded: 2 },
+    })
+    expect(await rows()).toHaveLength(6)
+
+    // Republish unchanged: nothing embedded.
+    expect((await indexDoc(fakePayload(), 'post', 1))?.locales.en).toEqual({
+      chunks: 2,
+      embedded: 0,
+    })
+
+    // One paragraph edited in English (ja follows it); the description chunk stays.
+    const edited = { ...en, content: body('Charlie text.') }
+    published = { ...published, en: [edited], ja: [edited] }
+    embedded = []
+    await indexDoc(fakePayload(), 'post', 1)
+    expect(embedded).toEqual(['Deploy\n\nCharlie text.'])
+  })
+
+  test('a language that stops being public, a removed chunk, a renamed slug and a deleted post are reflected', async () => {
+    const en: Doc = { id: 2, slug: 'old', title: 'Old', content: body('Alpha.', 'Bravo.') }
+    published = { en: [en], ja: [en], zh: [en] }
+    await indexDoc(fakePayload(), 'post', 2)
+
+    published = { en: [{ ...en, slug: 'new', content: body('Alpha.') }], ja: [], zh: [] }
+    await indexDoc(fakePayload(), 'post', 2)
+    expect((await rows()).map((r) => [r.locale, r.slug, r.content])).toEqual([
+      ['en', 'new', 'Alpha.'],
+    ])
+
+    await removeDoc(fakePayload(), 'post', 2)
+    expect(await rows()).toEqual([])
+  })
+
+  test('only published posts are indexed, even when the read could see drafts (a script saving with a user)', async () => {
+    const draft: Doc = {
+      id: 5,
+      slug: 'secret',
+      title: 'Secret',
+      content: body('Delta.'),
+      _status: 'draft',
+    }
+    published = { en: [draft], ja: [draft], zh: [draft] }
+    await indexDoc(fakePayload(), 'post', 5)
+    expect(await rows()).toEqual([])
+    await reindexAll(fakePayload())
+    expect(await rows()).toEqual([])
+  })
+
+  test('reindexAll indexes every public post and drops posts that are gone; search returns the nearest first', async () => {
+    const a: Doc = { id: 3, slug: 'a', title: 'A', content: body('Alpha.') }
+    const b: Doc = { id: 4, slug: 'b', title: 'B', content: body('Bravo.') }
+    published = { en: [a, b], ja: [a, b], zh: [a, b] }
+    expect(await reindexAll(fakePayload())).toEqual({ docs: 2, embedded: 2, removed: 0 })
+
+    published = { en: [b], ja: [b], zh: [b] }
+    expect(await reindexAll(fakePayload())).toEqual({ docs: 1, embedded: 0, removed: 3 })
+
+    // A post published after the reindex listed the ids (its hook indexed it) is read again, not dropped.
+    published = { en: [a, b], ja: [a, b], zh: [a, b] }
+    await indexDoc(fakePayload(), 'post', 3)
+    unlisted = new Set([3])
+    expect(await reindexAll(fakePayload())).toEqual({ docs: 2, embedded: 0, removed: 0 })
+    unlisted = new Set()
+    published = { en: [b], ja: [b], zh: [b] }
+    await removeDoc(fakePayload(), 'post', 3)
+
+    const hits = await nearestChunks(pool, vectorFor('Bravo'), 'ja', 'voyage:voyage-4-lite:1024', 5)
+    expect(hits.map((hit) => [hit.kind, hit.slug, Math.round(hit.score)])).toEqual([
+      ['post', 'b', 1],
+    ])
+    expect(hits[0]?.hash).toMatch(/^[0-9a-f]{64}$/)
+  })
+
+  test('pages, builds, /about and /stacks are indexed as visitors see them; search tells them apart by kind', async () => {
+    const hero = { type: 'lowImpact', richText: body('Echo hero.') }
+    const layout = [
+      { blockType: 'content', columns: [{ richText: body('Foxtrot column.') }] },
+      { blockType: 'mediaBlock', media: 3 },
+      { blockType: 'formBlock', enableIntro: true, introContent: body('Sierra intro.') },
+    ]
+    others = {
+      pages: [
+        { id: 10, slug: 'contact', title: 'Contact', hero, layout },
+        // A hero set to "none" is not rendered: only the blocks count.
+        {
+          id: 13,
+          slug: 'plain',
+          title: 'Plain',
+          hero: { type: 'none', richText: body('Zulu unseen.') },
+          layout: [
+            { blockType: 'content', columns: [{ richText: body('Quebec.') }] },
+            // A form introduction switched off keeps its text in the data, unseen.
+            { blockType: 'formBlock', enableIntro: false, introContent: body('Romeo unseen.') },
+          ],
+        },
+        // Not routed by the web app.
+        { id: 11, slug: 'home', title: 'Home', hero: { richText: body('Golf.') } },
+        {
+          id: 12,
+          slug: 'draft',
+          title: 'Draft',
+          hero: { richText: body('Hotel.') },
+          _status: 'draft',
+        },
+      ],
+      projects: [
+        {
+          id: 20,
+          slug: 'athena',
+          title: 'Athena',
+          repo: 'me/athena',
+          github: {},
+          description: 'India site.',
+          brief: 'Juliet brief.',
+        },
+        // No CMS description: /builds shows GitHub's.
+        { id: 23, slug: 'tool', title: 'Tool', repo: 'me/tool', github: { description: 'Tango from GitHub.' } },
+        // Shown only with a live URL.
+        {
+          id: 21,
+          slug: 'secret',
+          title: 'Secret',
+          repo: '',
+          privateRepo: true,
+          description: 'Kilo.',
+        },
+        // GitHub never answered: not on /builds.
+        { id: 22, slug: 'typo', title: 'Typo', repo: 'me/typo', description: 'Lima.' },
+      ],
+      about: { heading: 'About me', lead: 'Mike lead.', body: body('November story.') },
+      stack: {
+        intro: 'Oscar intro.',
+        groups: [
+          { title: 'Editors', items: [{ name: 'Papa', note: 'daily' }, { name: '' }] },
+          { title: 'Empty', items: [] },
+        ],
+      },
+    }
+    expect(await reindexAll(fakePayload())).toMatchObject({ docs: 6 })
+    const en = (await rows()).filter((row) => row.locale === 'en')
+    expect(en.map((row) => [row.kind, row.doc_id, row.slug, row.title, row.content])).toEqual([
+      ['about', 'about', '', 'About me', 'Mike lead.'],
+      ['about', 'about', '', 'About me', 'November story.'],
+      ['page', '10', 'contact', 'Contact', 'Echo hero.\n\nFoxtrot column.\n\nSierra intro.'],
+      ['page', '13', 'plain', 'Plain', 'Quebec.'],
+      ['project', '20', 'athena', 'Athena', 'India site.\n\nJuliet brief.'],
+      ['project', '23', 'tool', 'Tool', 'Tango from GitHub.'],
+      ['stack', 'stack', '', 'Stacks', 'Oscar intro.'],
+      ['stack', 'stack', '', 'Stacks', '- Papa: daily'],
+    ])
+    const hits = await nearestChunks(pool, vectorFor('Echo'), 'en', 'voyage:voyage-4-lite:1024', 1)
+    expect(hits.map((hit) => [hit.kind, hit.docId, hit.slug])).toEqual([['page', '10', 'contact']])
+
+    // An emptied /about drops out; a hidden build (no longer returned) is removed by the reindex.
+    others = { ...others, about: { heading: 'About me', lead: '', body: body() }, projects: [] }
+    await indexDoc(fakePayload(), 'about', 'about')
+    expect((await reindexAll(fakePayload()))?.removed).toBe(6)
+    expect((await rows()).some((row) => row.kind === 'about' || row.kind === 'project')).toBe(false)
+  })
+
+  test('saves wait for the first build, report what changed, and a failed first build leaves the index empty', async () => {
+    const a: Doc = { id: 6, slug: 'a', title: 'A', content: body('Alpha.') }
+    const b: Doc = { id: 7, slug: 'b', title: 'B', content: body('Bravo.') }
+    published = { en: [a, b], ja: [a, b], zh: [a, b] }
+
+    // A save before the first search writes nothing: a few rows would make the index look built.
+    expect(await indexDoc(fakePayload(), 'post', 6, undefined, { untilBuilt: true })).toMatchObject({
+      waiting: true,
+      changed: 0,
+    })
+    expect(await rows()).toEqual([])
+
+    // The first build fails half way (the embedding call for B): nothing is kept.
+    const working = globalThis.fetch
+    globalThis.fetch = (async (url: string, init: RequestInit) =>
+      String(init.body).includes('Bravo')
+        ? new Response('boom', { status: 500 })
+        : working(url, init)) as unknown as typeof fetch
+    await expect(reindexAll(fakePayload(), { atomic: true })).rejects.toThrow()
+    globalThis.fetch = working
+    expect(await rows()).toEqual([])
+
+    // While a first build holds the lock, another one starts nothing.
+    const holder = await pool.connect()
+    await holder.query('BEGIN')
+    await holder.query("SELECT pg_advisory_xact_lock(hashtext('ai.chunks first build'))")
+    expect(await reindexAll(fakePayload(), { atomic: true })).toBeNull()
+    await holder.query('ROLLBACK')
+    holder.release()
+
+    expect(await reindexAll(fakePayload(), { atomic: true })).toEqual({ docs: 2, embedded: 2, removed: 0 })
+
+    // Once built, saves index; an unchanged republish changes nothing (no cache expiry), an unpublish does.
+    expect((await indexDoc(fakePayload(), 'post', 6, undefined, { untilBuilt: true }))?.changed).toBe(0)
+    published = { en: [b], ja: [b], zh: [b] }
+    expect((await indexDoc(fakePayload(), 'post', 6, undefined, { untilBuilt: true }))?.changed).toBe(3)
+    expect(await removeDoc(fakePayload(), 'post', 7)).toBe(3)
+    expect(await rows()).toEqual([])
+  })
+
+  test('updates of one document run one at a time and read it only once they hold its lock', async () => {
+    const a: Doc = { id: 8, slug: 'a', title: 'A', content: body('Alpha.') }
+    published = { en: [a], ja: [a], zh: [a] }
+    await indexDoc(fakePayload(), 'post', 8)
+    expect(await rows()).toHaveLength(3)
+
+    // A publish whose update is still running holds the lock; the update that
+    // follows (here, after an unpublish) waits, then reads the new state.
+    const holder = await pool.connect()
+    await holder.query('BEGIN')
+    await holder.query("SELECT pg_advisory_xact_lock(hashtext('ai.chunks post 8'))")
+    const pending = indexDoc(fakePayload(), 'post', 8)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(await rows()).toHaveLength(3)
+    published = {}
+    await holder.query('COMMIT')
+    holder.release()
+    expect((await pending)?.changed).toBe(3)
+    expect(await rows()).toEqual([])
+  })
+
+  test('a save during the first build waits for it, then applies on top of what the build read', async () => {
+    const a: Doc = { id: 9, slug: 'a', title: 'A', content: body('Alpha.') }
+    published = { en: [a], ja: [a], zh: [a] }
+    await indexDoc(fakePayload(), 'post', 9)
+    await pool.query('DROP TABLE IF EXISTS ai.build_copy')
+    await pool.query('CREATE TABLE ai.build_copy AS SELECT * FROM ai.chunks')
+    await pool.query('TRUNCATE ai.chunks')
+
+    // The build has read post 9 as published and written it, not committed yet.
+    const build = await pool.connect()
+    await build.query('BEGIN')
+    await build.query("SELECT pg_advisory_xact_lock(hashtext('ai.chunks first build'))")
+    await build.query('INSERT INTO ai.chunks SELECT * FROM ai.build_copy')
+    // Post 9 is unpublished now; its hook must not skip on the empty index.
+    published = {}
+    const pending = indexDoc(fakePayload(), 'post', 9, undefined, { untilBuilt: true })
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect((await build.query('SELECT 1 FROM ai.chunks')).rows).toHaveLength(3)
+    await build.query('COMMIT')
+    build.release()
+    const done = await pending
+    expect(done?.waiting).toBeUndefined()
+    expect(done?.changed).toBe(3)
+    expect(await rows()).toEqual([])
+    await pool.query('DROP TABLE ai.build_copy')
+  })
+
+  test('saves waiting for the first build hold no connection, so the build can still read', async () => {
+    const a: Doc = { id: 10, slug: 'a', title: 'A', content: body('Alpha.') }
+    published = { en: [a], ja: [a], zh: [a] }
+    // Two connections: the build holds one; the waiting saves must leave it the other.
+    const small = new Pool({ connectionString: pool.options.connectionString, max: 2 })
+    const build = await small.connect()
+    try {
+      await build.query('BEGIN')
+      await build.query("SELECT pg_advisory_xact_lock(hashtext('ai.chunks first build'))")
+      const saves = [
+        indexDoc(fakePayload(small), 'post', 10, undefined, { untilBuilt: true }),
+        indexDoc(fakePayload(small), 'post', 10, undefined, { untilBuilt: true }),
+      ]
+      await new Promise((resolve) => setTimeout(resolve, 700))
+      // What the build reads through the pool (Payload's find) gets a connection.
+      const read = small.query('SELECT 1 AS one')
+      const timeout = new Promise((resolve) => setTimeout(() => resolve('timeout'), 2000))
+      expect(await Promise.race([read.then((r) => r.rows[0]?.one), timeout])).toBe(1)
+      await build.query('COMMIT')
+      build.release()
+      // The index is still empty after the build: both saves wait for the first search.
+      expect((await Promise.all(saves)).map((done) => done?.waiting)).toEqual([true, true])
+    } finally {
+      await small.end()
+    }
+  })
+
+  test('the first build reads everything again before it commits: an unpublish it missed is not kept', async () => {
+    const a: Doc = { id: 11, slug: 'a', title: 'A', content: body('Alpha.') }
+    const b: Doc = { id: 12, slug: 'b', title: 'B', content: body('Bravo.') }
+    published = { en: [a, b], ja: [a, b], zh: [a, b] }
+    // Post 11 is unpublished once the build has read it; its save gave up
+    // waiting for the build (BUILD_WAIT_MS), so no hook applies it.
+    const working = globalThis.fetch
+    globalThis.fetch = (async (url: string, init: RequestInit) => {
+      if (String(init.body).includes('Bravo')) published = { en: [b], ja: [b], zh: [b] }
+      return working(url, init)
+    }) as unknown as typeof fetch
+    try {
+      await reindexAll(fakePayload(), { atomic: true })
+    } finally {
+      globalThis.fetch = working
+    }
+    expect([...new Set((await rows()).map((row) => row.doc_id))]).toEqual(['12'])
+  })
+
+  test('kept answers: found by the same wording or a question meaning nearly the same, per language and model', async () => {
+    const v = (dim: number, tilt = 0) => {
+      const x = new Array(EMBEDDING_DIMENSIONS).fill(0)
+      x[dim] = 1
+      x[dim + 1] = tilt
+      return x
+    }
+    const base = {
+      locale: 'en',
+      answerModel: 'claude-opus-5-5',
+      model: 'voyage:voyage-4-lite:1024',
+      sourceKey: 'k1',
+    }
+    await saveAnswer(pool, {
+      ...base,
+      question: 'how do you deploy?',
+      vector: v(10),
+      answer: { parts: ['a'] },
+    })
+    await saveAnswer(pool, {
+      ...base,
+      question: 'how do you deploy?',
+      vector: v(10),
+      sourceKey: 'k2',
+      answer: { parts: ['b'] },
+    })
+    await saveAnswer(pool, {
+      ...base,
+      question: 'what is the stack?',
+      vector: v(20),
+      answer: { parts: ['c'] },
+    })
+
+    const ask = (question: string, vector: number[], extra: Partial<typeof base> = {}) =>
+      storedAnswers(pool, { ...base, ...extra, question, vector })
+    // Same wording: replaced, not duplicated.
+    expect((await ask('how do you deploy?', v(30))).map((r) => [r.question, r.sourceKey])).toEqual([
+      ['how do you deploy?', 'k2'],
+    ])
+    // Nearly the same meaning (cosine ~0.995) is found; a different one is not.
+    expect((await ask('how are deploys done?', v(10, 0.1))).map((r) => r.question)).toEqual([
+      'how do you deploy?',
+    ])
+    expect(await ask('who are you?', v(10, 1))).toEqual([])
+    // Other language or model: nothing.
+    expect(await ask('how do you deploy?', v(10), { locale: 'ja' })).toEqual([])
+    expect(await ask('how do you deploy?', v(10), { answerModel: 'claude-haiku-5-5' })).toEqual([])
+  })
+})

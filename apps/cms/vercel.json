@@ -1,5 +1,6 @@
 {
   "bunVersion": "1.4.x",
+  "regions": ["sin1"],
   "schedules": {
     "payload-jobs": {
       "schedule": "0 * * * *",
@@ -9,7 +10,7 @@
   },
   "functions": {
     "src/app/(payload)/api/[...slug]/route.ts": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "src/app/(payload)/api/translate/route.ts": {
       "maxDuration": 300

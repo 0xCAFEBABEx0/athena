@@ -1,3 +1,4 @@
+import { ROUTES } from '@athena/shared/constants'
 import type {
   DefaultNodeTypes,
   SerializedBlockNode,
@@ -29,14 +30,14 @@ export const escapeHTML = (value: string): string =>
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
 
-/** Same internal-doc mapping as apps/cms RichText: posts -> /posts/:slug, pages -> /:slug. */
+/** Internal-doc links: posts -> /notes/:slug, pages -> /:slug. */
 const internalDocToHref =
   (locale: Locale) =>
   ({ linkNode }: { linkNode: SerializedLinkNode }): string => {
     const doc = linkNode.fields.doc
     if (!doc || typeof doc.value !== 'object') return localizePath(locale, '/')
     const slug = (doc.value as { slug?: string }).slug ?? ''
-    return localizePath(locale, doc.relationTo === 'posts' ? `/posts/${slug}` : `/${slug}`)
+    return localizePath(locale, doc.relationTo === 'posts' ? `${ROUTES.posts}/${slug}` : `/${slug}`)
   }
 
 /** Anchor id for a heading: lowercase words joined by "-", CJK kept as is. */

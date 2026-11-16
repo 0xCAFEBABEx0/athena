@@ -1,4 +1,5 @@
 ---
+import { ROUTES } from '@athena/shared/constants'
 import CMSLink from '@/components/CMSLink.astro'
 import ThemeToggle from '@/components/ThemeToggle.astro'
 import SiteMark from '@/components/SiteMark.astro'
@@ -11,8 +12,9 @@ import type { SiteData } from '@/lib/site'
 
 /**
  * Both headers render on every page and CSS shows one: the CLI header
- * (`❯_ site  home posts  en [ade] [dark]`, all lowercase) or the modern top bar
- * (breadcrumb + CLI|Modern and EN|日本語|中文 controls).
+ * (`❯_ site  home posts  [ade] [en] [dark]`, all lowercase) or the modern top bar
+ * (breadcrumb + search, CLI|ADE, EN|JP|ZH and sun|moon). Both put the switches
+ * in the same order as the status panel's config rows: view, language, theme.
  */
 type Props = {
   site: SiteData
@@ -26,8 +28,8 @@ const navLinks = await getHeaderNav(Astro.locals, locale)
 // Until nav is set up in the CMS, keep the two routes every visitor needs.
 const fallbackNav: CMSLinkData[] = [
   { type: 'custom', url: '/', label: t.home },
-  { type: 'custom', url: '/posts', label: t.posts },
-  { type: 'custom', url: '/work', label: t.work },
+  { type: 'custom', url: ROUTES.posts, label: t.posts },
+  { type: 'custom', url: ROUTES.work, label: t.work },
   ]
 const links = navLinks.length > 0 ? navLinks : fallbackNav
 
@@ -48,10 +50,10 @@ const languages = LOCALES.map((code) => ({
 const crumbs = current.split('/').filter(Boolean)
 ---
 
-<header class="cli-header container flex flex-wrap items-center justify-between gap-x-4 pt-5">
-  <span class="inline-flex items-center gap-2">
+<header class="cli-header container flex flex-wrap items-center gap-x-4 pt-5 max-md:gap-x-2">
+  <span class="inline-flex items-center gap-2 max-md:gap-1">
     <a
-      class="inline-flex min-h-11 items-center gap-2 font-mono text-sm font-semibold text-base-content no-underline"
+      class="inline-flex min-h-11 items-center gap-2 font-mono max-md:gap-1.5 text-sm font-semibold text-base-content no-underline"
       href={localizePath(locale, '/')}
     >
       <span class="text-primary" aria-hidden="true">❯_</span>{site.siteName}
@@ -65,14 +67,20 @@ const crumbs = current.split('/').filter(Boolean)
       v{SHORT_VERSION}
     </button>
   </span>
-  <nav class="flex flex-wrap items-center" aria-label={t.nav}>
-    {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
+  <nav class="flex flex-wrap items-center max-md:order-2 max-md:basis-full md:ms-auto" aria-label={t.nav}>
+    <span class="flex flex-wrap items-center" data-section-nav>
+      {links.map((link) => <CMSLink {...link} appearance="nav" current={isCurrent(linkHref(link, locale))} />)}
+    </span>
+  </nav>
+  {/* Below md the switches share the site name's row and the sections take the next one. */}
+  <span class="ms-auto flex items-center max-md:order-1 md:ms-0" data-header-switches>
+    <ViewToggle />
     <details class="dropdown dropdown-end" data-language-menu>
       <summary
-        class="inline-flex min-h-11 cursor-pointer list-none items-center px-2 font-mono text-sm text-base-content/65 hover:text-base-content"
+        class="btn btn-ghost btn-sm min-h-11 px-1 font-mono font-normal md:px-2 text-base-content/65 hover:text-base-content"
         aria-label={t.language}
       >
-        {LOCALE_LABEL[locale].toLowerCase()}
+        [{LOCALE_LABEL[locale].toLowerCase()}]
       </summary>
       <ul
         class="menu dropdown-content z-20 mt-1 w-20 rounded-box border border-base-300 bg-base-100 p-1 font-mono text-sm"
@@ -95,9 +103,8 @@ const crumbs = current.split('/').filter(Boolean)
         }
       </ul>
     </details>
-    <ViewToggle />
     <ThemeToggle />
-  </nav>
+  </span>
 </header>
 
 <header class="modern-topbar">
@@ -125,10 +132,10 @@ const crumbs = current.split('/').filter(Boolean)
       }
     </ul>
   </nav>
-  <div class="ms-auto flex shrink-0 items-center gap-2">
+  <div class="ms-auto flex shrink-0 items-center gap-2 max-[22rem]:gap-1">
     <button
       type="button"
-      class="topbar-search btn btn-ghost btn-square lg:hidden"
+      class="topbar-icon topbar-search btn btn-ghost btn-square lg:hidden"
       aria-label={t.searchOpen}
       data-search-open
     >
@@ -154,5 +161,22 @@ const crumbs = current.split('/').filter(Boolean)
         ))
       }
     </div>
+    {/* Below lg the sidebar (and its theme switch) is hidden. */}
+    <ThemeToggle variant="segmented" class="topbar-theme lg:hidden" />
   </div>
 </header>
+
+<script>
+  // The CLI language menu opens under its right edge, unless the nav wrapped
+  // and put [xx] at the start of a row (narrow phones): then that would run
+  // off the left edge, so open it to the right instead. Decided on the click
+  // that opens it, before it is drawn.
+  for (const menu of document.querySelectorAll<HTMLDetailsElement>('[data-language-menu]')) {
+    menu.querySelector('summary')?.addEventListener('click', () => {
+      if (menu.open) return
+      const list = menu.querySelector('ul')
+      const width = list ? Number.parseFloat(getComputedStyle(list).width) || 80 : 80
+      menu.classList.toggle('dropdown-end', menu.getBoundingClientRect().right - width >= 8)
+    })
+  }
+</script>

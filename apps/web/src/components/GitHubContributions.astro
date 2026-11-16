@@ -1,0 +1,56 @@
+---
+/**
+ * Home page GitHub contribution graph: the last year, one square per day,
+ * shaded like GitHub's own calendar. The CMS reads it from GitHub (Site
+ * global → GitHub) and stores it; nothing here loads from GitHub. Below
+ * 640 px only the last 26 weeks are drawn, below 360 px the last 17 (CSS),
+ * so the squares stay big enough to see without horizontal scrolling. The
+ * whole block (label, total and squares) is one link to the GitHub profile;
+ * its name is the graph's label, so the parts inside are hidden from it.
+ */
+import Prompt from '@/components/Prompt.astro'
+import { dict, LANG_TAG, localeOf } from '@/lib/i18n'
+import type { Contributions } from '@/lib/site'
+
+type Props = { data: Contributions | null; class?: string }
+
+const { data, class: className } = Astro.props
+const locale = localeOf(Astro)
+const t = dict(locale)
+const total = data ? new Intl.NumberFormat(LANG_TAG[locale]).format(data.total) : ''
+---
+
+{
+  data && (
+    <section class:list={['contrib', className]} aria-labelledby="contributions" data-contributions>
+      <Prompt command={`gh contributions ${data.login}`} question={t.askContributions} heading={t.contributions} id="contributions" />
+      <a
+        class="contrib-box mt-2.5 ml-5"
+        href={`https://github.com/${data.login}`}
+        rel="me noopener"
+        aria-label={t.contributionsLabel(total)}
+        data-contrib-link
+      >
+        <p class="contrib-head font-mono text-[13px]" aria-hidden="true">
+          <span class="contrib-label">
+            <span class="cli-only">⎿ </span>github
+          </span>
+          <span class="contrib-total" data-contrib-total>{t.contributionsTotal(total)}</span>
+        </p>
+        <div class="contrib-grid" aria-hidden="true">
+          {data.weeks.map((week) => (
+            <div class="contrib-week">
+              {week.map((day) =>
+                day ? (
+                  <span class="contrib-day" data-level={day.level} title={t.contributionsDay(day.count, day.date)} />
+                ) : (
+                  <span class="contrib-day contrib-pad" />
+                ),
+              )}
+            </div>
+          ))}
+        </div>
+      </a>
+    </section>
+  )
+}

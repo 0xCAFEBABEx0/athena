@@ -1,0 +1,71 @@
+/*
+ * daisyUI for the CMS's own admin components (home, list rows, brand, login,
+ * translate button). Payload's own UI is themed with tokens in
+ * app/(payload)/custom.scss instead.
+ *
+ * Rules that keep this working on Payload 3 and 4:
+ * - One `tw:` prefix for Tailwind and daisyUI: Payload already has .btn,
+ *   .card, .table...; unprefixed daisyUI classes would restyle them.
+ * - No preflight (no tailwindcss/preflight.css): Payload owns base styles.
+ * - daisyUI theme variables live on the .whoa-ui wrapper, never on :root.
+ *   daisyUI's --color-base-100/200/300 collide with Payload 3's
+ *   --color-base-* ramp, and Payload 4's --color-* tokens.
+ * - Colors come from the --whoa-* tokens in custom.scss, so the admin and
+ *   these components change together (and with the light/dark switch).
+ */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tw);
+@import '@fontsource-variable/inter/wght.css';
+
+@source '../components';
+
+/* Payload sets the root font size to 13px, so rem-based sizes come out small.
+   Pin the scale to px (prefixed theme variables, so Payload is unaffected). */
+@theme {
+  --spacing: 4px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+}
+
+@plugin 'daisyui' {
+  themes: false;
+  /* Add a component here before using it (keeps the CSS small). */
+  include: button, card, stat, list, badge, alert, loading, kbd, radius;
+}
+
+.whoa-ui {
+  color-scheme: light;
+  --color-base-100: var(--whoa-bg);
+  --color-base-200: var(--whoa-panel);
+  --color-base-300: var(--whoa-line);
+  --color-base-content: var(--whoa-ink);
+  --color-primary: var(--whoa-draft);
+  --color-primary-content: var(--whoa-on-draft);
+  --color-neutral: var(--whoa-ink);
+  --color-neutral-content: var(--whoa-on-ink);
+  --color-success: var(--whoa-success);
+  --color-success-content: var(--whoa-on-ink);
+  --color-error: var(--whoa-error);
+  --color-error-content: var(--whoa-on-ink);
+  --radius-selector: 16px;
+  --radius-field: 8px;
+  --radius-box: 12px;
+  --size-selector: 4px;
+  --size-field: 4px;
+  --fontsize: 14px;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+  color: var(--color-base-content);
+  font-family: var(--whoa-font);
+  font-size: 14px;
+}
+
+html[data-theme='dark'] .whoa-ui {
+  color-scheme: dark;
+}

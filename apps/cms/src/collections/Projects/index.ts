@@ -9,12 +9,13 @@ import type {
 
 import type { Project } from '@athena/shared/payload-types'
 
-import { CACHE_TAGS } from '@athena/shared/constants'
+import { CACHE_TAGS, ROUTES } from '@athena/shared/constants'
 
-import { authenticated } from '../../access/authenticated'
-import { fetchRepos, isRepoName } from '../../github/sync'
-import { translateUIField } from '../../translation/translate'
-import { invalidateWeb } from '../../utilities/invalidateWeb'
+import { authenticated } from '@/access/authenticated'
+import { indexAfterChange, removeAfterDelete } from '@/ai/hooks'
+import { fetchRepos, isRepoName } from '@/github/sync'
+import { translateUIField } from '@/translation/translate'
+import { invalidateWeb } from '@/utilities/invalidateWeb'
 
 /**
  * Portfolio entries shown on the public site at /work, one per GitHub
@@ -77,8 +78,8 @@ const fillFromGitHub: CollectionBeforeChangeHook = async ({ data, originalDoc, r
 
 const revalidateProject: CollectionAfterChangeHook = async ({ doc, previousDoc, req }) => {
   if (req.context.disableRevalidate) return doc
-  const paths = ['/', '/work', `/work/${doc.slug}`]
-  if (previousDoc?.slug && previousDoc.slug !== doc.slug) paths.push(`/work/${previousDoc.slug}`)
+  const paths = ['/', ROUTES.work, `${ROUTES.work}/${doc.slug}`]
+  if (previousDoc?.slug && previousDoc.slug !== doc.slug) paths.push(`${ROUTES.work}/${previousDoc.slug}`)
   await invalidateWeb({ paths, tags: [CACHE_TAGS.projects], payload: req.payload })
   return doc
 }
@@ -86,7 +87,7 @@ const revalidateProject: CollectionAfterChangeHook = async ({ doc, previousDoc, 
 const revalidateProjectDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
   if (req.context.disableRevalidate) return doc
   await invalidateWeb({
-    paths: ['/', '/work', `/work/${doc?.slug}`],
+    paths: ['/', ROUTES.work, `${ROUTES.work}/${doc?.slug}`],
     tags: [CACHE_TAGS.projects],
     payload: req.payload,
   })
@@ -95,7 +96,8 @@ const revalidateProjectDelete: CollectionAfterDeleteHook = async ({ doc, req }) 
 
 export const Projects: CollectionConfig<'projects'> = {
   slug: 'projects',
-  labels: { singular: 'Work', plural: 'Work' },
+  // Shown as Builds, like the public section (/builds).
+  labels: { singular: 'Build', plural: 'Builds' },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -108,7 +110,7 @@ export const Projects: CollectionConfig<'projects'> = {
     useAsTitle: 'repo',
     defaultColumns: ['repo', 'status', 'pinned', 'hidden', 'order', 'syncedAt'],
     description:
-      'Repositories shown at /work. Only entries added here appear; tick Hidden to take one off the site.',
+      'Repositories shown at /builds. Only entries added here appear; tick Hidden to take one off the site.',
   },
   fields: [
     {
@@ -236,7 +238,7 @@ export const Projects: CollectionConfig<'projects'> = {
       admin: {
         position: 'sidebar',
         readOnly: true,
-        description: 'URL: /work/<slug>, from the repository name.',
+        description: 'URL: /builds/<slug>, from the repository name.',
       },
     },
     translateUIField,
@@ -264,7 +266,7 @@ export const Projects: CollectionConfig<'projects'> = {
   ],
   hooks: {
     beforeChange: [fillFromGitHub],
-    afterChange: [revalidateProject],
-    afterDelete: [revalidateProjectDelete],
+    afterChange: [revalidateProject, indexAfterChange('project')],
+    afterDelete: [revalidateProjectDelete, removeAfterDelete('project')],
   },
 }

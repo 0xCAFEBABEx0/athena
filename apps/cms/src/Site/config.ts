@@ -1,6 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
-import { normalizeXUrl } from '../x/oembed'
+import { fillContributions, isGitHubLogin } from '@/github/contributions'
+import { normalizeXUrl } from '@/x/oembed'
 import { fillXPicks } from './hooks/fillXPicks'
 import { revalidateSite } from './hooks/revalidateSite'
 
@@ -15,7 +16,8 @@ export const Site: GlobalConfig = {
     read: () => true,
   },
   admin: {
-    description: 'Name, intro, links, projects and X picks shown on the public site (whoa.me).',
+    description:
+      'Name, intro, links, projects, X picks and the GitHub graph shown on the public site (whoa.me).',
   },
   fields: [
     {
@@ -181,6 +183,83 @@ export const Site: GlobalConfig = {
       ],
     },
     {
+      name: 'github',
+      type: 'group',
+      label: 'GitHub contributions',
+      admin: {
+        description:
+          'The contribution graph on the home page. Enter a GitHub username and save: the last year is read from GitHub now and every 6 hours after. Leave it empty to hide the graph.',
+      },
+      fields: [
+        {
+          name: 'username',
+          type: 'text',
+          label: 'GitHub username',
+          admin: { placeholder: 'octocat' },
+          validate: (value: string | null | undefined) =>
+            !value?.trim() || isGitHubLogin(value.trim())
+              ? true
+              : 'Enter a GitHub username (letters, digits and hyphens), without @ or a link.',
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'syncedAt',
+              type: 'date',
+              label: 'Read from GitHub',
+              admin: {
+                width: '35%',
+                readOnly: true,
+                date: { pickerAppearance: 'dayAndTime' },
+              },
+            },
+            {
+              name: 'syncError',
+              type: 'text',
+              label: 'Last error',
+              admin: { width: '65%', readOnly: true },
+            },
+          ],
+        },
+        {
+          // Filled by the CMS; the web app draws the graph from it.
+          name: 'contributions',
+          type: 'json',
+          admin: { hidden: true },
+        },
+      ],
+    },
+    {
+      name: 'aiModel',
+      type: 'select',
+      label: 'AI search: answer model',
+      defaultValue: 'claude-opus-5-5',
+      options: [
+        { label: 'Claude Opus 5.5 (best answers, ~$0.03 each)', value: 'claude-opus-5-5' },
+        { label: 'Claude Sonnet 5.5 (~$0.015 each)', value: 'claude-sonnet-5-5' },
+        { label: 'Claude Haiku 5.5 (cheapest, ~$0.001 each)', value: 'claude-haiku-5-5' },
+      ],
+      admin: {
+        description:
+          'Writes the answers under "Ask AI" on /search. Takes effect on save, no deploy. Answers kept from another model are written again on their next ask.',
+      },
+    },
+    {
+      name: 'aiPresets',
+      type: 'array',
+      localized: true,
+      maxRows: 6,
+      label: 'AI search: suggested questions',
+      labels: { singular: 'Question', plural: 'Questions' },
+      admin: {
+        initCollapsed: true,
+        description:
+          'Offered under "Ask AI" on /search, in this language. Each answer is written once and kept until the notes it cites change. Empty: no suggestions.',
+      },
+      fields: [{ name: 'question', type: 'text', required: true, maxLength: 120 }],
+    },
+    {
       name: 'banner',
       type: 'group',
       label: 'CLI banner',
@@ -227,7 +306,7 @@ export const Site: GlobalConfig = {
     },
   ],
   hooks: {
-    beforeChange: [fillXPicks()],
+    beforeChange: [fillXPicks(), fillContributions()],
     afterChange: [revalidateSite],
   },
 }

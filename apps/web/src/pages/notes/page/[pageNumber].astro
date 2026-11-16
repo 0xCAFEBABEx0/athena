@@ -1,0 +1,44 @@
+---
+import { ROUTES } from '@athena/shared/constants'
+import { dict, localeOf, localizePath } from '@/lib/i18n'
+import Layout from '@/layouts/Layout.astro'
+import PostsArchive from '@/components/PostsArchive.astro'
+import { getPosts } from '@/lib/cms'
+import { routeMeta } from '@/lib/seo'
+import { getSite } from '@/lib/site'
+
+const locale = localeOf(Astro)
+const t = dict(locale)
+const lp = (path: string) => localizePath(locale, path)
+const pageNumber = Number(Astro.params.pageNumber)
+
+if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+  return Astro.rewrite('/404')
+}
+
+if (pageNumber === 1) {
+  return Astro.redirect(lp(ROUTES.posts), 301)
+}
+
+// Page 1 (cached, shared with /posts) says how many pages exist, so a page
+// number past the end is a 404 without a CMS call per made-up number.
+const first = await getPosts({ page: 1 }, { locale }).catch(() => null)
+
+if (first && first.totalPages > 0 && pageNumber > first.totalPages) {
+  return Astro.rewrite('/404')
+}
+
+const posts = await getPosts({ page: pageNumber }, { locale })
+
+const site = await getSite(Astro.locals, locale)
+const meta = routeMeta(
+  t.allPostsPage(pageNumber),
+  lp(`${ROUTES.posts}/page/${pageNumber}`),
+  site,
+  t.postsPageDescription(site.siteName, pageNumber),
+)
+---
+
+<Layout meta={meta}>
+  <PostsArchive posts={posts} />
+</Layout>

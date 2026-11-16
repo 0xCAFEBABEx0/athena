@@ -14,7 +14,9 @@ providers. Credentials and secret values never go to git.
 | `imports.tf` | Adopts resources that already exist in an account |
 | `accounts/workstations.tfvars` | Current account: team ID and the IDs to adopt (no secrets) |
 | `accounts/new-account.tfvars.example` | Template for a fresh account |
-| `secrets.auto.tfvars.example` | The secret keys to supply (copy to the git-ignored `secrets.auto.tfvars`) |
+| `tf` | Runs `terraform` with every credential read from 1Password (`op.env`, `secrets.op.json`) |
+| `op.env`, `secrets.op.json` | 1Password references (not secrets) for the API tokens and the secret env var values |
+| `secrets.auto.tfvars.example` | The same secret keys, for running without 1Password (copy to the git-ignored `secrets.auto.tfvars`) |
 
 ## What is managed and what is not
 
@@ -36,8 +38,23 @@ Not managed here:
   alone.
 - Marketplace integrations (Neon, Sentry, Checkly), the Blob store, the
   Protection Bypass secret itself, and DNS at Cloudflare.
+- `ANTHROPIC_API_KEY` on athena-web: it goes away once the AI Gateway pair is
+  set (see below), so it is left alone until then.
 
 ## Credentials
+
+**With 1Password (the usual way)**: keep the tokens and secret values in
+1Password and run `./tf` instead of `terraform` (same arguments). It reads the
+API tokens through `op run --env-file=op.env` and the secret values through
+`op inject --in-file secrets.op.json` into `TF_VAR_secrets`; nothing is written
+to disk. The references assume a vault `athena` with the items
+`terraform-vercel` and `terraform-cloudflare` (field `credential`) and
+`athena-terraform` (one field per key in `secrets.op.json`); edit the two
+files to match yours. Every referenced field must exist (an empty
+`cf_aig_token` is fine until the gateway has a token). Needs the 1Password CLI
+signed in (`op signin`, or the desktop app integration).
+
+Without 1Password:
 
 - **Vercel API token**: create one at <https://vercel.com/account/settings/tokens>
   scoped to the team, and export it in your shell only:
@@ -73,11 +90,12 @@ Not managed here:
 
 ```bash
 cd infra/terraform
-export VERCEL_API_TOKEN=...            # team-scoped token
-cp secrets.auto.tfvars.example secrets.auto.tfvars   # fill in current values
-terraform init
-terraform plan -var-file=accounts/workstations.tfvars
+./tf init
+./tf plan -var-file=accounts/workstations.tfvars
 ```
+
+(Without 1Password: export `VERCEL_API_TOKEN`, fill `secrets.auto.tfvars`,
+and run `terraform` itself.)
 
 The goal of the first run is a plan that only imports. Expect a few in-place
 updates and review each one before applying:
@@ -88,10 +106,10 @@ updates and review each one before applying:
 - `value` on the two production URL vars of athena-web: they are Sensitive in
   Vercel, so their value imports as null and is re-sent once (same value).
 - `value_wo_version` on the secrets: the first apply re-sends each secret from
-  `secrets.auto.tfvars`. Supply the **current** values; a new value here is a
+  1Password (or `secrets.auto.tfvars`). Supply the **current** values; a new value here is a
   rotation and needs both apps redeployed.
 
-Then `terraform apply -var-file=accounts/workstations.tfvars`. Env var changes
+Then `./tf apply -var-file=accounts/workstations.tfvars`. Env var changes
 reach a deployment only after a redeploy.
 
 ## Everyday changes
@@ -123,17 +141,18 @@ gateway token.
 1. Uncomment `ai_gateway` in `accounts/workstations.tfvars` and set
    `account_id` (Cloudflare dashboard home). Keep `vercel_targets = ["preview"]`
    for the first round.
-2. `export CLOUDFLARE_API_TOKEN=...` (AI Gateway Edit), then
-   `terraform apply -target=cloudflare_ai_gateway.this -var-file=accounts/workstations.tfvars`
+2. Put a Cloudflare API token with **Account > AI Gateway > Edit** in
+   1Password (`op.env`), then
+   `./tf apply -target=cloudflare_ai_gateway.this -var-file=accounts/workstations.tfvars`
    (creates only the gateway; the env vars need the token from step 3).
 3. Dashboard, **AI > AI Gateway > whoa**: under **Provider Keys** add the
    Anthropic key; under **Settings > Authentication** create a token and put
-   it in `secrets.auto.tfvars` as `cf_aig_token`.
+   it in 1Password as `cf_aig_token`.
 4. Check **Settings > Spend limits**: the rule should read the budget and a
    30-day window. The API does not document the unit of `window`; this
    configuration assumes seconds. If the dashboard shows something else, fix
    `spend_limit_window` and apply again.
-5. `terraform apply -var-file=accounts/workstations.tfvars`, then redeploy
+5. `./tf apply -var-file=accounts/workstations.tfvars`, then redeploy
    athena-web and athena-cms on Preview, ask a question on `/search` and see
    it in the gateway's analytics.
 6. Set `vercel_targets = ["production", "preview"]`, apply, delete
