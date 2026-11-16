@@ -111,9 +111,11 @@ and run `terraform` itself.)
 The goal of the first run is a plan that only imports. Expect a few in-place
 updates and review each one before applying:
 
-- `build_command` / `install_command` / `root_directory`: Terraform sends the
-  values in `locals.tf`. If the plan shows a dashboard value that should stay,
-  copy it into `locals.tf` instead.
+- `build_command` on athena-cms: the dashboard still says `pnpm run ci`, which
+  `vercel.json` (`bun run build`) already overrides. Terraform clears it, since
+  build and install commands belong to `vercel.json` or Vercel's detection.
+  Dashboard settings Terraform does not own (Fluid compute, default function
+  region, Toolbar, build machine) are in `ignore_changes` and never sent.
 - `value` on the two production URL vars of athena-web: they are Sensitive in
   Vercel, so their value imports as null and is re-sent once (same value).
 - `value_wo_version` on the secrets: the first apply re-sends each secret from

@@ -1,13 +1,14 @@
 locals {
   # Settings that also live in apps/*/vercel.json (bunVersion, regions,
   # schedules, functions, git.deploymentEnabled, buildCommand, ignoreCommand)
-  # are owned by vercel.json and deliberately not repeated here.
+  # are owned by vercel.json and deliberately not repeated here. The build
+  # and install commands are left to vercel.json or Vercel's detection
+  # (bun run build / bun install), so the dashboard fields stay empty.
   projects = {
     web = {
       name           = "athena-web"
       framework      = "astro"
       root_directory = "apps/web"
-      build_command  = "bun run build"
       # Standard Protection: Vercel Authentication on every deployment URL
       # except the production custom domains (API: all_except_custom_domains).
       vercel_authentication = "standard_protection_new"
@@ -16,15 +17,13 @@ locals {
       name           = "athena-cms"
       framework      = "nextjs"
       root_directory = "apps/cms"
-      build_command  = "bun run build"
       # Every deployment, Production included (since 1.0.8). athena-web passes
       # it with CMS_PROTECTION_BYPASS (AGENTS.md pitfall 14).
       vercel_authentication = "all_deployments"
     }
   }
 
-  install_command = "bun install --frozen-lockfile"
-  node_version    = "24.x"
+  node_version = "24.x"
 
   # Production domains are assigned on every production deployment; a
   # git_branch domain follows that branch's latest deployment.
