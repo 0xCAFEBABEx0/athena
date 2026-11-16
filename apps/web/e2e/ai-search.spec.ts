@@ -154,6 +154,17 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await expect(page.locator('[data-ai-extra]')).toHaveCount(0)
     await expect(page).not.toHaveURL(/mode=/)
     expect(bodies).toBe(1)
+    // Choosing Ask AI clears results by meaning: snippets and extra rows go.
+    const askTab = page.locator('[data-search-mode="ask"]')
+    if ((await askTab.count()) > 0) {
+      await input.fill('how it works')
+      await input.press('Enter')
+      await expect(page.locator('[data-ai-extra]')).toHaveCount(1)
+      await askTab.click()
+      await expect(page.locator('[data-ai-extra]')).toHaveCount(0)
+      await expect(page.locator('[data-ai-snippet]')).toHaveCount(0)
+      await expect(visibleRows(page)).toHaveCount(slugs.length)
+    }
   })
 
   test('TC-E-68 the composer and the "/" popup open /search by meaning on Enter and offer "Ask Hoo" only with Ask AI', async ({

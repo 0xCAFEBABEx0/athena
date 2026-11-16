@@ -636,7 +636,9 @@ const modes = withAsk
         // suggested question), as AI requests only start from the visitor.
         shown = undefined
         resetAi()
-        keyword('')
+        // Results by meaning (snippets, rows for pages and builds) go too.
+        resetRows()
+        setEmpty(rows.length === 0)
         setPrompt('', rows.length)
       } else {
         run(query)
