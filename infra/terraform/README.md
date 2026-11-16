@@ -1,13 +1,16 @@
 # Vercel infrastructure (Terraform)
 
 The two Vercel projects, their domains and the environment variables the apps
-own, as code. Uses the official [`vercel/vercel`](https://registry.terraform.io/providers/vercel/vercel/latest/docs)
-provider. Credentials and secret values never go to git.
+own, as code, plus the Cloudflare AI Gateway in front of Claude. Uses the
+official [`vercel/vercel`](https://registry.terraform.io/providers/vercel/vercel/latest/docs)
+and [`cloudflare/cloudflare`](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs)
+providers. Credentials and secret values never go to git.
 
 | File | Holds |
 | --- | --- |
 | `locals.tf` | Project settings, domains and env var definitions (the part you edit) |
 | `projects.tf`, `domains.tf`, `env.tf` | Resources built from `locals.tf` |
+| `ai_gateway.tf` | Cloudflare AI Gateway and its spend limit (only when `ai_gateway` is set) |
 | `imports.tf` | Adopts resources that already exist in an account |
 | `accounts/workstations.tfvars` | Current account: team ID and the IDs to adopt (no secrets) |
 | `accounts/new-account.tfvars.example` | Template for a fresh account |
@@ -17,8 +20,8 @@ provider. Credentials and secret values never go to git.
 
 Managed: `athena-web` and `athena-cms` (framework, root directory, install and
 build commands, Node version, Git repository and production branch, Vercel
-Authentication), the 10 project domains, and the env vars listed in
-`local.env`.
+Authentication), the 10 project domains, the env vars listed in `local.env`,
+and, when `ai_gateway` is set, the Cloudflare AI Gateway with its spend limit.
 
 Not managed here:
 
@@ -39,6 +42,10 @@ Not managed here:
 - **Vercel API token**: create one at <https://vercel.com/account/settings/tokens>
   scoped to the team, and export it in your shell only:
   `export VERCEL_API_TOKEN=...`. Never put it in a `.tf` or `.tfvars` file.
+- **Cloudflare API token** (only with `ai_gateway`): a custom token with
+  **Account > AI Gateway > Edit**, exported the same way:
+  `export CLOUDFLARE_API_TOKEN=...`. Without `ai_gateway` nothing is sent to
+  Cloudflare.
 - **Secret values**: copy `secrets.auto.tfvars.example` to
   `secrets.auto.tfvars` (git-ignored) and fill it in, or export
   `TF_VAR_secrets='{"revalidate_secret":"...", ...}'`. A password manager works
@@ -97,6 +104,46 @@ reach a deployment only after a redeploy.
   they cannot drift apart.
 - Changes made in the dashboard to managed settings are reverted by the next
   apply; make them here instead.
+
+## Cloudflare AI Gateway
+
+Claude calls (Ask AI on athena-web, the Translate button on athena-cms) can go
+through Cloudflare AI Gateway with the Anthropic key stored at Cloudflare
+(BYOK), so a spend limit caps what they cost. Why and what it costs:
+`docs/AI_SEARCH.md`, "Cloudflare AI Gateway". The apps need 1.6.0 or later.
+
+Terraform manages the gateway (authentication on, logs, no gateway cache or
+rate limit), one spend limit rule for provider `anthropic`, and
+`ANTHROPIC_BASE_URL` + `CF_AIG_TOKEN` on both Vercel projects. Two things are
+done once in the dashboard instead, so no secret lands in the state: the
+Anthropic key under the gateway's **Provider Keys** (the provider cannot attach
+a stored key yet, cloudflare/terraform-provider-cloudflare#7332) and the
+gateway token.
+
+1. Uncomment `ai_gateway` in `accounts/workstations.tfvars` and set
+   `account_id` (Cloudflare dashboard home). Keep `vercel_targets = ["preview"]`
+   for the first round.
+2. `export CLOUDFLARE_API_TOKEN=...` (AI Gateway Edit), then
+   `terraform apply -target=cloudflare_ai_gateway.this -var-file=accounts/workstations.tfvars`
+   (creates only the gateway; the env vars need the token from step 3).
+3. Dashboard, **AI > AI Gateway > whoa**: under **Provider Keys** add the
+   Anthropic key; under **Settings > Authentication** create a token and put
+   it in `secrets.auto.tfvars` as `cf_aig_token`.
+4. Check **Settings > Spend limits**: the rule should read the budget and a
+   30-day window. The API does not document the unit of `window`; this
+   configuration assumes seconds. If the dashboard shows something else, fix
+   `spend_limit_window` and apply again.
+5. `terraform apply -var-file=accounts/workstations.tfvars`, then redeploy
+   athena-web and athena-cms on Preview, ask a question on `/search` and see
+   it in the gateway's analytics.
+6. Set `vercel_targets = ["production", "preview"]`, apply, delete
+   `ANTHROPIC_API_KEY` from both projects in the dashboard (it is not managed
+   here and is unused once the gateway pair is set), and redeploy Production.
+
+Change the budget with `spend_limit_usd` and apply; no redeploy is needed.
+To go back to calling Anthropic directly, set `ANTHROPIC_API_KEY` again,
+remove `ai_gateway` (the env vars are deleted; the gateway too, as
+`authentication` cannot be turned off once on) and redeploy.
 
 ## Moving to another account
 

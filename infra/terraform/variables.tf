@@ -46,3 +46,31 @@ variable "secret_versions" {
   type        = map(number)
   default     = {}
 }
+
+variable "ai_gateway" {
+  description = <<-EOT
+    Cloudflare AI Gateway in front of Claude (docs/AI_SEARCH.md, "Cloudflare
+    AI Gateway"). null = not managed: no gateway, and the apps keep calling
+    Anthropic directly. account_id and gateway_id are not secrets.
+  EOT
+  type = object({
+    account_id = string
+    gateway_id = optional(string, "whoa")
+    # Dollars per window for every Anthropic request through the gateway.
+    spend_limit_usd = optional(number, 5)
+    # Length of the budget window. The API does not document the unit;
+    # seconds, like rate_limiting_interval, is assumed (30 days by default).
+    # Check the rule under Settings > Spend limits after the first apply.
+    spend_limit_window = optional(number, 2592000)
+    # "fixed" resets at the end of each window; "sliding" counts the last window.
+    spend_limit_technique = optional(string, "fixed")
+    # Request logs (prompts and answers) in Workers Logs, free up to 200,000 a day.
+    collect_logs = optional(bool, true)
+    # Vercel environments that get ANTHROPIC_BASE_URL and CF_AIG_TOKEN.
+    # Start with ["preview"] to try it there first.
+    vercel_targets = optional(list(string), ["production", "preview"])
+    # true when the gateway was already created in the dashboard: adopt it.
+    import = optional(bool, false)
+  })
+  default = null
+}

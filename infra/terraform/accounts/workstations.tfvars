@@ -31,3 +31,12 @@ existing = {
     "cms:GITHUB_TOKEN:preview"    = "8r2jPxsf57R1lexi"
   }
 }
+
+# Cloudflare AI Gateway in front of Claude (docs/AI_SEARCH.md). Uncomment
+# after the Cloudflare account ID is known (dashboard home, right column).
+# ai_gateway = {
+#   account_id      = "<cloudflare account id>"
+#   gateway_id      = "whoa"
+#   spend_limit_usd = 5
+#   vercel_targets  = ["preview"] # then ["production", "preview"]
+# }

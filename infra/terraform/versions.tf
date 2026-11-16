@@ -8,6 +8,10 @@ terraform {
       source  = "vercel/vercel"
       version = "~> 5.25"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.29"
+    }
   }
 
   # State stays local (and git-ignored) by default. To keep it remotely, add a

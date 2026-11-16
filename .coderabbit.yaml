@@ -119,6 +119,9 @@ reviews:
         be repeated here. Never add Vercel Authentication or other deployment
         protection to athena-cms Production. Keep `prevent_destroy` on the
         projects.
+        The Cloudflare AI Gateway keeps `authentication = true`; the Anthropic
+        key and the gateway token are set in the dashboard (or `var.secrets`
+        for `cf_aig_token`), never in a resource whose value reaches the state.
         Layout.astro prerenders hovered links: any script that must run only
         when the page is shown (analytics, settings from localStorage) waits
         for `prerenderingchange` when `document.prerendering` is true.

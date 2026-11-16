@@ -3,3 +3,7 @@
 provider "vercel" {
   team = var.team_id
 }
+
+# Likewise CLOUDFLARE_API_TOKEN (permission: AI Gateway Edit). Only the AI
+# Gateway (ai_gateway.tf) uses it.
+provider "cloudflare" {}

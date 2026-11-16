@@ -189,12 +189,13 @@ project's Root Directory) to avoid duplicate builds:
   before using `<Image>`.
 
 **Infrastructure as code** (`infra/terraform/`, see its `README.md`): both
-Vercel projects, their domains and the env vars the apps own are Terraform
-(`vercel/vercel` provider). Change those there, not in the dashboard, or the
+Vercel projects, their domains, the env vars the apps own and the Cloudflare
+AI Gateway in front of Claude are Terraform (`vercel/vercel`,
+`cloudflare/cloudflare`). Change those there, not in the dashboard, or the
 next `terraform apply` reverts it. Settings in `apps/*/vercel.json` stay in
 `vercel.json` and are never repeated in Terraform; integration-written env vars
 (Neon, Blob, Sentry, Checkly) are not managed. No credential ever goes to git:
-the Vercel token comes from `VERCEL_API_TOKEN`, secret values from the
+the Vercel token comes from `VERCEL_API_TOKEN` (Cloudflare: `CLOUDFLARE_API_TOKEN`), secret values from the
 git-ignored `secrets.auto.tfvars` and are write-only (`value_wo`), and the state
 is git-ignored. `infra/` is outside `vercel-ignore-build.sh`'s paths, so a
 Terraform-only push builds nothing.

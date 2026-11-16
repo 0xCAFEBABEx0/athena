@@ -56,7 +56,7 @@ locals {
   # vars (POSTGRES_*, PG*, DATABASE_URL*, NEON_PROJECT_ID, STACK_*,
   # NEXT_PUBLIC_STACK_*), BLOB_READ_WRITE_TOKEN, SENTRY_*, NEXT_PUBLIC_SENTRY_DSN
   # and CHECKLY_*.
-  env = {
+  env_base = {
     # --- athena-web --------------------------------------------------------
     "web:CMS_URL:production" = { project = "web", key = "CMS_URL", target = ["production"], sensitive = true, value = local.urls.cms_production }
     "web:CMS_URL:preview"    = { project = "web", key = "CMS_URL", target = ["preview"], sensitive = false, value = local.urls.cms_preview, comment = "Preview CMS (athena-cms preview branch)" }
@@ -79,6 +79,20 @@ locals {
     "cms:GITHUB_TOKEN:production" = { project = "cms", key = "GITHUB_TOKEN", target = ["production"], sensitive = true, secret = "github_token_production" }
     "cms:GITHUB_TOKEN:preview"    = { project = "cms", key = "GITHUB_TOKEN", target = ["preview"], sensitive = true, secret = "github_token_preview" }
   }
+
+  # Claude through Cloudflare AI Gateway with the Anthropic key stored there
+  # (BYOK). Both apps read the same pair (packages/shared/src/anthropic.ts);
+  # ANTHROPIC_API_KEY is then unused (not managed here: delete it by hand).
+  anthropic_base_url = var.ai_gateway == null ? null : "https://gateway.ai.cloudflare.com/v1/${var.ai_gateway.account_id}/${var.ai_gateway.gateway_id}/anthropic"
+  ai_gateway_apps    = var.ai_gateway == null ? [] : ["web", "cms"]
+  ai_gateway_env = merge({}, [
+    for app in local.ai_gateway_apps : {
+      "${app}:ANTHROPIC_BASE_URL" = { project = app, key = "ANTHROPIC_BASE_URL", target = var.ai_gateway.vercel_targets, sensitive = false, value = local.anthropic_base_url, comment = "Cloudflare AI Gateway (Anthropic, BYOK)" }
+      "${app}:CF_AIG_TOKEN"       = { project = app, key = "CF_AIG_TOKEN", target = var.ai_gateway.vercel_targets, sensitive = true, secret = "cf_aig_token" }
+    }
+  ]...)
+
+  env = merge(local.env_base, local.ai_gateway_env)
 
   # Every key var.secrets must provide.
   secret_keys = toset(compact([for e in values(local.env) : try(e.secret, null)]))

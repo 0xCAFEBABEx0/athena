@@ -10,3 +10,8 @@ output "domain_verification" {
     if !d.verified
   }
 }
+
+output "anthropic_base_url" {
+  description = "ANTHROPIC_BASE_URL the apps get when var.ai_gateway is set (null otherwise)."
+  value       = local.anthropic_base_url
+}

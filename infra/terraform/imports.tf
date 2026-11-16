@@ -16,6 +16,12 @@ import {
 }
 
 import {
+  for_each = var.ai_gateway != null && try(var.ai_gateway.import, false) ? { this = var.ai_gateway } : {}
+  to       = cloudflare_ai_gateway.this[0]
+  id       = "${each.value.account_id}/${each.value.gateway_id}"
+}
+
+import {
   for_each = var.existing.env_ids
   to       = vercel_project_environment_variable.this[each.key]
   # "write-only:" keeps an imported secret's value out of the state.
