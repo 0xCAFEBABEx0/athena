@@ -164,7 +164,7 @@ gateway token.
    1Password (`op.env`), then
    `./tf apply -target=cloudflare_ai_gateway.this -var-file=accounts/workstations.tfvars`
    (creates only the gateway; the env vars need the token from step 3).
-3. Dashboard, **AI > AI Gateway > whoa**: under **Provider Keys** add the
+3. Dashboard, **AI > AI Gateway > athena**: under **Provider Keys** add the
    Anthropic key; under **Settings > Authentication** create a token and put
    it in 1Password as `cf_aig_token`.
 4. Check **Settings > Spend limits**: the rule should read the budget and a

@@ -232,7 +232,7 @@ plan), or turn logging off for the gateway. Do not buy Unified Billing credits
 
 Setup (Cloudflare dashboard, then Vercel):
 
-1. **AI > AI Gateway > Create gateway** (e.g. `whoa`). In its settings turn on
+1. **AI > AI Gateway > Create gateway** (e.g. `athena`, the project name). In its settings turn on
    **Authenticated Gateway** and create a token; this is `CF_AIG_TOKEN`.
 2. **Provider keys** (BYOK): add the Anthropic key (Secrets Store).
 3. **Spend limits**: add a rule for provider Anthropic, e.g. $5 a month. The

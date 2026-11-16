@@ -55,7 +55,7 @@ variable "ai_gateway" {
   EOT
   type = object({
     account_id = string
-    gateway_id = optional(string, "whoa")
+    gateway_id = optional(string, "athena")
     # Dollars per window for every Anthropic request through the gateway.
     spend_limit_usd = optional(number, 5)
     # Length of the budget window. The API does not document the unit;
