@@ -25,6 +25,17 @@ locals {
 
   node_version = "24.x"
 
+  # Deployment Retention Policy for both projects (retention.tf). Previews
+  # only matter until the next push: the one preview.whoa.me points at stays
+  # because it has an alias. Production keeps a month of rollback targets
+  # (the last 3 stay anyway).
+  deployment_retention = {
+    preview    = "1d"
+    production = "1m"
+    canceled   = "1d"
+    errored    = "1w"
+  }
+
   # Production domains are assigned on every production deployment; a
   # git_branch domain follows that branch's latest deployment.
   domains = {

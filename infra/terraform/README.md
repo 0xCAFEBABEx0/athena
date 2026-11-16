@@ -9,7 +9,7 @@ providers. Credentials and secret values never go to git.
 | File | Holds |
 | --- | --- |
 | `locals.tf` | Project settings, domains and env var definitions (the part you edit) |
-| `projects.tf`, `domains.tf`, `env.tf` | Resources built from `locals.tf` |
+| `projects.tf`, `domains.tf`, `env.tf`, `retention.tf` | Resources built from `locals.tf` |
 | `ai_gateway.tf` | Cloudflare AI Gateway and its spend limit (only when `ai_gateway` is set) |
 | `imports.tf` | Adopts resources that already exist in an account |
 | `accounts/workstations.tfvars` | Current account: team ID and the IDs to adopt (no secrets) |
@@ -22,7 +22,7 @@ providers. Credentials and secret values never go to git.
 
 Managed: `athena-web` and `athena-cms` (framework, root directory, install and
 build commands, Node version, Git repository and production branch, Vercel
-Authentication), the 10 project domains, the env vars listed in `local.env`,
+Authentication, Deployment Retention Policy), the 10 project domains, the env vars listed in `local.env`,
 and, when `ai_gateway` is set, the Cloudflare AI Gateway with its spend limit.
 
 Not managed here:
