@@ -107,6 +107,20 @@ const readPost: Reader = async (payload, id, locale, req) => {
 
 const HERO_TYPES = new Set(['highImpact', 'mediumImpact', 'lowImpact'])
 
+/**
+ * Layout blocks as the web app renders them: a form block shows its
+ * introduction only while `enableIntro` is on (FormBlock.astro), and the text
+ * stays in the data when it is switched off.
+ */
+const shownBlocks = (layout: unknown): unknown =>
+  Array.isArray(layout)
+    ? layout.map((block) =>
+        isObject(block) && block.blockType === 'formBlock' && !block.enableIntro
+          ? { ...block, introContent: null }
+          : block,
+      )
+    : layout
+
 const readPage: Reader = async (payload, id, locale, req) => {
   const page = await findPublished(payload, 'pages', id, locale, req)
   const slug = text(page?.slug)
@@ -118,7 +132,7 @@ const readPage: Reader = async (payload, id, locale, req) => {
     description: descriptionOf(page),
     // The web app renders a hero only for these types (RenderHero.astro); a
     // hero switched to "none" keeps its text in the data, unseen.
-    sections: richTextSections([HERO_TYPES.has(String(isObject(page.hero) ? page.hero.type : '')) ? page.hero : null, page.layout]),
+    sections: richTextSections([HERO_TYPES.has(String(isObject(page.hero) ? page.hero.type : '')) ? page.hero : null, shownBlocks(page.layout)]),
   }
 }
 
@@ -145,12 +159,12 @@ const readProject: Reader = async (payload, id, locale, req) => {
     : Boolean(text(project.repo)) && isObject(project.github)
   if (!listed) return null
   const title = text(project.title) || repoName(text(project.repo)) || slug
+  // As /builds shows it (work.ts): the CMS description, else GitHub's.
+  const description = text(project.description) || (isObject(project.github) ? text(project.github.description) : '')
   return {
     slug,
     title,
-    sections: [
-      { heading: null, paragraphs: paragraphs(project.description, project.brief, project.notes) },
-    ],
+    sections: [{ heading: null, paragraphs: paragraphs(description, project.brief, project.notes) }],
   }
 }
 

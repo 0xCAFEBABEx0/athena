@@ -234,6 +234,7 @@ suite('TC-U-56 AI index: Postgres', () => {
     const layout = [
       { blockType: 'content', columns: [{ richText: body('Foxtrot column.') }] },
       { blockType: 'mediaBlock', media: 3 },
+      { blockType: 'formBlock', enableIntro: true, introContent: body('Sierra intro.') },
     ]
     others = {
       pages: [
@@ -244,7 +245,11 @@ suite('TC-U-56 AI index: Postgres', () => {
           slug: 'plain',
           title: 'Plain',
           hero: { type: 'none', richText: body('Zulu unseen.') },
-          layout: [{ blockType: 'content', columns: [{ richText: body('Quebec.') }] }],
+          layout: [
+            { blockType: 'content', columns: [{ richText: body('Quebec.') }] },
+            // A form introduction switched off keeps its text in the data, unseen.
+            { blockType: 'formBlock', enableIntro: false, introContent: body('Romeo unseen.') },
+          ],
         },
         // Not routed by the web app.
         { id: 11, slug: 'home', title: 'Home', hero: { richText: body('Golf.') } },
@@ -266,6 +271,8 @@ suite('TC-U-56 AI index: Postgres', () => {
           description: 'India site.',
           brief: 'Juliet brief.',
         },
+        // No CMS description: /builds shows GitHub's.
+        { id: 23, slug: 'tool', title: 'Tool', repo: 'me/tool', github: { description: 'Tango from GitHub.' } },
         // Shown only with a live URL.
         {
           id: 21,
@@ -287,14 +294,15 @@ suite('TC-U-56 AI index: Postgres', () => {
         ],
       },
     }
-    expect(await reindexAll(fakePayload())).toMatchObject({ docs: 5 })
+    expect(await reindexAll(fakePayload())).toMatchObject({ docs: 6 })
     const en = (await rows()).filter((row) => row.locale === 'en')
     expect(en.map((row) => [row.kind, row.doc_id, row.slug, row.title, row.content])).toEqual([
       ['about', 'about', '', 'About me', 'Mike lead.'],
       ['about', 'about', '', 'About me', 'November story.'],
-      ['page', '10', 'contact', 'Contact', 'Echo hero.\n\nFoxtrot column.'],
+      ['page', '10', 'contact', 'Contact', 'Echo hero.\n\nFoxtrot column.\n\nSierra intro.'],
       ['page', '13', 'plain', 'Plain', 'Quebec.'],
       ['project', '20', 'athena', 'Athena', 'India site.\n\nJuliet brief.'],
+      ['project', '23', 'tool', 'Tool', 'Tango from GitHub.'],
       ['stack', 'stack', '', 'Stacks', 'Oscar intro.'],
       ['stack', 'stack', '', 'Stacks', '- Papa: daily'],
     ])
@@ -304,7 +312,7 @@ suite('TC-U-56 AI index: Postgres', () => {
     // An emptied /about drops out; a hidden build (no longer returned) is removed by the reindex.
     others = { ...others, about: { heading: 'About me', lead: '', body: body() }, projects: [] }
     await indexDoc(fakePayload(), 'about', 'about')
-    expect((await reindexAll(fakePayload()))?.removed).toBe(3)
+    expect((await reindexAll(fakePayload()))?.removed).toBe(6)
     expect((await rows()).some((row) => row.kind === 'about' || row.kind === 'project')).toBe(false)
   })
 

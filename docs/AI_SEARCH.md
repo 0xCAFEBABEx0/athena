@@ -89,7 +89,9 @@ POST /api/ai/search  ◄──────────────── Bearer 
   jobs run in `/api/payload-jobs/run`, a request, so they are indexed. A
   reindex reads again, under its lock, every document it would drop, so one
   published while the reindex ran stays. A page's hero counts only when the
-  web app renders it (high, medium or low impact, not "none").
+  web app renders it (high, medium or low impact, not "none"), a form
+  block's introduction only while it is switched on, and a build without its
+  own description uses GitHub's, as /builds does.
 - **First run**: the index starts empty. The first search on a deployment
   whose index is empty answers `building: true` and indexes everything public
   in the background; the page says the site is being indexed (not cached),
