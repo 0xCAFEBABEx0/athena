@@ -12,4 +12,12 @@ resource "vercel_project_environment_variable" "this" {
   value            = try(each.value.secret, null) == null ? each.value.value : null
   value_wo         = try(each.value.secret, null) == null ? null : var.secrets[each.value.secret]
   value_wo_version = try(each.value.secret, null) == null ? null : lookup(var.secret_versions, each.value.secret, 1)
+
+  lifecycle {
+    # An empty field in 1Password would otherwise reach Vercel as an empty value.
+    precondition {
+      condition     = try(each.value.secret, null) == null || trimspace(lookup(var.secrets, try(each.value.secret, ""), "")) != ""
+      error_message = "secrets.${coalesce(try(each.value.secret, null), "?")} (for ${each.key}) is empty or missing. Fill it in before planning."
+    }
+  }
 }
