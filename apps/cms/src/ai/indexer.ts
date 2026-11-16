@@ -107,15 +107,15 @@ const indexLocale = async (
 
 /**
  * Bring one document's chunks up to date in every language. Null when AI
- * search is not configured.
+ * search is not configured, or when a save gave up waiting for a first build.
  *
  * With `untilBuilt` (the save hooks), nothing is done while the index holds
  * no row of the current model: the first search builds the whole index, and
  * a save before it must not leave a few rows that make the index look built.
  * A first build in progress holds its lock until it commits, so the check
- * waits for it (a shared lock: saves do not wait for each other) and then
- * finds the index built: a save the build may have read before it was
- * committed (an unpublish, say) is then applied on top.
+ * waits for it (`waitForBuild`) and then finds the index built: a save the
+ * build may have read before it was committed (an unpublish, say) is then
+ * applied on top.
  */
 export const indexDoc = async (
   payload: Payload,
@@ -131,12 +131,14 @@ export const indexDoc = async (
   const doc: DocRef = { kind, id: String(id) }
   const result: IndexResult = { kind, id: doc.id, locales: {}, changed: 0 }
   if (options.untilBuilt) {
-    const built = await inTransaction(payload, async (locked) => !(await isEmptyFor(locked, modelId(config))), {
-      key: BUILD_LOCK,
-      wait: true,
-      shared: true,
-    })
-    if (!built) return { ...result, waiting: true }
+    const built = await waitForBuild(payload, modelId(config))
+    if (built === false) return { ...result, waiting: true }
+    if (built === null) {
+      // The build may have read this document before the save: the next save
+      // of it, or POST /api/ai/reindex, catches up.
+      payload.logger.warn(`AI index: ${kind} ${doc.id} skipped, the first build is still running`)
+      return null
+    }
   }
   // One update of a document at a time, each reading the document only once
   // it holds the lock: a publish still waiting on its embeddings can then not
@@ -153,6 +155,32 @@ export const indexDoc = async (
     },
     { key: docLockKey(doc), wait: true },
   )
+}
+
+/** How long a save waits for a first build in progress before giving up. */
+export const BUILD_WAIT_MS = 40_000
+const BUILD_POLL_MS = 500
+
+/**
+ * Whether the index holds rows of `model`, once no first build is running:
+ * true (built), false (empty: the first search builds it), or null (a build
+ * still running after BUILD_WAIT_MS). The build holds BUILD_LOCK until it
+ * commits; a save takes it shared (saves do not wait for each other) with a
+ * try-lock and polls, so a waiting save holds no pooled connection: blocking
+ * on the lock would keep one each, and enough saves could leave the build
+ * none for its own reads.
+ */
+const waitForBuild = async (payload: Payload, model: string): Promise<boolean | null> => {
+  const deadline = Date.now() + BUILD_WAIT_MS
+  for (;;) {
+    const built = await inTransaction(payload, async (locked) => !(await isEmptyFor(locked, model)), {
+      key: BUILD_LOCK,
+      shared: true,
+    })
+    if (built !== null) return built
+    if (Date.now() >= deadline) return null
+    await new Promise((resolve) => setTimeout(resolve, BUILD_POLL_MS))
+  }
 }
 
 const docLockKey = (doc: DocRef) => `ai.chunks ${doc.kind} ${doc.id}`

@@ -31,6 +31,8 @@ export async function POST(request: Request): Promise<Response> {
       return json({ error: 'The AI search table does not exist yet (docs/AI_SEARCH.md).' }, 503)
     }
     payload.logger.error({ err: error, msg: 'AI reindex failed' })
+    // Documents before the failure may already be rewritten.
+    await invalidateWebAiResults(payload)
     return json({ error: 'Reindex failed. See the CMS logs.' }, 502)
   }
 }

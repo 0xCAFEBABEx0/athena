@@ -101,9 +101,13 @@ POST /api/ai/search  ◄──────────────── Bearer 
   nothing. Saves do not index while the index is empty (a few rows from a
   save would make it look built and hide every other document); a save
   during the build waits for it to commit, then applies on top, so an
-  unpublish the build read too early does not stay searchable. To rebuild
-  by hand, a logged-in admin can `POST /api/ai/reindex` on the CMS (same
-  cookie as the admin).
+  unpublish the build read too early does not stay searchable. A waiting
+  save polls the lock every half second and holds no database connection
+  meanwhile (the build needs the pool for its own reads); after 40 s it
+  gives up with a warning, and the next save or a reindex catches up. To
+  rebuild by hand, a logged-in admin can `POST /api/ai/reindex` on the CMS
+  (same cookie as the admin); it expires the web's cached AI results even
+  when it fails half way.
 - **Search** (`POST ${CMS_URL}/api/ai/search`, `{ q, locale, limit }`): embeds
   the query (`input_type: query`) and returns the nearest excerpts in that
   language, exact cosine scan (no ANN index; fine for a few thousand chunks).

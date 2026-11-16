@@ -50,9 +50,9 @@ const conditions = (where?: Where): Where[] =>
  * `_status` are published; a draft is returned unless `where` asks for
  * published ones, as for a request whose user can read drafts.
  */
-const fakePayload = () =>
+const fakePayload = (db: Pool = pool) =>
   ({
-    db: { pool },
+    db: { pool: db },
     find: async ({
       collection,
       locale,
@@ -394,14 +394,41 @@ suite('TC-U-56 AI index: Postgres', () => {
     published = {}
     const pending = indexDoc(fakePayload(), 'post', 9, undefined, { untilBuilt: true })
     await new Promise((resolve) => setTimeout(resolve, 100))
+    expect((await build.query('SELECT 1 FROM ai.chunks')).rows).toHaveLength(3)
     await build.query('COMMIT')
     build.release()
-    expect(await rows()).toHaveLength(3)
     const done = await pending
     expect(done?.waiting).toBeUndefined()
     expect(done?.changed).toBe(3)
     expect(await rows()).toEqual([])
     await pool.query('DROP TABLE ai.build_copy')
+  })
+
+  test('saves waiting for the first build hold no connection, so the build can still read', async () => {
+    const a: Doc = { id: 10, slug: 'a', title: 'A', content: body('Alpha.') }
+    published = { en: [a], ja: [a], zh: [a] }
+    // Two connections: the build holds one; the waiting saves must leave it the other.
+    const small = new Pool({ connectionString: pool.options.connectionString, max: 2 })
+    const build = await small.connect()
+    try {
+      await build.query('BEGIN')
+      await build.query("SELECT pg_advisory_xact_lock(hashtext('ai.chunks first build'))")
+      const saves = [
+        indexDoc(fakePayload(small), 'post', 10, undefined, { untilBuilt: true }),
+        indexDoc(fakePayload(small), 'post', 10, undefined, { untilBuilt: true }),
+      ]
+      await new Promise((resolve) => setTimeout(resolve, 700))
+      // What the build reads through the pool (Payload's find) gets a connection.
+      const read = small.query('SELECT 1 AS one')
+      const timeout = new Promise((resolve) => setTimeout(() => resolve('timeout'), 2000))
+      expect(await Promise.race([read.then((r) => r.rows[0]?.one), timeout])).toBe(1)
+      await build.query('COMMIT')
+      build.release()
+      // The index is still empty after the build: both saves wait for the first search.
+      expect((await Promise.all(saves)).map((done) => done?.waiting)).toEqual([true, true])
+    } finally {
+      await small.end()
+    }
   })
 
   test('kept answers: found by the same wording or a question meaning nearly the same, per language and model', async () => {

@@ -93,7 +93,8 @@ export const inTransaction = async <T>(
       const take = lock.shared ? 'pg_advisory_xact_lock_shared' : 'pg_advisory_xact_lock'
       await client.query(`SELECT ${take}(hashtext($1))`, [lock.key])
     } else if (lock) {
-      const { rows } = await client.query('SELECT pg_try_advisory_xact_lock(hashtext($1)) AS locked', [lock.key])
+      const take = lock.shared ? 'pg_try_advisory_xact_lock_shared' : 'pg_try_advisory_xact_lock'
+      const { rows } = await client.query(`SELECT ${take}(hashtext($1)) AS locked`, [lock.key])
       if (!rows[0]?.locked) {
         await client.query('ROLLBACK')
         return null
