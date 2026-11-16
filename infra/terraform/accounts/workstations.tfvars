@@ -40,7 +40,7 @@ ai_gateway = {
   account_id      = "6b3d305816ba5b9c7629ce019a22cfde"
   gateway_id      = "athena"
   spend_limit_usd = 5
-  vercel_targets  = ["preview"] # then ["production", "preview"] after the 1.6.0 release
+  vercel_targets  = ["production", "preview"] # production since the 1.6.0 release (2026-11-16)
 }
 
 # Version 2 re-sends every secret: on 2026-11-16 the first apply sent the
