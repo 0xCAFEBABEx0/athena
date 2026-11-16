@@ -75,12 +75,22 @@ POST /api/ai/search  ◄──────────────── Bearer 
   are skipped. Builds and the globals have no drafts, so every save counts
   (the GitHub sync's saves cost one `SELECT` per excerpt unless the text
   changed). Deleting a note, page or build removes its rows. A failure is
-  logged and never fails the save.
+  logged and never fails the save. When an update changed any row, the CMS
+  then calls `/api/invalidate` with the tag `ai_index`, which only expires
+  the web app's cached CMS data (AI results and answers among them): the
+  publish's own invalidation ran seconds earlier, before the embedding call,
+  so a search in between would otherwise keep the old excerpts (even an
+  unpublished note's) for a day.
 - **First run**: the index starts empty. The first search on a deployment
   whose index is empty answers `building: true` and indexes everything public
   in the background; the page says the site is being indexed (not cached),
-  and a search a minute later finds them. To rebuild by hand, a logged-in
-  admin can `POST /api/ai/reindex` on the CMS (same cookie as the admin).
+  and a search a minute later finds them. The build is one transaction under
+  an advisory lock: a build that fails half way leaves the index empty and
+  the next search starts it again, and a search during the build starts
+  nothing. Saves do not index while the index is empty (a few rows from a
+  save would make it look built and hide every other document). To rebuild
+  by hand, a logged-in admin can `POST /api/ai/reindex` on the CMS (same
+  cookie as the admin).
 - **Search** (`POST ${CMS_URL}/api/ai/search`, `{ q, locale, limit }`): embeds
   the query (`input_type: query`) and returns the nearest excerpts in that
   language, exact cosine scan (no ANN index; fine for a few thousand chunks).
@@ -156,11 +166,9 @@ POST /api/ai/search  ◄──────────────── Bearer 
 - Neon: each uncached query is one short `SELECT` (it wakes the compute if it
   slept). Indexing reads the document and writes only changed rows.
 
-Known limit: a publish expires the cached results at once, while the index
-is updated a few seconds later (after the embedding call). A search for the
-same words in that window caches the old results until the next publish.
-With today's traffic this is unlikely; publishing again (or any other post)
-clears it.
+A publish expires the cached results at once, and the index is updated a
+few seconds later (after the embedding call); the second expiry (`ai_index`,
+above) clears whatever a search cached in between.
 
 ## Setup
 

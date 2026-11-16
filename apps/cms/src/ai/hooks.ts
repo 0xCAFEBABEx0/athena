@@ -7,6 +7,8 @@ import type {
   PayloadRequest,
 } from 'payload'
 
+import { invalidateWebAiResults } from '@/utilities/invalidateWeb'
+
 import { indexDoc, removeDoc } from './indexer'
 import { type DocKind, isMissingTable } from './store'
 
@@ -17,19 +19,23 @@ import { type DocKind, isMissingTable } from './store'
  * (jobs, scripts) `after()` throws, and the task runs right away inside the
  * same transaction, so it is given `req`.
  *
+ * When the task changed any row, the web app's cached AI results are expired
+ * afterwards: the publish's own invalidation ran before the index caught up.
+ *
  * Never throws: indexing must not break a publish. A missed update is picked
  * up by the next save of that document or by POST /api/ai/reindex.
  */
 const defer = (
   payload: Payload,
   label: string,
-  task: (req?: PayloadRequest) => Promise<unknown>,
+  task: (req?: PayloadRequest) => Promise<{ changed: number } | null>,
   req: PayloadRequest,
 ) => {
   const run = async (inline?: PayloadRequest) => {
     try {
       const result = await task(inline)
       if (result) payload.logger.info({ msg: `AI index: ${label}`, result })
+      if (result && result.changed > 0) await invalidateWebAiResults(payload)
     } catch (error) {
       if (isMissingTable(error)) {
         payload.logger.warn(
@@ -69,7 +75,7 @@ export const indexAfterChange =
     await defer(
       req.payload,
       `${kind} ${doc.id}`,
-      (inline) => indexDoc(req.payload, kind, doc.id, inline),
+      (inline) => indexDoc(req.payload, kind, doc.id, inline, { untilBuilt: true }),
       req,
     )
     return doc
@@ -82,7 +88,7 @@ export const removeAfterDelete =
     await defer(
       req.payload,
       `delete ${kind} ${doc.id}`,
-      () => removeDoc(req.payload, kind, doc.id).then(() => 'removed'),
+      async () => ({ removed: true, changed: await removeDoc(req.payload, kind, doc.id) }),
       req,
     )
     return doc
@@ -93,6 +99,11 @@ export const indexGlobalAfterChange =
   (kind: 'about' | 'stack'): GlobalAfterChangeHook =>
   async ({ doc, req }) => {
     if (req.context.skipAiIndex) return doc
-    await defer(req.payload, kind, (inline) => indexDoc(req.payload, kind, kind, inline), req)
+    await defer(
+      req.payload,
+      kind,
+      (inline) => indexDoc(req.payload, kind, kind, inline, { untilBuilt: true }),
+      req,
+    )
     return doc
   }

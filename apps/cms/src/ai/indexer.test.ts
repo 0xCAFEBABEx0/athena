@@ -275,6 +275,46 @@ suite('TC-U-56 AI index: Postgres', () => {
     expect((await rows()).some((row) => row.kind === 'about' || row.kind === 'project')).toBe(false)
   })
 
+  test('saves wait for the first build, report what changed, and a failed first build leaves the index empty', async () => {
+    const a: Doc = { id: 6, slug: 'a', title: 'A', content: body('Alpha.') }
+    const b: Doc = { id: 7, slug: 'b', title: 'B', content: body('Bravo.') }
+    published = { en: [a, b], ja: [a, b], zh: [a, b] }
+
+    // A save before the first search writes nothing: a few rows would make the index look built.
+    expect(await indexDoc(fakePayload(), 'post', 6, undefined, { untilBuilt: true })).toMatchObject({
+      waiting: true,
+      changed: 0,
+    })
+    expect(await rows()).toEqual([])
+
+    // The first build fails half way (the embedding call for B): nothing is kept.
+    const working = globalThis.fetch
+    globalThis.fetch = (async (url: string, init: RequestInit) =>
+      String(init.body).includes('Bravo')
+        ? new Response('boom', { status: 500 })
+        : working(url, init)) as unknown as typeof fetch
+    await expect(reindexAll(fakePayload(), { atomic: true })).rejects.toThrow()
+    globalThis.fetch = working
+    expect(await rows()).toEqual([])
+
+    // While a first build holds the lock, another one starts nothing.
+    const holder = await pool.connect()
+    await holder.query('BEGIN')
+    await holder.query("SELECT pg_advisory_xact_lock(hashtext('ai.chunks first build'))")
+    expect(await reindexAll(fakePayload(), { atomic: true })).toBeNull()
+    await holder.query('ROLLBACK')
+    holder.release()
+
+    expect(await reindexAll(fakePayload(), { atomic: true })).toEqual({ docs: 2, embedded: 2, removed: 0 })
+
+    // Once built, saves index; an unchanged republish changes nothing (no cache expiry), an unpublish does.
+    expect((await indexDoc(fakePayload(), 'post', 6, undefined, { untilBuilt: true }))?.changed).toBe(0)
+    published = { en: [b], ja: [b], zh: [b] }
+    expect((await indexDoc(fakePayload(), 'post', 6, undefined, { untilBuilt: true }))?.changed).toBe(3)
+    expect(await removeDoc(fakePayload(), 'post', 7)).toBe(3)
+    expect(await rows()).toEqual([])
+  })
+
   test('kept answers: found by the same wording or a question meaning nearly the same, per language and model', async () => {
     const v = (dim: number, tilt = 0) => {
       const x = new Array(EMBEDDING_DIMENSIONS).fill(0)

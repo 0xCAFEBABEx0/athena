@@ -71,6 +71,41 @@ export const dbOf = (payload: Payload): Db => {
   return pool as Db
 }
 
+type PoolClient = Db & { release: () => void }
+
+/**
+ * Run `task` in one transaction on one pooled connection: all of its writes
+ * land together or not at all. With `lockKey`, only one such transaction
+ * runs at a time; another one gets `null` at once instead of waiting.
+ */
+export const inTransaction = async <T>(
+  payload: Payload,
+  task: (db: Db) => Promise<T>,
+  lockKey?: string,
+): Promise<T | null> => {
+  const pool = dbOf(payload) as Db & { connect?: () => Promise<PoolClient> }
+  if (typeof pool.connect !== 'function') throw new Error('AI search needs a pg Pool with connect()')
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    if (lockKey) {
+      const { rows } = await client.query('SELECT pg_try_advisory_xact_lock(hashtext($1)) AS locked', [lockKey])
+      if (!rows[0]?.locked) {
+        await client.query('ROLLBACK')
+        return null
+      }
+    }
+    const result = await task(client)
+    await client.query('COMMIT')
+    return result
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined)
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
 /** Postgres "relation does not exist": the index tables were never created. */
 export const isMissingTable = (error: unknown): boolean =>
   typeof error === 'object' && error !== null && (error as { code?: unknown }).code === '42P01'
@@ -130,7 +165,8 @@ export const knownVectors = async (db: Db, hashes: string[]): Promise<Map<string
 /**
  * Make the stored chunks of one document in one language exactly `chunks`:
  * insert or replace them, refresh slug and title on unchanged ones (cheap),
- * and drop chunk numbers past the end and rows of other models.
+ * and drop chunk numbers past the end and rows of other models. Returns how
+ * many rows changed (0: what visitors find did not change).
  */
 export const replaceChunks = async (
   db: Db,
@@ -140,7 +176,7 @@ export const replaceChunks = async (
   meta: { slug: string; title: string },
   changed: StoredChunk[],
   count: number,
-): Promise<void> => {
+): Promise<number> => {
   for (const chunk of changed) {
     await db.query(
       `INSERT INTO ai.chunks
@@ -165,24 +201,30 @@ export const replaceChunks = async (
       ],
     )
   }
-  await db.query(
+  const renamed = await db.query(
     `UPDATE ai.chunks SET slug = $4, title = $5
-      WHERE kind = $1 AND doc_id = $2 AND locale = $3 AND (slug <> $4 OR title <> $5)`,
+      WHERE kind = $1 AND doc_id = $2 AND locale = $3 AND (slug <> $4 OR title <> $5)
+      RETURNING 1`,
     [doc.kind, doc.id, locale, meta.slug, meta.title],
   )
-  await db.query(
-    'DELETE FROM ai.chunks WHERE kind = $1 AND doc_id = $2 AND locale = $3 AND (chunk >= $4 OR model <> $5)',
+  const dropped = await db.query(
+    `DELETE FROM ai.chunks WHERE kind = $1 AND doc_id = $2 AND locale = $3 AND (chunk >= $4 OR model <> $5)
+      RETURNING 1`,
     [doc.kind, doc.id, locale, count, model],
   )
+  return changed.length + renamed.rows.length + dropped.rows.length
 }
 
-/** Drop a document from the index, in one language or (no locale) in all. */
-export const deleteDocChunks = async (db: Db, doc: DocRef, locale?: string): Promise<void> => {
-  if (locale) {
-    await db.query('DELETE FROM ai.chunks WHERE kind = $1 AND doc_id = $2 AND locale = $3', [doc.kind, doc.id, locale])
-  } else {
-    await db.query('DELETE FROM ai.chunks WHERE kind = $1 AND doc_id = $2', [doc.kind, doc.id])
-  }
+/** Drop a document from the index, in one language or (no locale) in all; returns the rows removed. */
+export const deleteDocChunks = async (db: Db, doc: DocRef, locale?: string): Promise<number> => {
+  const { rows } = locale
+    ? await db.query('DELETE FROM ai.chunks WHERE kind = $1 AND doc_id = $2 AND locale = $3 RETURNING 1', [
+        doc.kind,
+        doc.id,
+        locale,
+      ])
+    : await db.query('DELETE FROM ai.chunks WHERE kind = $1 AND doc_id = $2 RETURNING 1', [doc.kind, doc.id])
+  return rows.length
 }
 
 /** Drop every document of `kind` not in `keep` (deleted while a hook was missed), and kinds no longer indexed. */

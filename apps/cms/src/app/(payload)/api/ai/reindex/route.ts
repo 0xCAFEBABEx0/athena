@@ -3,6 +3,7 @@ import { getPayload } from 'payload'
 
 import { reindexAll } from '@/ai/indexer'
 import { isMissingTable } from '@/ai/store'
+import { invalidateWebAiResults } from '@/utilities/invalidateWeb'
 
 const json = (body: unknown, status = 200) => Response.json(body, { status })
 
@@ -23,6 +24,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const result = await reindexAll(payload)
     if (!result) return json({ error: 'No embedding provider API key is set on the CMS deployment.' }, 503)
+    await invalidateWebAiResults(payload)
     return json({ ok: true, ...result })
   } catch (error) {
     if (isMissingTable(error)) {

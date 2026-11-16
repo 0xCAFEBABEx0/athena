@@ -15,6 +15,8 @@ import {
   deleteDocChunks,
   deleteOtherDocs,
   ensureSchema,
+  inTransaction,
+  isEmptyFor,
   knownVectors,
   replaceChunks,
   storedHashes,
@@ -39,7 +41,13 @@ export type IndexResult = {
   kind: DocKind
   id: string
   locales: Partial<Record<Locale, LocaleResult>>
+  /** Rows written or removed: when > 0, what a search finds changed (cached results are stale). */
+  changed: number
+  /** Set when nothing was done because the index has not been built yet (the first search builds it all). */
+  waiting?: true
 }
+
+type Indexed = { result: LocaleResult; changed: number }
 
 const indexLocale = async (
   payload: Payload,
@@ -48,12 +56,9 @@ const indexLocale = async (
   doc: DocRef,
   locale: Locale,
   req?: PayloadRequest,
-): Promise<LocaleResult> => {
+): Promise<Indexed> => {
   const source = await READERS[doc.kind](payload, doc.id, locale, req)
-  if (!source) {
-    await deleteDocChunks(db, doc, locale)
-    return 'removed'
-  }
+  if (!source) return { result: 'removed', changed: await deleteDocChunks(db, doc, locale) }
   const model = modelId(config)
   const chunks = buildChunks({
     title: source.title,
@@ -87,7 +92,7 @@ const indexLocale = async (
     hash,
     embedding: known.get(hash) as number[],
   }))
-  await replaceChunks(
+  const written = await replaceChunks(
     db,
     doc,
     locale,
@@ -96,51 +101,77 @@ const indexLocale = async (
     changed,
     chunks.length,
   )
-  return { chunks: chunks.length, embedded: missing.length }
+  return { result: { chunks: chunks.length, embedded: missing.length }, changed: written }
 }
 
-/** Bring one document's chunks up to date in every language. Null when AI search is not configured. */
+/**
+ * Bring one document's chunks up to date in every language. Null when AI
+ * search is not configured.
+ *
+ * With `untilBuilt` (the save hooks), nothing is done while the index holds
+ * no row of the current model: the first search builds the whole index, and
+ * a save before it must not leave a few rows that make the index look built.
+ */
 export const indexDoc = async (
   payload: Payload,
   kind: DocKind,
   id: string | number,
   req?: PayloadRequest,
+  options: { untilBuilt?: boolean } = {},
 ): Promise<IndexResult | null> => {
   const config = embeddingConfig()
   if (!config) return null
   const db = dbOf(payload)
   await ensureSchema(db)
   const doc: DocRef = { kind, id: String(id) }
-  const result: IndexResult = { kind, id: doc.id, locales: {} }
+  const result: IndexResult = { kind, id: doc.id, locales: {}, changed: 0 }
+  if (options.untilBuilt && (await isEmptyFor(db, modelId(config)))) return { ...result, waiting: true }
   for (const locale of LOCALES) {
-    result.locales[locale] = await indexLocale(payload, db, config, doc, locale, req)
+    const { result: done, changed } = await indexLocale(payload, db, config, doc, locale, req)
+    result.locales[locale] = done
+    result.changed += changed
   }
   return result
 }
 
-/** Remove a deleted document from the index. */
+/** Remove a deleted document from the index; returns the rows removed. */
 export const removeDoc = async (
   payload: Payload,
   kind: DocKind,
   id: string | number,
-): Promise<void> => {
+): Promise<number> => {
   const db = dbOf(payload)
   await ensureSchema(db)
-  await deleteDocChunks(db, { kind, id: String(id) })
+  return deleteDocChunks(db, { kind, id: String(id) })
 }
 
 export type ReindexResult = { docs: number; embedded: number; removed: number }
 
+const BUILD_LOCK = 'ai.chunks first build'
+
 /**
  * Re-check every document the public can read, and drop rows of documents
  * that are gone. Unchanged chunks cost one SELECT each, no embedding call.
+ *
+ * With `atomic` (the first build, started by a search on an empty index),
+ * every write lands in one transaction: a build that fails half way leaves
+ * the index empty, so the next search starts it again instead of finding a
+ * partial index that looks built. Only one atomic build runs at a time; a
+ * second one returns null at once.
  */
-export const reindexAll = async (payload: Payload): Promise<ReindexResult | null> => {
+export const reindexAll = async (
+  payload: Payload,
+  options: { atomic?: boolean } = {},
+): Promise<ReindexResult | null> => {
   const config = embeddingConfig()
   if (!config) return null
   const db = dbOf(payload)
   await ensureSchema(db)
+  const build = (target: Db) => reindexInto(payload, target, config)
+  return options.atomic ? inTransaction(payload, build, BUILD_LOCK) : build(db)
+}
 
+const reindexInto = async (payload: Payload, db: Db, config: EmbeddingConfig): Promise<ReindexResult> => {
   let docs = 0
   let embedded = 0
   let removed = 0
@@ -152,7 +183,7 @@ export const reindexAll = async (payload: Payload): Promise<ReindexResult | null
     for (const id of ids) {
       let shown = false
       for (const locale of LOCALES) {
-        const result = await indexLocale(payload, db, config, { kind, id }, locale)
+        const { result } = await indexLocale(payload, db, config, { kind, id }, locale)
         if (result !== 'removed') {
           shown = true
           embedded += result.embedded

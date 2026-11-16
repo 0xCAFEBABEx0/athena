@@ -6,6 +6,7 @@ import { isServerCaller } from '@/ai/auth'
 import { reindexAll } from '@/ai/indexer'
 import { SearchUnavailableError, parseSearchRequest, semanticSearch } from '@/ai/search'
 import { isMissingTable } from '@/ai/store'
+import { invalidateWebAiResults } from '@/utilities/invalidateWeb'
 
 const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
@@ -38,10 +39,16 @@ export async function POST(request: Request): Promise<Response> {
     if (indexEmpty) {
       // First search after the table was created or the embedding model
       // changed: build the index in the background, so the next search finds
-      // documents without anyone calling /api/ai/reindex.
+      // documents without anyone calling /api/ai/reindex. In one transaction,
+      // so a failed build leaves the index empty and the next search retries
+      // (saves do not index while it is empty, see indexDoc); a search during
+      // the build finds it running and starts nothing.
       after(async () => {
         try {
-          payload.logger.info({ msg: 'AI index: built on first search', result: await reindexAll(payload) })
+          const result = await reindexAll(payload, { atomic: true })
+          if (!result) return
+          payload.logger.info({ msg: 'AI index: built on first search', result })
+          await invalidateWebAiResults(payload)
         } catch (error) {
           payload.logger.error({ err: error, msg: 'AI index: first build failed' })
         }

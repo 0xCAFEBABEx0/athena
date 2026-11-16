@@ -14,6 +14,7 @@ import { isrBypassToken } from '@/lib/isr-bypass.mjs'
  *   POST /api/invalidate
  *   Authorization: Bearer ${REVALIDATE_SECRET}
  *   { "paths": ["/posts/foo"], "tags": ["posts", "sitemap"] }
+ *   { "tags": ["ai_index"] }   (AI index updated: expire cached CMS data only)
  *
  * Vercel caches every rendered page, feed and sitemap (ISR) under one cache
  * tag (see lib/cache.ts). Any change first marks that tag stale, so every
@@ -54,6 +55,20 @@ export const POST: APIRoute = async ({ request }) => {
   } catch {
     return new Response('Invalid JSON body', { status: 400 })
   }
+  // The AI search index changed after the publish's own invalidation: only
+  // the cached CMS responses (AI results and answers among them) go stale;
+  // pages are already fresh, so nothing is re-rendered.
+  const tags = body.tags ?? []
+  if (!body.paths?.length && tags.length && tags.every((tag) => tag === CACHE_TAGS.aiIndex)) {
+    return Response.json({
+      invalidated: false,
+      cmsData: await expireCmsData(),
+      revalidated: [],
+      failed: [],
+      tags,
+    })
+  }
+
   const bypassToken = isrBypassToken(secret) ?? ''
 
   const paths = new Set<string>(

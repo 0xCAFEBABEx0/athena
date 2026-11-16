@@ -41,6 +41,11 @@ export const CACHE_TAGS = {
   about: 'global_about',
   redirects: 'redirects',
   sitemap: 'sitemap',
+  /**
+   * The AI search index changed (apps/cms/src/ai): the web app expires its
+   * cached search results and answers only, no page re-renders.
+   */
+  aiIndex: 'ai_index',
 } as const
 
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS]
