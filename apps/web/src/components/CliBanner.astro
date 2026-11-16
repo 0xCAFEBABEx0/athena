@@ -19,6 +19,7 @@ import { owlPaths, OWL_HEIGHT, OWL_WIDTH, type OwlFrame } from '@/lib/owl'
 import type { SiteData } from '@/lib/site'
 import RelativeTimes from '@/components/work/RelativeTimes.astro'
 import type { BannerActivity } from '@/lib/activity'
+import { aiModes } from '@/lib/ai'
 
 type Props = {
   site: SiteData
@@ -29,12 +30,16 @@ type Props = {
 
 const { site, totalPosts, updated, activity } = Astro.props
 const t = dict(localeOf(Astro))
-const tips = site.banner.tips.length > 0 ? site.banner.tips : t.bannerTips
+const ask = aiModes().includes('ask')
+// The default tips mention Ask AI only where it is on; Site banner tips are used as written.
+const [welcome, ...rest] = t.bannerTips
+const defaultTips = [welcome ?? '', ask ? t.bannerTipSearchAsk : t.bannerTipSearch, ...rest]
+const tips = site.banner.tips.length > 0 ? site.banner.tips : defaultTips
 const frames: OwlFrame[] = ['sleep', 'awake', 'wave', 'wink']
 const name = site.authorName || site.siteName
 const kindLabel = { post: t.activityPost, release: t.activityRelease, push: t.activityPush }
 const commands = [
-  { cmd: 'search', key: '/', label: t.bannerCmdSearch },
+  { cmd: 'search', key: '/', label: ask ? t.bannerCmdSearchAsk : t.bannerCmdSearch },
   { cmd: 'status', key: '/status', label: t.bannerCmdStatus },
   { cmd: 'view', key: 'v', label: t.bannerCmdView },
   { cmd: 'theme', key: 't', label: t.bannerCmdTheme },

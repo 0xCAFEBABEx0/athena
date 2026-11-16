@@ -4,6 +4,49 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.5.0] - 2026-11-13
+
+### Added
+
+- Search by meaning: `/search` still narrows the notes by keyword as you
+  type, and Enter now searches the whole site for what you mean, not only the
+  words you typed: notes, /about, /builds, /stacks and other pages, best
+  first, with the closest passage under each title. Enter in the search box
+  on every page and in the "/" popup does the same.
+- **Ask AI** tab on `/search`: answers a question from the site (the notes
+  and the about, builds and stacks pages), in the page's language, with
+  numbered citations that link to the pages it used.
+  While you type in the search box or the "/" popup, an **Ask Hoo** row opens
+  your question there.
+- Suggested questions under Ask AI, set per language in the CMS (Site).
+- Answers are kept and reused for the same question, or one meaning nearly
+  the same, as long as the pages they came from have not changed, so common
+  questions cost nothing after the first time; uncached questions are
+  limited per visitor and per day.
+- The answer model is chosen in the CMS (Site) and takes effect on save,
+  no deploy.
+- The CMS keeps an index of the text visitors can read (one pgvector table
+  outside Payload's own, for notes, pages, builds, About and Stack), updated
+  on publish. Needs `docs/sql/2026-11-15-ai.sql` and the `VOYAGE_API_KEY` /
+  `ANTHROPIC_API_KEY` settings ([`docs/AI_SEARCH.md`](docs/AI_SEARCH.md));
+  without them `/search` stays as it was.
+
+### Changed
+
+- The search boxes, the sidebar's search button and the home tips no longer
+  say "Search notes": they say "Search", or "Search, or ask Hoo" where Ask
+  AI is on, and an AI error now points to the keyword search that still works
+  as you type, not to the old Keyword tab.
+
+### Security
+
+- Pages can no longer be shown in a frame by other sites (only the site
+  itself and the CMS's Live Preview), and a link from another site to an AI
+  question waits for Enter instead of asking it.
+- A kept answer is reused for a reworded question only when it was written
+  for one of the suggested questions; the daily AI limit refuses requests
+  when it cannot count them.
+
 ## [1.4.0] - 2026-11-13
 
 ### Changed

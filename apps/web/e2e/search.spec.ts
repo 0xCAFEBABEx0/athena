@@ -48,9 +48,11 @@ test.describe('/search (one cached page, filtered in the browser)', () => {
     page.on('request', (request) => {
       if (request.resourceType() === 'document') documents += 1
     })
+    // With AI search on, Enter searches by meaning (stubbed: costs nothing).
+    await page.route('**/api/ai/search', (route) => route.fulfill({ json: { results: [] } }))
     await page.locator('[data-search-input]').fill('astro')
     await page.locator('[data-search-input]').press('Enter')
-    await expect(page).toHaveURL(/\/search\?q=astro$/)
+    await expect(page).toHaveURL(/\/search\?q=astro(&mode=meaning)?$/)
     expect(documents).toBe(0)
   })
 
@@ -71,5 +73,23 @@ test.describe('/search (one cached page, filtered in the browser)', () => {
     const all = await page.locator('[data-search-text]').count()
     await expect(visibleRows(page)).toHaveCount(all)
     await expect(page.locator('[data-prompt-count]').first()).toHaveText(String(all))
+  })
+
+  test('TC-E-70 the search boxes say "Search", and mention Hoo only with Ask AI', async ({ page }) => {
+    await open(page, '/search', { view: 'cli' })
+    const withAsk = (await page.locator('[data-search-mode="ask"]').count()) > 0
+    const expected = withAsk ? 'Search, or ask Hoo…' : 'Search…'
+    await expect(page.locator('[data-search-page] [data-search-input]').first()).toHaveAttribute('placeholder', 'Search…')
+    await open(page, '/', { view: 'modern' })
+    await expect(page.locator('[data-search-prompt] [data-search-input]').first()).toHaveAttribute('placeholder', expected)
+    await expect(page.locator('.modern-search-button').first()).toContainText(withAsk ? 'Search or ask Hoo' : 'Search')
+    await open(page, '/', { view: 'cli' })
+    await page.keyboard.press('/')
+    await expect(page.locator('[data-search-query]')).toHaveAttribute('placeholder', expected)
+    await open(page, '/ja/', { view: 'modern' })
+    await expect(page.locator('[data-search-prompt] [data-search-input]').first()).toHaveAttribute(
+      'placeholder',
+      withAsk ? '検索・Hoo に質問…' : '検索…',
+    )
   })
 })

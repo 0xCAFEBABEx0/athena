@@ -1,7 +1,7 @@
 import { after } from 'next/server'
 import type { Payload } from 'payload'
 
-import type { CacheTag } from '@athena/shared/constants'
+import { CACHE_TAGS, type CacheTag } from '@athena/shared/constants'
 
 type InvalidateArgs = {
   paths?: string[]
@@ -36,6 +36,17 @@ export const invalidateWeb = async (args: InvalidateArgs): Promise<void> => {
     await sendInvalidation(args)
   }
 }
+
+/**
+ * The AI search index changed: expire the web app's cached AI results and
+ * answers (the Runtime Cache), with no page re-render. Called once the index
+ * update is written, which is seconds after the publish's own invalidation
+ * (the embedding call sits in between): a search in that window would
+ * otherwise keep the old excerpts, even an unpublished note's, cached for a
+ * day. Sent right away: callers already run after the save is committed.
+ */
+export const invalidateWebAiResults = (payload: Payload): Promise<void> =>
+  sendInvalidation({ tags: [CACHE_TAGS.aiIndex], payload })
 
 const sendInvalidation = async ({ paths = [], tags = [], payload }: InvalidateArgs) => {
   const webURL = process.env.WEB_URL

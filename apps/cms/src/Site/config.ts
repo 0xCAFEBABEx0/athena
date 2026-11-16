@@ -231,6 +231,35 @@ export const Site: GlobalConfig = {
       ],
     },
     {
+      name: 'aiModel',
+      type: 'select',
+      label: 'AI search: answer model',
+      defaultValue: 'claude-opus-5-5',
+      options: [
+        { label: 'Claude Opus 5.5 (best answers, ~$0.03 each)', value: 'claude-opus-5-5' },
+        { label: 'Claude Sonnet 5.5 (~$0.015 each)', value: 'claude-sonnet-5-5' },
+        { label: 'Claude Haiku 5.5 (cheapest, ~$0.001 each)', value: 'claude-haiku-5-5' },
+      ],
+      admin: {
+        description:
+          'Writes the answers under "Ask AI" on /search. Takes effect on save, no deploy. Answers kept from another model are written again on their next ask.',
+      },
+    },
+    {
+      name: 'aiPresets',
+      type: 'array',
+      localized: true,
+      maxRows: 6,
+      label: 'AI search: suggested questions',
+      labels: { singular: 'Question', plural: 'Questions' },
+      admin: {
+        initCollapsed: true,
+        description:
+          'Offered under "Ask AI" on /search, in this language. Each answer is written once and kept until the notes it cites change. Empty: no suggestions.',
+      },
+      fields: [{ name: 'question', type: 'text', required: true, maxLength: 120 }],
+    },
+    {
       name: 'banner',
       type: 'group',
       label: 'CLI banner',

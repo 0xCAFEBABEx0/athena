@@ -10,6 +10,8 @@ import {
   lexicalEditor,
 } from '@payloadcms/richtext-lexical'
 
+import { indexGlobalAfterChange } from '@/ai/hooks'
+
 import { revalidateAbout } from './hooks/revalidateAbout'
 
 /**
@@ -90,6 +92,6 @@ export const About: GlobalConfig = {
     },
   ],
   hooks: {
-    afterChange: [revalidateAbout],
+    afterChange: [revalidateAbout, indexGlobalAfterChange('about')],
   },
 }

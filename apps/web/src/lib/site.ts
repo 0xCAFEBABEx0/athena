@@ -30,6 +30,10 @@ export type SiteData = {
   picks: SitePick[]
   /** GitHub contribution graph for the home page, or null when off or not read yet. */
   contributions: Contributions | null
+  /** Suggested questions under Ask AI on /search, in the page's language. */
+  aiPresets: string[]
+  /** Claude model for Ask AI answers chosen in the CMS; null = AI_ANSWER_MODEL or the default. */
+  aiModel: string | null
   /** CLI-view welcome box: Hoo the owl beside the intro, or the plain box. */
   banner: {
     style: 'fetch' | 'off'
@@ -157,6 +161,11 @@ export const normalizeSite = (site: Partial<Site> | null | undefined): SiteData 
     })),
   picks: picksOf(site?.picks),
   contributions: contributionsOf(site?.github),
+  aiModel: typeof site?.aiModel === 'string' && /^claude-[\w.-]{1,60}$/.test(site.aiModel) ? site.aiModel : null,
+  aiPresets: (site?.aiPresets ?? [])
+    .map((preset) => preset.question?.replace(/\s+/g, ' ').trim() ?? '')
+    .filter((question) => question.length > 0 && question.length <= 300)
+    .slice(0, 6),
   banner: {
     style: site?.banner?.style === 'off' ? 'off' : 'fetch',
     mascot: site?.banner?.mascot !== false,

@@ -8,6 +8,7 @@ import { tagAsContent } from '@/lib/cache'
 import { getRedirects } from '@/lib/cms'
 import { withFreshCmsReads } from '@/lib/cms-cache'
 import { env } from '@/lib/env'
+import { withFramePolicy } from '@/lib/frame-policy'
 import { DEFAULT_LOCALE, localizePath, splitLocale, type Locale } from '@/lib/i18n'
 import { linkHref, type CMSLinkData } from '@/lib/links'
 import { isrBypassToken } from '@/lib/isr-bypass.mjs'
@@ -172,8 +173,8 @@ const isRevalidation = (request: Request): boolean => {
   return Boolean(token) && token === isrBypassToken(env('REVALIDATE_SECRET'))
 }
 
-export const onRequest = defineMiddleware((context, next) => {
-  if (!isRevalidation(context.request)) return handle(context, next)
+export const onRequest = defineMiddleware(async (context, next) => {
+  if (!isRevalidation(context.request)) return withFramePolicy(await handle(context, next))
   console.info(`[cms-cache] fresh CMS reads for ${context.url.pathname}`)
-  return withFreshCmsReads(() => handle(context, next))
+  return withFramePolicy(await withFreshCmsReads(() => handle(context, next)))
 })

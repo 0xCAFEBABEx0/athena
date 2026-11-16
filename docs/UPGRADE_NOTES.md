@@ -2,6 +2,58 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## AI search on `/search` — 2026-11-13 (pages added 2026-11-15)
+
+**CMS**
+
+- `src/ai/`: text of notes, pages, builds, About and Stack → chunks →
+  embeddings (Voyage `voyage-4-lite`, 1024 dimensions) in `ai.chunks`
+  (pgvector, one table with `kind` + `doc_id`). The `afterChange` /
+  `afterDelete` hooks of Posts, Pages and Projects and the `afterChange` hooks
+  of the About and Stack globals keep it in step after the commit; drafts and
+  autosaves are skipped. New routes `POST /api/ai/search` (web server or a logged-in
+  user) and `POST /api/ai/reindex` (logged-in user).
+- New route `POST /api/ai/answers` (web server only) keeps finished answers
+  in `ai.answers` for reuse.
+- No new collection or job task; the only Payload schema change is the two
+  Site fields above.
+
+**Web**
+
+- `/search` gets mode tabs (By meaning with `REVALIDATE_SECRET`, Ask AI
+  also with `ANTHROPIC_API_KEY`) and the suggested questions; `POST /api/ai/search` and `/api/ai/ask`
+  (NDJSON stream). New dependency `@anthropic-ai/sdk`. daisyUI `include:`
+  gains `alert`, `loading`, `link`.
+
+**Settings (Site global)**: `aiModel` (select: Opus 5.5 / Sonnet 5.5 /
+Haiku 5.5, takes effect on save) and `aiPresets` (localized array of
+suggested questions, up to 6). These are Payload fields, so they are in
+`payload-types.ts` and need the SQL below.
+
+**Database (manual, schema push is off)**
+
+Run [`docs/sql/2026-11-15-ai.sql`](./sql/2026-11-15-ai.sql) (pgvector,
+schema `ai`, tables `ai.chunks` and `ai.answers`, enum `enum_site_ai_model`,
+column `site.ai_model`, table `site_ai_presets`) on the preview Neon branch,
+then production, before the CMS deploys: the CMS reads the Site columns on
+every Site read. It replaces the two files of 2026-11-13, which only ever ran
+on the preview branch; there it also drops their notes-only
+`ai.post_chunks` (the index is rebuilt by the next search). Checked: it runs
+twice on a database that ran the old files; the Site part is exactly what
+Payload's push creates for the Site fields.
+
+**Environment**
+
+- athena-cms: `VOYAGE_API_KEY` (Preview + Production).
+- athena-web: `ANTHROPIC_API_KEY` (Preview + Production); optional
+  `AI_DAILY_LIMIT` (default 100 uncached questions a day), `AI_ANSWER_MODEL`.
+
+**After deploying**
+
+The index fills on the first search by meaning (or `POST /api/ai/reindex`
+from a logged-in admin). Details and the Payload 4.0 notes:
+[`docs/AI_SEARCH.md`](./AI_SEARCH.md).
+
 ## About page — 2026-11-12
 
 **CMS**

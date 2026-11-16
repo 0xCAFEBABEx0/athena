@@ -36,6 +36,22 @@ describe('normalizeSite', () => {
     expect(site.banner).toEqual({ style: 'off', mascot: false, tips: ['hi'] })
   })
 
+  test('TC-U-61 AI search settings: the answer model and trimmed suggested questions (6 at most)', () => {
+    const site = normalizeSite({
+      aiModel: 'claude-haiku-5-5',
+      aiPresets: [
+        { question: '  How   do you deploy? ' },
+        { question: '   ' },
+        ...Array.from({ length: 8 }, (_, i) => ({ question: `Q${i}` })),
+      ],
+    })
+    expect(site.aiModel).toBe('claude-haiku-5-5')
+    expect(site.aiPresets).toEqual(['How do you deploy?', 'Q0', 'Q1', 'Q2', 'Q3', 'Q4'])
+    expect(normalizeSite({}).aiModel).toBeNull()
+    expect(normalizeSite({}).aiPresets).toEqual([])
+    expect(normalizeSite({ aiModel: 'gpt-x' as never }).aiModel).toBeNull()
+  })
+
   test('TC-U-30 X picks: only x.com post links with text; trimmed fields and fallbacks', () => {
     const site = normalizeSite({
       picks: [
