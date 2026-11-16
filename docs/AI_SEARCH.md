@@ -104,7 +104,9 @@ POST /api/ai/search  ◄──────────────── Bearer 
   unpublish the build read too early does not stay searchable. A waiting
   save polls the lock every half second and holds no database connection
   meanwhile (the build needs the pool for its own reads); after 40 s it
-  gives up with a warning, and the next save or a reindex catches up. To
+  gives up with a warning. The build reads every document a second time
+  before it commits (unchanged excerpts cost one SELECT), so a save that
+  gave up, or a delete, made while the build ran is still reflected. To
   rebuild by hand, a logged-in admin can `POST /api/ai/reindex` on the CMS
   (same cookie as the admin); it expires the web's cached AI results even
   when it fails half way.

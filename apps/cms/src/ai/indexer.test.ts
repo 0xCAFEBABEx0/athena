@@ -431,6 +431,25 @@ suite('TC-U-56 AI index: Postgres', () => {
     }
   })
 
+  test('the first build reads everything again before it commits: an unpublish it missed is not kept', async () => {
+    const a: Doc = { id: 11, slug: 'a', title: 'A', content: body('Alpha.') }
+    const b: Doc = { id: 12, slug: 'b', title: 'B', content: body('Bravo.') }
+    published = { en: [a, b], ja: [a, b], zh: [a, b] }
+    // Post 11 is unpublished once the build has read it; its save gave up
+    // waiting for the build (BUILD_WAIT_MS), so no hook applies it.
+    const working = globalThis.fetch
+    globalThis.fetch = (async (url: string, init: RequestInit) => {
+      if (String(init.body).includes('Bravo')) published = { en: [b], ja: [b], zh: [b] }
+      return working(url, init)
+    }) as unknown as typeof fetch
+    try {
+      await reindexAll(fakePayload(), { atomic: true })
+    } finally {
+      globalThis.fetch = working
+    }
+    expect([...new Set((await rows()).map((row) => row.doc_id))]).toEqual(['12'])
+  })
+
   test('kept answers: found by the same wording or a question meaning nearly the same, per language and model', async () => {
     const v = (dim: number, tilt = 0) => {
       const x = new Array(EMBEDDING_DIMENSIONS).fill(0)

@@ -259,28 +259,38 @@ const reindexInto = async (
     await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [lock.key])
     return indexAllLocales(db, doc)
   }
-  let docs = 0
   let embedded = 0
   let removed = 0
-  for (const kind of DOC_KINDS) {
-    const ids = new Set<string>()
-    for (const locale of LOCALES) {
-      for (const id of await listIds(payload, kind, locale)) ids.add(id)
-    }
-    for (const id of ids) {
-      const done = await underLock({ kind, id })
-      if (done?.shown) docs += 1
-      embedded += done?.count ?? 0
-    }
-    for (const id of await otherDocIds(db, kind, [...ids])) {
-      const done = await underLock({ kind, id })
-      removed += done?.dropped ?? 0
-      if (done?.shown) {
-        docs += 1
-        embedded += done.count
+  const pass = async () => {
+    let docs = 0
+    for (const kind of DOC_KINDS) {
+      const ids = new Set<string>()
+      for (const locale of LOCALES) {
+        for (const id of await listIds(payload, kind, locale)) ids.add(id)
+      }
+      for (const id of ids) {
+        const done = await underLock({ kind, id })
+        if (done?.shown) docs += 1
+        embedded += done?.count ?? 0
+      }
+      for (const id of await otherDocIds(db, kind, [...ids])) {
+        const done = await underLock({ kind, id })
+        removed += done?.dropped ?? 0
+        if (done?.shown) {
+          docs += 1
+          embedded += done.count
+        }
       }
     }
+    return docs
   }
+  let docs = await pass()
+  // The first build reads everything a second time before it commits: a
+  // save made while it ran (an unpublish, say) and that gave up waiting for
+  // it (waitForBuild) is then reflected, as is a delete, whose rows did not
+  // exist yet outside the build's transaction. Unchanged excerpts cost one
+  // SELECT each, so this pass is quick.
+  if (inside) docs = await pass()
   removed += await deleteUnknownKinds(db)
   return { docs, embedded, removed }
 }
