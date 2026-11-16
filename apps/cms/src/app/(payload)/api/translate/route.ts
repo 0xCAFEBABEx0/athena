@@ -1,4 +1,6 @@
 import config from '@/payload.config'
+import { anthropicConnection } from '@athena/shared/anthropic'
+import Anthropic from '@anthropic-ai/sdk'
 import { getPayload } from 'payload'
 
 import {
@@ -25,8 +27,11 @@ export async function POST(request: Request): Promise<Response> {
   const payload = await getPayload({ config })
   const { user } = await payload.auth({ headers: request.headers })
   if (!user) return json({ error: 'Log in to translate.' }, 401)
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return json({ error: 'ANTHROPIC_API_KEY is not set on the CMS deployment.' }, 503)
+  if (!anthropicConnection((key) => process.env[key])) {
+    return json(
+      { error: 'Set ANTHROPIC_API_KEY (or ANTHROPIC_BASE_URL + CF_AIG_TOKEN for Cloudflare AI Gateway) on the CMS deployment.' },
+      503,
+    )
   }
 
   const body = (await request.json().catch(() => null)) as {
@@ -57,6 +62,10 @@ export async function POST(request: Request): Promise<Response> {
   } catch (error) {
     payload.logger.error({ err: error, msg: `translate ${String(collection)}/${id} failed` })
     if (error instanceof TranslationError) return json({ error: error.message }, 422)
+    if (error instanceof Anthropic.RateLimitError) {
+      // Anthropic's rate limit, or a Cloudflare AI Gateway spend limit.
+      return json({ error: 'The AI usage limit is reached for now. Try again later.' }, 429)
+    }
     return json({ error: 'Translation failed. See the CMS logs.' }, 502)
   }
 }

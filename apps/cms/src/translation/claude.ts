@@ -1,3 +1,4 @@
+import { anthropicConnection } from '@athena/shared/anthropic'
 import Anthropic from '@anthropic-ai/sdk'
 
 import type { Segment } from './segments'
@@ -122,7 +123,8 @@ async function translateChunk(
 export async function translateSegments(
   segments: Segment[],
   locale: TargetLocale,
-  client = new Anthropic(),
+  // Direct, or through Cloudflare AI Gateway with the key stored there.
+  client = new Anthropic(anthropicConnection((key) => process.env[key]) ?? {}),
 ): Promise<Map<number, string>> {
   const merged = new Map<number, string>()
   for (const part of chunk(segments)) {

@@ -208,6 +208,7 @@ REVALIDATE_SECRET=         # Shared with web: bearer token for /api/invalidate (
 WEB_PROTECTION_BYPASS=     # optional; athena-web Protection Bypass for Automation (invalidation past Vercel Authentication)
 BLOB_READ_WRITE_TOKEN=     # Vercel Blob storage token
 ANTHROPIC_API_KEY=         # Translate button (Claude); TRANSLATION_MODEL optional
+ANTHROPIC_BASE_URL= CF_AIG_TOKEN=  # optional, both apps: Claude via Cloudflare AI Gateway, key stored there (BYOK, spend limit; docs/AI_SEARCH.md); ANTHROPIC_API_KEY then unused
 VOYAGE_API_KEY=            # AI search embeddings (voyage-4-lite); EMBEDDING_PROVIDER/MODEL/BASE_URL optional (openai uses OPENAI_API_KEY)
 GITHUB_TOKEN=              # /builds GitHub sync (fine-grained, public repos read-only)
 ```
@@ -218,7 +219,7 @@ Web (`apps/web/.env` — see `apps/web/README.md`):
 CMS_URL= WEB_URL= PREVIEW_SECRET= REVALIDATE_SECRET=
 PAYLOAD_API_KEY=           # web-frontend service account key (draft fetches)
 CMS_PROTECTION_BYPASS=     # optional; athena-cms Protection Bypass for Automation
-ANTHROPIC_API_KEY=         # AI search answers; unset = no Ask AI tab (By meaning still shows; AI_SEARCH=off hides both). AI_ANSWER_MODEL (used only when Site has no aiModel), AI_DAILY_LIMIT (default 100) optional
+ANTHROPIC_API_KEY=         # AI search answers (or ANTHROPIC_BASE_URL + CF_AIG_TOKEN, see CMS above); neither = no Ask AI tab (By meaning still shows; AI_SEARCH=off hides both). AI_ANSWER_MODEL (used only when Site has no aiModel), AI_DAILY_LIMIT (default 100) optional
 ```
 
 ## Key URLs (Local Dev)

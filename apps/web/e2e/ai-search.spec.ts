@@ -249,6 +249,19 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await page.locator('[data-search-input]').press('Enter')
     await expect(page.locator('[data-ai-error]')).toBeVisible()
     await expect(page.locator('[data-ai-answer]')).toBeHidden()
+
+    // A spending limit (Anthropic or Cloudflare AI Gateway, 429 from Claude) arrives in the stream.
+    await page.unroute('**/api/ai/ask')
+    await page.route('**/api/ai/ask', (route) =>
+      route.fulfill({
+        contentType: 'application/x-ndjson',
+        body: `${JSON.stringify({ type: 'error', code: 'limit', message: 'limit' })}\n`,
+      }),
+    )
+    await page.locator('[data-search-input]').fill('さらにもう一度')
+    await page.locator('[data-search-input]').press('Enter')
+    await expect(page.locator('[data-ai-error]')).toBeVisible()
+    await expect(page.locator('[data-ai-error]')).toContainText('利用上限')
   })
 
   test('TC-E-67 a suggested question asks itself when clicked, shows only in Ask AI, and fits a phone', async ({ page }) => {

@@ -20,10 +20,11 @@ import {
 } from './ai'
 import { allowToday, allowVisitor, dailyLimit, resetVisitorLimits } from './ai-limits'
 import { bumpCounter, peekCms, storeCms, type CmsCacheStore } from './cms-cache'
+import { anthropicConnection } from '@athena/shared/anthropic'
 import { ROUTES } from '@athena/shared/constants'
 
 /** Set environment variables for one test and put the old values back after it. */
-const envKeys = ['REVALIDATE_SECRET', 'CMS_URL', 'CMS_PROTECTION_BYPASS', 'AI_DAILY_LIMIT', 'AI_SEARCH', 'ANTHROPIC_API_KEY'] as const
+const envKeys = ['REVALIDATE_SECRET', 'CMS_URL', 'CMS_PROTECTION_BYPASS', 'AI_DAILY_LIMIT', 'AI_SEARCH', 'ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL', 'CF_AIG_TOKEN'] as const
 const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]))
 const restoreEnv = () => {
   for (const key of envKeys) {
@@ -220,6 +221,32 @@ describe('TC-U-58 AI search (web): asking the CMS', () => {
     delete process.env.AI_SEARCH
     delete process.env.REVALIDATE_SECRET
     expect(aiModes()).toEqual([])
+  })
+
+  test('Ask AI also shows with Cloudflare AI Gateway BYOK (base URL + gateway token, no Anthropic key)', () => {
+    process.env.REVALIDATE_SECRET = 's'
+    delete process.env.ANTHROPIC_API_KEY
+    delete process.env.AI_SEARCH
+    delete process.env.ANTHROPIC_BASE_URL
+    process.env.CF_AIG_TOKEN = 't'
+    expect(aiModes()).toEqual(['meaning'])
+    process.env.ANTHROPIC_BASE_URL = 'https://gateway.ai.cloudflare.com/v1/acc/gw/anthropic'
+    expect(aiModes()).toEqual(['meaning', 'ask'])
+  })
+
+  test('anthropicConnection: direct key, or the gateway with the key stored there (no x-api-key sent)', () => {
+    const read = (vars: Record<string, string>) => (key: string) => vars[key]
+    expect(anthropicConnection(read({}))).toBeNull()
+    expect(anthropicConnection(read({ CF_AIG_TOKEN: 't' }))).toBeNull()
+    expect(anthropicConnection(read({ ANTHROPIC_API_KEY: 'k' }))).toEqual({ apiKey: 'k' })
+    expect(anthropicConnection(read({ ANTHROPIC_API_KEY: 'k', ANTHROPIC_BASE_URL: 'https://x' }))).toEqual({
+      apiKey: 'k',
+      baseURL: 'https://x',
+    })
+    const gateway = anthropicConnection(read({ ANTHROPIC_API_KEY: 'k', ANTHROPIC_BASE_URL: 'https://gw', CF_AIG_TOKEN: ' t ' }))
+    expect(gateway?.baseURL).toBe('https://gw')
+    expect(gateway?.apiKey).not.toBe('k')
+    expect(gateway?.defaultHeaders).toEqual({ 'cf-aig-authorization': 'Bearer t', 'x-api-key': null })
   })
 
   test('Ask AI also asks for kept answers by its model (a cache entry of its own); answers are kept with the secret, failures only logged', async () => {
