@@ -106,7 +106,12 @@ POST /api/ai/search  ◄──────────────── Bearer 
   meanwhile (the build needs the pool for its own reads); after 40 s it
   gives up with a warning. The build reads every document a second time
   before it commits (unchanged excerpts cost one SELECT), so a save that
-  gave up, or a delete, made while the build ran is still reflected. To
+  gave up, or a delete, made while the build ran is still reflected. Only
+  an unpublish or delete after that second read, with the rest of the
+  build lasting over 40 s, can stay in the index: the CMS logs
+  `AI index: <kind> <id> skipped, the first build is still running`, and
+  the next save of that document or a reindex removes it (closing this
+  fully would need a durable queue; hooks run in the request's function). To
   rebuild by hand, a logged-in admin can `POST /api/ai/reindex` on the CMS
   (same cookie as the admin); it expires the web's cached AI results even
   when it fails half way.
