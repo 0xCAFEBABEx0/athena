@@ -369,6 +369,33 @@ suite('TC-U-56 AI index: Postgres', () => {
     expect(await rows()).toEqual([])
   })
 
+  test('a save during the first build waits for it, then applies on top of what the build read', async () => {
+    const a: Doc = { id: 9, slug: 'a', title: 'A', content: body('Alpha.') }
+    published = { en: [a], ja: [a], zh: [a] }
+    await indexDoc(fakePayload(), 'post', 9)
+    await pool.query('DROP TABLE IF EXISTS ai.build_copy')
+    await pool.query('CREATE TABLE ai.build_copy AS SELECT * FROM ai.chunks')
+    await pool.query('TRUNCATE ai.chunks')
+
+    // The build has read post 9 as published and written it, not committed yet.
+    const build = await pool.connect()
+    await build.query('BEGIN')
+    await build.query("SELECT pg_advisory_xact_lock(hashtext('ai.chunks first build'))")
+    await build.query('INSERT INTO ai.chunks SELECT * FROM ai.build_copy')
+    // Post 9 is unpublished now; its hook must not skip on the empty index.
+    published = {}
+    const pending = indexDoc(fakePayload(), 'post', 9, undefined, { untilBuilt: true })
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    await build.query('COMMIT')
+    build.release()
+    expect(await rows()).toHaveLength(3)
+    const done = await pending
+    expect(done?.waiting).toBeUndefined()
+    expect(done?.changed).toBe(3)
+    expect(await rows()).toEqual([])
+    await pool.query('DROP TABLE ai.build_copy')
+  })
+
   test('kept answers: found by the same wording or a question meaning nearly the same, per language and model', async () => {
     const v = (dim: number, tilt = 0) => {
       const x = new Array(EMBEDDING_DIMENSIONS).fill(0)

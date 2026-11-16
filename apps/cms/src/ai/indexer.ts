@@ -112,6 +112,10 @@ const indexLocale = async (
  * With `untilBuilt` (the save hooks), nothing is done while the index holds
  * no row of the current model: the first search builds the whole index, and
  * a save before it must not leave a few rows that make the index look built.
+ * A first build in progress holds its lock until it commits, so the check
+ * waits for it (a shared lock: saves do not wait for each other) and then
+ * finds the index built: a save the build may have read before it was
+ * committed (an unpublish, say) is then applied on top.
  */
 export const indexDoc = async (
   payload: Payload,
@@ -126,7 +130,14 @@ export const indexDoc = async (
   await ensureSchema(db)
   const doc: DocRef = { kind, id: String(id) }
   const result: IndexResult = { kind, id: doc.id, locales: {}, changed: 0 }
-  if (options.untilBuilt && (await isEmptyFor(db, modelId(config)))) return { ...result, waiting: true }
+  if (options.untilBuilt) {
+    const built = await inTransaction(payload, async (locked) => !(await isEmptyFor(locked, modelId(config))), {
+      key: BUILD_LOCK,
+      wait: true,
+      shared: true,
+    })
+    if (!built) return { ...result, waiting: true }
+  }
   // One update of a document at a time, each reading the document only once
   // it holds the lock: a publish still waiting on its embeddings can then not
   // write its text back after a later unpublish or delete removed it.
@@ -145,7 +156,6 @@ export const indexDoc = async (
 }
 
 const docLockKey = (doc: DocRef) => `ai.chunks ${doc.kind} ${doc.id}`
-
 /** Remove a deleted document from the index; returns the rows removed. */
 export const removeDoc = async (
   payload: Payload,

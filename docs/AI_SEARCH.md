@@ -97,7 +97,9 @@ POST /api/ai/search  ◄──────────────── Bearer 
   an advisory lock: a build that fails half way leaves the index empty and
   the next search starts it again, and a search during the build starts
   nothing. Saves do not index while the index is empty (a few rows from a
-  save would make it look built and hide every other document). To rebuild
+  save would make it look built and hide every other document); a save
+  during the build waits for it to commit, then applies on top, so an
+  unpublish the build read too early does not stay searchable. To rebuild
   by hand, a logged-in admin can `POST /api/ai/reindex` on the CMS (same
   cookie as the admin).
 - **Search** (`POST ${CMS_URL}/api/ai/search`, `{ q, locale, limit }`): embeds
