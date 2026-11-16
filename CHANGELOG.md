@@ -4,6 +4,21 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.6.0] - 2026-11-16
+
+### Added
+
+- Claude can be reached through Cloudflare AI Gateway with the Anthropic key
+  stored there (BYOK), so a spending limit can cap what Ask AI and the
+  Translate button cost. Set `ANTHROPIC_BASE_URL` and `CF_AIG_TOKEN` on both
+  apps instead of `ANTHROPIC_API_KEY`; without them nothing changes. Setup:
+  `docs/AI_SEARCH.md`.
+
+### Changed
+
+- When Claude refuses for a rate or spending limit, Ask AI says the limit is
+  reached instead of a generic error, and the Translate button answers 429.
+
 ## [1.5.0] - 2026-11-13
 
 ### Added

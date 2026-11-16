@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 
+import { anthropicConnection } from '@athena/shared/anthropic'
 import { ROUTES } from '@athena/shared/constants'
 
 import { cachedCms } from './cms-cache'
@@ -87,12 +88,13 @@ export type AiMode = 'meaning' | 'ask'
 /**
  * The AI modes this deployment offers. By meaning needs only the CMS (its
  * VOYAGE_API_KEY and the ai.chunks table; this server reaches it with
- * REVALIDATE_SECRET); Ask AI also needs ANTHROPIC_API_KEY here.
+ * REVALIDATE_SECRET); Ask AI also needs a way to Claude here: ANTHROPIC_API_KEY,
+ * or ANTHROPIC_BASE_URL + CF_AIG_TOKEN for Cloudflare AI Gateway (anthropicConnection).
  * AI_SEARCH=off hides both.
  */
 export const aiModes = (): AiMode[] => {
   if (env('AI_SEARCH')?.trim().toLowerCase() === 'off' || !env('REVALIDATE_SECRET')) return []
-  return env('ANTHROPIC_API_KEY') ? ['meaning', 'ask'] : ['meaning']
+  return anthropicConnection(env) ? ['meaning', 'ask'] : ['meaning']
 }
 
 export const aiModeEnabled = (mode: AiMode): boolean => aiModes().includes(mode)

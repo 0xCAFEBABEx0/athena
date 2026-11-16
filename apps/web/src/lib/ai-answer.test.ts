@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import type Anthropic from '@anthropic-ai/sdk'
+import Anthropic from '@anthropic-ai/sdk'
 
 import type { ChunkHit } from './ai'
 import {
@@ -174,6 +174,23 @@ describe('TC-U-60 AI answers', () => {
     console.error = originalError
     expect(failed.at(-1)).toMatchObject({ type: 'error', code: 'failed' })
     expect(stored).toBeUndefined()
+  })
+
+  test('a 429 (Anthropic rate limit or an AI Gateway spend limit) is its own error code', async () => {
+    const limited: AnswerClient = {
+      stream: () => ({
+        // biome-ignore lint/correctness/useYield: fails before the first event
+        async *[Symbol.asyncIterator]() {
+          throw new Anthropic.RateLimitError(429, undefined, 'spend limit', new Headers())
+        },
+        finalMessage: async () => ({}) as Anthropic.Beta.BetaMessage,
+      }),
+    }
+    const originalError = console.error
+    console.error = () => {}
+    const events = await collect(streamAnswer('?', [chunk('a')], 'en', { client: limited }))
+    console.error = originalError
+    expect(events.at(-1)).toMatchObject({ type: 'error', code: 'limit' })
   })
 
   test('kept answers replay as the same events as a new one (nothing marks them as kept); parts are merged and repeated citations dropped', async () => {

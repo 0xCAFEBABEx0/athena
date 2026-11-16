@@ -70,6 +70,7 @@ const strings = {
   cited: ai.cited(0).replace('0', '{n}'),
   errorBusy: ai.errorBusy,
   errorDaily: ai.errorDaily,
+  errorLimit: ai.errorLimit,
   errorDisabled: ai.errorDisabled,
   errorBuilding: ai.errorBuilding,
   errorRefused: ai.errorRefused,
@@ -205,6 +206,7 @@ const modes = withAsk
     | 'cited'
     | 'errorBusy'
     | 'errorDaily'
+    | 'errorLimit'
     | 'errorDisabled'
     | 'errorBuilding'
     | 'errorRefused'
@@ -372,6 +374,7 @@ const modes = withAsk
     const errorFor = (code: string | undefined, status: number) => {
       if (code === 'busy') return strings.errorBusy
       if (code === 'daily') return strings.errorDaily
+      if (code === 'limit') return strings.errorLimit
       if (code === 'building') return strings.errorBuilding
       if (code === 'disabled' || code === 'search' || status === 503) return strings.errorDisabled
       if (code === 'refused') return strings.errorRefused

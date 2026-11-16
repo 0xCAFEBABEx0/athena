@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 
+import { anthropicConnection } from '@athena/shared/anthropic'
 import Anthropic from '@anthropic-ai/sdk'
 import type { BetaMessageStreamParams } from '@anthropic-ai/sdk/resources/beta/messages'
 
@@ -69,7 +70,7 @@ export type AnswerEvent =
   | { type: 'text'; text: string }
   | { type: 'cite'; n: number }
   | { type: 'done' }
-  | { type: 'error'; code: 'refused' | 'failed'; message: string }
+  | { type: 'error'; code: 'refused' | 'limit' | 'failed'; message: string }
 
 export type StoredAnswer = { sources: Source[]; parts: AnswerPart[] }
 
@@ -251,9 +252,9 @@ export type AnswerClient = {
 
 const anthropicClient = (): AnswerClient => {
   const client = new Anthropic({
-    apiKey: env('ANTHROPIC_API_KEY'),
+    // Direct, or through Cloudflare AI Gateway with the key stored there.
     // Read through env() so a local .env works too (Vite does not put it in process.env).
-    baseURL: env('ANTHROPIC_BASE_URL') || undefined,
+    ...anthropicConnection(env),
     maxRetries: 1,
     timeout: 60_000,
   })
@@ -334,8 +335,12 @@ export async function* streamAnswer(
     yield { type: 'done' }
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError) {
+      // Anthropic's rate limit, or a Cloudflare AI Gateway spend limit.
       console.error('[ai-answer] rate limited', error.message)
-    } else if (error instanceof Anthropic.APIError) {
+      yield { type: 'error', code: 'limit', message: 'The AI answer limit is reached for now.' }
+      return
+    }
+    if (error instanceof Anthropic.APIError) {
       console.error(`[ai-answer] API error ${error.status}`, error.message)
     } else {
       console.error('[ai-answer]', error)

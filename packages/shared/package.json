@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./payload-types": "./src/payload-types.ts",
-    "./constants": "./src/constants.ts"
+    "./constants": "./src/constants.ts",
+    "./anthropic": "./src/anthropic.ts"
   }
 }

@@ -177,7 +177,7 @@ rate limit.
 | `/api/{collection}`, `/api/globals/{slug}` | Payload REST API (all collections). |
 | `/api/graphql`, `/api/graphql-playground` | Payload GraphQL. |
 | `/api/payload-jobs/run` | Jobs runner. Vercel Schedules hourly (`0 * * * *` UTC, Hobby adds up to 15 min jitter); needs a logged-in user or `Authorization: Bearer ${CRON_SECRET}`. Each run also queues due scheduled tasks (`syncGitHub`, every 6 hours: the /builds repositories and the home contribution graph). |
-| `POST /api/translate` | Body `{ collection: 'posts' \| 'pages' \| 'projects', id, locales? }`. Logged-in users only. Translates the English version with Claude and saves `ja`/`zh` as drafts (projects have no drafts: saved directly). `503` without `ANTHROPIC_API_KEY`, `422` if the reply is unusable, `502` on API errors. `maxDuration` 300 s. |
+| `POST /api/translate` | Body `{ collection: 'posts' \| 'pages' \| 'projects', id, locales? }`. Logged-in users only. Translates the English version with Claude and saves `ja`/`zh` as drafts (projects have no drafts: saved directly). `503` without `ANTHROPIC_API_KEY` (or the AI Gateway pair), `422` if the reply is unusable, `429` at a rate or spend limit, `502` on other API errors. `maxDuration` 300 s. |
 | `/api/sentry-test` | Sentry smoke test route. |
 | `/` | Redirects to `/admin`. Any other non-admin, non-API path redirects (308) to the same path on `WEB_URL`. |
 
@@ -208,7 +208,8 @@ both apps together.
 | `PAYLOAD_API_KEY` | | yes | `web-frontend` API key for draft reads. |
 | `CMS_PROTECTION_BYPASS` | | optional | athena-cms Protection Bypass for Automation secret, sent on every server-side CMS request (reads and form forwarding). Required on any environment where athena-cms is protected. |
 | `BLOB_READ_WRITE_TOKEN` | yes | | Vercel Blob. |
-| `ANTHROPIC_API_KEY` | for translation | | Claude API key for the Translate button. Unset = button answers 503. |
+| `ANTHROPIC_API_KEY` | for translation | for Ask AI | Claude API key (Translate button; Ask AI on the web). Unset with no gateway = Translate answers 503, Ask AI hidden. Ignored when `CF_AIG_TOKEN` is used. |
+| `ANTHROPIC_BASE_URL`, `CF_AIG_TOKEN` | optional | optional | Claude through Cloudflare AI Gateway with the key stored there (BYOK, spend limit): the gateway's Anthropic URL and its token. See [AI_SEARCH.md](./AI_SEARCH.md#cloudflare-ai-gateway-spend-limit). |
 | `TRANSLATION_MODEL` | optional | | Overrides the translation model (default `claude-opus-5-5`). |
 | `GITHUB_TOKEN` | for /builds | | Fine-grained token with read access to public repositories only, for the `syncGitHub` job and the home contribution graph. Unset = entries show `syncError` and stay off `/builds`; the graph is not shown until a first successful read, and after one a failed read (an unset token included) keeps the last calendar and only records `syncError`. |
 | `CRON_SECRET` | yes | | Jobs runner auth for Vercel Schedules (sent as a bearer token, like Vercel Cron). |

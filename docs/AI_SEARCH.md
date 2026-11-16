@@ -26,7 +26,9 @@ in `/search?mode=ask`. The row is never selected by itself (↓ in the composer,
 
 By meaning needs only the CMS side (`VOYAGE_API_KEY` and the table), so it
 shows on every deployment that has `REVALIDATE_SECRET`. Ask AI shows only when
-the web deployment also has `ANTHROPIC_API_KEY`. `AI_SEARCH=off` on athena-web
+the web deployment can also reach Claude: `ANTHROPIC_API_KEY`, or
+`ANTHROPIC_BASE_URL` + `CF_AIG_TOKEN` through Cloudflare AI Gateway (below).
+`AI_SEARCH=off` on athena-web
 hides both, and `/search` is the keyword search it was before; `/api/ai/*` then
 answer 503. A link with `?mode=` for a mode that is not offered opens Keyword.
 
@@ -106,7 +108,12 @@ POST /api/ai/search  ◄──────────────── Bearer 
   meanwhile (the build needs the pool for its own reads); after 40 s it
   gives up with a warning. The build reads every document a second time
   before it commits (unchanged excerpts cost one SELECT), so a save that
-  gave up, or a delete, made while the build ran is still reflected. To
+  gave up, or a delete, made while the build ran is still reflected. Only
+  an unpublish or delete after that second read, with the rest of the
+  build lasting over 40 s, can stay in the index: the CMS logs
+  `AI index: <kind> <id> skipped, the first build is still running`, and
+  the next save of that document or a reindex removes it (closing this
+  fully would need a durable queue; hooks run in the request's function). To
   rebuild by hand, a logged-in admin can `POST /api/ai/reindex` on the CMS
   (same cookie as the admin); it expires the web's cached AI results even
   when it fails half way.
@@ -195,9 +202,51 @@ above) clears whatever a search cached in between.
 |---|---|---|
 | athena-cms (Preview + Production) | `VOYAGE_API_KEY` | Embeddings. Without it the CMS does not index and `/api/ai/search` answers 503 |
 | athena-cms | `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_BASE_URL` | Optional: `openai` (with `OPENAI_API_KEY`), another model, a gateway. Changing the model re-embeds everything on the next run |
-| athena-web (Preview + Production) | `ANTHROPIC_API_KEY` | Answers, and the switch for the whole AI UI |
+| athena-web (Preview + Production) | `ANTHROPIC_API_KEY`, or `ANTHROPIC_BASE_URL` + `CF_AIG_TOKEN` | Answers, and the switch for Ask AI. The second form goes through Cloudflare AI Gateway with the key stored there (below) |
 | athena-web | `AI_ANSWER_MODEL`, `AI_DAILY_LIMIT` | Optional; the model in the Site global wins over `AI_ANSWER_MODEL` |
 | both | `REVALIDATE_SECRET` | Already set; the web server authenticates to `/api/ai/search` with it |
+
+### Cloudflare AI Gateway (spend limit)
+
+Claude calls (Ask AI on athena-web, the Translate button on athena-cms) can go
+through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/)
+to get a dollar budget (spend limit) on top of `AI_DAILY_LIMIT`. Both apps
+read the same variables (`packages/shared/src/anthropic.ts`):
+
+| `ANTHROPIC_BASE_URL` | `CF_AIG_TOKEN` | `ANTHROPIC_API_KEY` | Claude is reached |
+|---|---|---|---|
+| unset | unset | set | directly (as before) |
+| gateway URL | set | ignored | through the gateway with the key stored in Cloudflare (BYOK); no `x-api-key` is sent |
+| unset | set | unset | not at all: Ask AI hidden, Translate answers 503 |
+
+Voyage embeddings stay direct: the gateway does not list Voyage, and a spend
+limit only counts models whose price it knows.
+
+Everything used is free (checked 2026-11-16): the gateway itself and spend
+limits on every plan (spend limits are in beta); the stored key in Secrets
+Store (beta, pricing not published yet, the beta announcement says 20 secrets
+free per account); logs in Workers Logs (an account whose first gateway is
+created on or after 2026-09-24: 200,000 events a day, 3 days kept on the free
+plan), or turn logging off for the gateway. Do not buy Unified Billing credits
+(5 % fee); BYOK bills Anthropic directly.
+
+Setup (Cloudflare dashboard, then Vercel):
+
+1. **AI > AI Gateway > Create gateway** (e.g. `whoa`). In its settings turn on
+   **Authenticated Gateway** and create a token; this is `CF_AIG_TOKEN`.
+2. **Provider keys** (BYOK): add the Anthropic key (Secrets Store).
+3. **Spend limits**: add a rule for provider Anthropic, e.g. $5 a month. The
+   count lags a little, so the budget can be passed slightly; `AI_DAILY_LIMIT`
+   stays as the hard daily cap.
+4. Vercel, athena-web and athena-cms (Preview + Production):
+   `ANTHROPIC_BASE_URL=https://gateway.ai.cloudflare.com/v1/<account id>/<gateway id>/anthropic`
+   and `CF_AIG_TOKEN`; then delete `ANTHROPIC_API_KEY` from both and redeploy.
+   Undo by restoring `ANTHROPIC_API_KEY` and deleting the two.
+5. Check: ask a question on `/search` and see it in the gateway's analytics.
+
+Over the budget the gateway answers 429, like Anthropic's own rate limit: Ask
+AI shows "AI answers have reached their spending limit for now" (code
+`limit`), Translate answers 429.
 
 `@anthropic-ai/sdk` adds about 4 MB to the web server functions (12 MB in
 all); only `/api/ai/ask` loads it, so other pages' cold starts do not change.
