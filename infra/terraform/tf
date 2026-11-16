@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 # Runs terraform with every credential read from 1Password at run time:
 #   ./tf plan -var-file=accounts/workstations.tfvars
-# The API tokens come from op.env (op run), the secret env var values from
-# secrets.op.json (op inject, to stdout). Nothing is written to disk.
-# Needs the 1Password CLI (`op`), signed in (desktop app integration or
-# `op signin`). Edit the op:// references in both files to match your vault.
+# op run resolves the references in op.env (API tokens and TF_VAR_secrets) and
+# passes them to terraform as environment variables of that one process, and
+# masks any secret terraform prints. Nothing is written to disk.
+# Needs the 1Password CLI (`op`), signed in (desktop app integration or a
+# service account). https://www.1password.dev/cli/secrets-environment-variables
 set -euo pipefail
 cd "$(dirname "$0")"
 
 if ! command -v op >/dev/null 2>&1; then
-  echo "tf: the 1Password CLI (op) is not installed: https://developer.1password.com/docs/cli/" >&2
+  echo "tf: the 1Password CLI (op) is not installed: https://www.1password.dev/cli/get-started" >&2
   exit 1
 fi
 
-TF_VAR_secrets="$(op inject --in-file secrets.op.json)"
-export TF_VAR_secrets
 exec op run --env-file=op.env -- terraform "$@"

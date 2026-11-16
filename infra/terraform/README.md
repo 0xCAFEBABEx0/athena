@@ -14,8 +14,8 @@ providers. Credentials and secret values never go to git.
 | `imports.tf` | Adopts resources that already exist in an account |
 | `accounts/workstations.tfvars` | Current account: team ID and the IDs to adopt (no secrets) |
 | `accounts/new-account.tfvars.example` | Template for a fresh account |
-| `tf` | Runs `terraform` with every credential read from 1Password (`op.env`, `secrets.op.json`) |
-| `op.env`, `secrets.op.json` | 1Password references (not secrets) for the API tokens and the secret env var values |
+| `tf` | Runs `terraform` under `op run` with every credential read from 1Password |
+| `op.env` | 1Password references (not secrets) for the API tokens and the secret env var values |
 | `secrets.auto.tfvars.example` | The same secret keys, for running without 1Password (copy to the git-ignored `secrets.auto.tfvars`) |
 
 ## What is managed and what is not
@@ -44,15 +44,25 @@ Not managed here:
 ## Credentials
 
 **With 1Password (the usual way)**: keep the tokens and secret values in
-1Password and run `./tf` instead of `terraform` (same arguments). It reads the
-API tokens through `op run --env-file=op.env` and the secret values through
-`op inject --in-file secrets.op.json` into `TF_VAR_secrets`; nothing is written
-to disk. The references assume a vault `athena` with the items
-`terraform-vercel` and `terraform-cloudflare` (field `credential`) and
-`athena-terraform` (one field per key in `secrets.op.json`); edit the two
-files to match yours. Every referenced field must exist (an empty
-`cf_aig_token` is fine until the gateway has a token). Needs the 1Password CLI
-signed in (`op signin`, or the desktop app integration).
+1Password and run `./tf` instead of `terraform` (same arguments). It runs
+`op run --env-file=op.env -- terraform ...`
+([Load secrets into the environment](https://www.1password.dev/cli/secrets-environment-variables)):
+1Password CLI resolves the references in `op.env` and gives the values to
+that one terraform process as environment variables, masks any secret it
+prints, and writes nothing to disk. `op.env` sets `VERCEL_API_TOKEN`,
+`CLOUDFLARE_API_TOKEN` and `TF_VAR_secrets`, the last one a JSON map whose
+values are [template references](https://www.1password.dev/cli/secrets-template-syntax)
+(`{{ op://... }}`), which op run resolves inside a value.
+
+The references assume a vault `athena` with the items `terraform-vercel` and
+`terraform-cloudflare` (field `credential`) and `athena-terraform` (one field
+per key of `TF_VAR_secrets`); edit `op.env` to match yours. Every referenced
+field must exist (an empty `cf_aig_token` is fine until the gateway has a
+token). Needs the 1Password CLI signed in: the desktop app integration, or a
+[service account](https://www.1password.dev/service-accounts/) limited to that
+vault (`OP_SERVICE_ACCOUNT_TOKEN`), as 1Password recommends. As with any
+environment variable, other processes of the same user can read them while
+terraform runs.
 
 Without 1Password:
 
@@ -65,8 +75,8 @@ Without 1Password:
   Cloudflare.
 - **Secret values**: copy `secrets.auto.tfvars.example` to
   `secrets.auto.tfvars` (git-ignored) and fill it in, or export
-  `TF_VAR_secrets='{"revalidate_secret":"...", ...}'`. A password manager works
-  too, e.g. `op inject -i secrets.auto.tfvars.tpl -o secrets.auto.tfvars`.
+  `TF_VAR_secrets='{"revalidate_secret":"...", ...}'`. This file holds the
+  values in plain text on disk, which is why `./tf` is the usual way.
 - Secrets are **write-only** (`value_wo`, Terraform >= 1.11): they are sent to
   Vercel only when a variable is created or its version in `secret_versions`
   changes, and never land in the state or a saved plan. Imported secrets use the
