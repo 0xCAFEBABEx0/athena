@@ -19,6 +19,8 @@ section of each new version as a GitHub Release.
   search box and shows only on the prompt line above the answer, so it no
   longer looks unsent, also when the question on screen is asked again. If
   asking fails, the question goes back into the box.
+- Ask AI: an answer that stops before it ends (a cut connection) shows the
+  error and stops the spinner instead of waiting forever.
 
 ## [1.6.0] - 2026-11-16
 

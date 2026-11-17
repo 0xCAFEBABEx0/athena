@@ -505,6 +505,9 @@ const modes = withAsk
       setStatus(page.querySelector<HTMLElement>('[data-ai-status-text]')?.dataset.searching ?? '')
       let sources: Source[] = []
       let wrote = false
+      // Every answer stream ends with `done` or `error`; one that stops before
+      // either (connection cut, function timeout) is a failure.
+      let ended = false
       try {
         const res = await post('/api/ai/ask', query, signal)
         if (!res.ok || !res.body) {
@@ -555,9 +558,11 @@ const modes = withAsk
             const paragraph = answerText?.lastElementChild
             paragraph?.append(' ', citeMark(event.n, sources))
           } else if (event.type === 'done') {
+            ended = true
             setStatus(null)
             if (wrote && sourcesBox) sourcesBox.hidden = sources.length === 0
           } else if (event.type === 'error') {
+            ended = true
             setStatus(null)
             shown = undefined
             setError(errorFor(event.code, 200))
@@ -576,6 +581,7 @@ const modes = withAsk
             newline = buffer.indexOf('\n')
           }
         }
+        if (!ended) throw new Error('The answer stream ended early.')
       } catch (error) {
         if (signal.aborted) return
         shown = undefined

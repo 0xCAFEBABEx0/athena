@@ -321,6 +321,20 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await page.locator('[data-search-input]').press('Enter')
     await expect(page.locator('[data-ai-error]')).toBeVisible()
     await expect(page.locator('[data-ai-error]')).toContainText('利用上限')
+
+    // A stream cut before `done` (connection lost, function timeout) is a failure too.
+    await page.unroute('**/api/ai/ask')
+    await page.route('**/api/ai/ask', (route) =>
+      route.fulfill({
+        contentType: 'application/x-ndjson',
+        body: answerStream(slugs, '/ja').split('\n').slice(0, 2).join('\n') + '\n',
+      }),
+    )
+    await page.locator('[data-search-input]').fill('途中で切れる')
+    await page.locator('[data-search-input]').press('Enter')
+    await expect(page.locator('[data-ai-error]')).toBeVisible()
+    await expect(page.locator('[data-ai-status]')).toBeHidden()
+    await expect(page.locator('[data-search-input]')).toHaveValue('途中で切れる')
   })
 
   test('TC-E-67 a suggested question asks itself when clicked, shows only in Ask AI, and fits a phone', async ({ page }) => {
