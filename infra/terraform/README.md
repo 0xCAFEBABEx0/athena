@@ -205,9 +205,12 @@ running deployment keeps using the gateway pair even when
 5. Create a Protection Bypass for Automation secret on each new project (a
    secret works for its own project only) and store them as
    `cms_protection_bypass` (the new CMS's) and `web_protection_bypass` (the
-   new web's), in 1Password or `secrets.auto.tfvars`. Point `local.urls` at
-   the new projects' `*.vercel.app` URLs, apply and redeploy both apps
-   (otherwise the new web app still reads the old CMS), then check them.
+   new web's), in 1Password or `secrets.auto.tfvars`, and bump both keys in
+   `secret_versions` in `accounts/<name>.tfvars` (the variables already exist
+   from step 3, and a write-only value is sent only when its version changes).
+   Point `local.urls` at the new projects' `*.vercel.app` URLs, apply and
+   redeploy both apps (otherwise the new web app still reads the old CMS),
+   then check them.
 6. Remove the domains from the old projects, restore `local.domains` and
    `local.urls`, apply and redeploy; `terraform output domain_verification`
    lists any TXT records Cloudflare needs.
