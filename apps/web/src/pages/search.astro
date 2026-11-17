@@ -594,7 +594,12 @@ const modes = withAsk
         keyword(query)
         return
       }
-      if (shown === `${mode}\n${query}`) return
+      if (shown === `${mode}\n${query}`) {
+        // Already on screen. A question asked again still leaves the box,
+        // without a second request.
+        if (mode === 'ask' && input && input.value.trim() === query) input.value = ''
+        return
+      }
       if (mode === 'meaning') void meaning(query)
       else void ask(query)
     }

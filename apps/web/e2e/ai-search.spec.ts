@@ -344,6 +344,10 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await expect(page.locator('[data-search-input]')).toHaveValue('')
     await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
     expect(asked).toEqual([question])
+    // Clicked again once answered: no second request, and the box empties again.
+    await presets.first().click()
+    await expect(page.locator('[data-search-input]')).toHaveValue('')
+    expect(asked).toEqual([question])
     // Not offered in Search.
     await page.locator('[data-search-mode="keyword"]').click()
     await expect(page.locator('[data-ai-presets]')).toBeHidden()

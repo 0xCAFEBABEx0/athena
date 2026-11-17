@@ -179,9 +179,14 @@ gateway token.
    here and is unused once the gateway pair is set), and redeploy Production.
 
 Change the budget with `spend_limit_usd` and apply; no redeploy is needed.
-To go back to calling Anthropic directly, set `ANTHROPIC_API_KEY` again,
-remove `ai_gateway` (the env vars are deleted; the gateway too, as
-`authentication` cannot be turned off once on) and redeploy.
+To go back to calling Anthropic directly, do it in two steps, because a
+running deployment keeps using the gateway pair even when
+`ANTHROPIC_API_KEY` is set:
+
+1. Set `ANTHROPIC_API_KEY` again, set `vercel_targets = []` (the gateway stays,
+   its env vars are deleted), apply, and redeploy athena-web and athena-cms.
+2. Once both apps answer without the gateway, remove `ai_gateway` and apply
+   to delete the gateway (`authentication` cannot be turned off once on).
 
 ## Moving to another account
 
@@ -195,8 +200,11 @@ remove `ai_gateway` (the env vars are deleted; the gateway too, as
 4. Reconnect integrations by hand (Neon, Blob, Sentry, Checkly) and copy the
    data: Neon with `pg_dump`/`pg_restore` (a Vercel-managed Neon project cannot
    be transferred), Blob files with a copy script.
-5. Check the new `*.vercel.app` URLs, remove the domains from the old projects,
-   restore `local.domains` and apply; `terraform output domain_verification`
+5. Point `local.urls` at the new projects' `*.vercel.app` URLs, apply and
+   redeploy both apps (otherwise the new web app still reads the old CMS), then
+   check them.
+6. Remove the domains from the old projects, restore `local.domains` and
+   `local.urls`, apply and redeploy; `terraform output domain_verification`
    lists any TXT records Cloudflare needs.
 
 A move to a Pro team you belong to can use Vercel's own project transfer

@@ -67,7 +67,8 @@ variable "ai_gateway" {
     # Request logs (prompts and answers) in Workers Logs, free up to 200,000 a day.
     collect_logs = optional(bool, true)
     # Vercel environments that get ANTHROPIC_BASE_URL and CF_AIG_TOKEN.
-    # Start with ["preview"] to try it there first.
+    # Start with ["preview"] to try it there first; [] removes them and keeps
+    # the gateway (the first step of going back to Anthropic directly).
     vercel_targets = optional(list(string), ["production", "preview"])
     # true when the gateway was already created in the dashboard: adopt it.
     import = optional(bool, false)

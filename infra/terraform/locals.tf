@@ -98,7 +98,9 @@ locals {
   # (BYOK). Both apps read the same pair (packages/shared/src/anthropic.ts);
   # ANTHROPIC_API_KEY is then unused (not managed here: delete it by hand).
   anthropic_base_url = var.ai_gateway == null ? null : "https://gateway.ai.cloudflare.com/v1/${var.ai_gateway.account_id}/${var.ai_gateway.gateway_id}/anthropic"
-  ai_gateway_apps    = var.ai_gateway == null ? [] : ["web", "cms"]
+  # No targets (the first step of going back to Anthropic directly): the
+  # gateway stays, its env vars are deleted.
+  ai_gateway_apps = var.ai_gateway == null ? [] : (length(var.ai_gateway.vercel_targets) == 0 ? [] : ["web", "cms"])
   ai_gateway_env = merge({}, [
     for app in local.ai_gateway_apps : {
       "${app}:ANTHROPIC_BASE_URL" = { project = app, key = "ANTHROPIC_BASE_URL", target = var.ai_gateway.vercel_targets, sensitive = false, value = local.anthropic_base_url, comment = "Cloudflare AI Gateway (Anthropic, BYOK)" }

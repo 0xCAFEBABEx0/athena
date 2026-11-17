@@ -17,7 +17,8 @@ section of each new version as a GitHub Release.
 
 - Ask AI: a question sent with Enter or a suggested question leaves the
   search box and shows only on the prompt line above the answer, so it no
-  longer looks unsent. If asking fails, the question goes back into the box.
+  longer looks unsent, also when the question on screen is asked again. If
+  asking fails, the question goes back into the box.
 
 ## [1.6.0] - 2026-11-16
 
