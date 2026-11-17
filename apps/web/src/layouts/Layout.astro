@@ -230,7 +230,7 @@ if (draft) {
         <Footer site={site} />
       </div>
     </div>
-    <SearchDialog />
+    <SearchDialog presets={site.aiPresets} />
     <StatusDialog site={site} />
     <script is:inline>
       // Shortcuts: "/" search, j/k move through the page's list (notes, builds,

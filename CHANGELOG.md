@@ -4,6 +4,24 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.7.0] - 2026-11-16
+
+### Added
+
+- The suggested questions (Site → "AI search: suggested questions") also
+  show in the search box's menu on other pages and in the "/" popup while the
+  box is empty. Picking one (click, or ↓ and Enter) opens it in Ask AI, where
+  it is asked right away. None is picked by itself.
+
+### Fixed
+
+- Ask AI: a question sent with Enter or a suggested question leaves the
+  search box and shows only on the prompt line above the answer, so it no
+  longer looks unsent, also when the question on screen is asked again. If
+  asking fails, the question goes back into the box.
+- Ask AI: an answer that stops before it ends (a cut connection) shows the
+  error and stops the spinner instead of waiting forever.
+
 ## [1.6.0] - 2026-11-16
 
 ### Added

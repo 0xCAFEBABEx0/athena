@@ -140,8 +140,12 @@ POST /api/ai/search  ◄──────────────── Bearer 
   athena-web is used only while the Site has no value; the default is
   `claude-opus-5-5`.
 - **Suggested questions**: Site → "AI search: suggested questions" (per
-  language, up to 6). They show under the tabs in Ask AI only; clicking one
-  fills the prompt and asks it. Since many visitors click the same ones, they
+  language, up to 6). They show under the tabs in Ask AI, and in the menu of
+  an empty search box elsewhere (the composer, the "/" popup above the newest
+  posts). Clicking one asks it; from the composer or the popup it opens
+  `/search?mode=ask`, which asks it on arrival. A sent question leaves the box
+  and shows on the prompt line (it comes back if asking fails). Since many
+  visitors click the same ones, they
   are the questions most often answered from a kept answer (below).
 
 ## Cost and free-tier guards
@@ -232,7 +236,7 @@ plan), or turn logging off for the gateway. Do not buy Unified Billing credits
 
 Setup (Cloudflare dashboard, then Vercel):
 
-1. **AI > AI Gateway > Create gateway** (e.g. `whoa`). In its settings turn on
+1. **AI > AI Gateway > Create gateway** (e.g. `athena`, the project name). In its settings turn on
    **Authenticated Gateway** and create a token; this is `CF_AIG_TOKEN`.
 2. **Provider keys** (BYOK): add the Anthropic key (Secrets Store).
 3. **Spend limits**: add a rule for provider Anthropic, e.g. $5 a month. The

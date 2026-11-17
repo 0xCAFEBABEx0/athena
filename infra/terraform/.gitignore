@@ -1,0 +1,19 @@
+# Terraform working files
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+tfplan
+
+# Secrets and local overrides (credentials never go to git)
+*.auto.tfvars
+*.auto.tfvars.json
+secrets.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc

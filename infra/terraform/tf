@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Runs terraform with every credential read from 1Password at run time:
+#   ./tf plan -var-file=accounts/workstations.tfvars
+# op run resolves the whole-value references in op.env and passes them to one
+# child process as environment variables, masking any secret it prints;
+# nothing is written to disk. That child turns the TF_SECRET_* variables into
+# TF_VAR_secrets (a JSON map, built by jq so every value is escaped), refuses
+# to go on if any value is still an op:// reference, and execs terraform.
+# Needs the 1Password CLI (`op`), signed in (desktop app integration or a
+# service account), and jq. https://www.1password.dev/cli/secrets-environment-variables
+set -euo pipefail
+cd "$(dirname "$0")"
+
+for cmd in op jq; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "tf: $cmd is not installed (1Password CLI: https://www.1password.dev/cli/get-started, jq: brew install jq)" >&2
+    exit 1
+  fi
+done
+
+exec op run --env-file=op.env -- bash -c '
+  set -euo pipefail
+  TF_VAR_secrets="$(jq -cn "env | with_entries(select(.key | startswith(\"TF_SECRET_\")) | .key |= (ltrimstr(\"TF_SECRET_\") | ascii_downcase))")"
+  if jq -e "any(.[]; test(\"op://\"))" <<<"$TF_VAR_secrets" >/dev/null; then
+    echo "tf: a secret is still an op:// reference; check op.env" >&2
+    exit 1
+  fi
+  for v in VERCEL_API_TOKEN CLOUDFLARE_API_TOKEN; do
+    case "${!v:-}" in op://*) echo "tf: $v is still an op:// reference" >&2; exit 1 ;; esac
+  done
+  export TF_VAR_secrets
+  while IFS= read -r name; do unset "$name"; done < <(compgen -e | grep "^TF_SECRET_" || true)
+  exec terraform ${1+"$@"}
+' tf ${1+"$@"}

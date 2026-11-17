@@ -218,6 +218,63 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await expect(page).toHaveURL(/\/search\?.*mode=meaning/)
   })
 
+  test('TC-E-71 the composer and the "/" popup offer the suggested questions while empty; one opens in Ask AI and is asked once', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 })
+    await open(page, '/search?mode=ask', { view: 'cli' })
+    const slugs = await requireAi(page)
+    await requireAsk(page)
+    const questions = await page.locator('[data-ai-preset]').evaluateAll((els) => els.map((el) => el.getAttribute('data-ai-preset') ?? ''))
+    test.skip(questions.length === 0, 'no suggested questions in the Site settings')
+    const asked: string[] = []
+    await page.route('**/api/ai/ask', async (route) => {
+      asked.push(String(route.request().postDataJSON()?.q))
+      await route.fulfill({ contentType: 'application/x-ndjson', body: answerStream(slugs) })
+    })
+
+    // The home composer (ADE): focusing the empty box lists them, none picked.
+    await open(page, '/', { view: 'modern' })
+    const input = page.locator('[data-search-prompt] [data-search-input]').first()
+    await input.focus()
+    const rows = page.locator('[data-search-prompt] [data-prompt-preset]')
+    await expect(rows.first()).toBeVisible()
+    await expect(rows).toHaveCount(questions.length)
+    await expect(page.locator('[data-search-prompt] [data-prompt-preset][aria-selected="true"]')).toHaveCount(0)
+    expect(await overflowX(page)).toBeLessThanOrEqual(0)
+    // Typing hides them (the Ask Hoo row is for what is typed).
+    await input.fill('x')
+    await expect(rows.first()).toBeHidden()
+    await input.fill('')
+    await expect(rows.first()).toBeVisible()
+    expect(asked).toEqual([])
+    // ↓ picks the first, ↑ goes back to none; ↓ and Enter open it in Ask AI.
+    await input.press('ArrowDown')
+    await expect(rows.first()).toHaveAttribute('aria-selected', 'true')
+    await input.press('ArrowUp')
+    await expect(rows.first()).toHaveAttribute('aria-selected', 'false')
+    await input.press('ArrowDown')
+    await input.press('Enter')
+    await expect(page).toHaveURL(/\/search\?.*mode=ask/)
+    await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
+    expect(asked).toEqual([questions[0]])
+
+    // The "/" popup: listed above the newest posts while the box is empty, never selected.
+    await open(page, '/', { view: 'cli' })
+    await page.keyboard.press('/')
+    const hits = page.locator('[data-search-results] [data-ask]')
+    await expect(hits).toHaveCount(questions.length)
+    await expect(hits.first()).toHaveAttribute('aria-selected', 'false')
+    await expect(hits.first()).toHaveAttribute('href', /mode=ask/)
+    expect(await overflowX(page)).toBeLessThanOrEqual(0)
+    await page.locator('[data-search-query]').fill('zzzz-no-such-post')
+    await expect(hits).toHaveCount(1)
+    await page.locator('[data-search-query]').fill('')
+    await hits.last().click()
+    await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
+    expect(asked).toEqual([questions[0], questions[questions.length - 1]])
+  })
+
   test('TC-E-64 Ask AI streams the answer with numbered citations linking to the posts; errors show as an alert', async ({
     page,
   }) => {
@@ -249,6 +306,8 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await page.locator('[data-search-input]').press('Enter')
     await expect(page.locator('[data-ai-error]')).toBeVisible()
     await expect(page.locator('[data-ai-answer]')).toBeHidden()
+    // Not sent after all: the question is back in the box to try again.
+    await expect(page.locator('[data-search-input]')).toHaveValue('もう一度')
 
     // A spending limit (Anthropic or Cloudflare AI Gateway, 429 from Claude) arrives in the stream.
     await page.unroute('**/api/ai/ask')
@@ -262,6 +321,20 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     await page.locator('[data-search-input]').press('Enter')
     await expect(page.locator('[data-ai-error]')).toBeVisible()
     await expect(page.locator('[data-ai-error]')).toContainText('利用上限')
+
+    // A stream cut before `done` (connection lost, function timeout) is a failure too.
+    await page.unroute('**/api/ai/ask')
+    await page.route('**/api/ai/ask', (route) =>
+      route.fulfill({
+        contentType: 'application/x-ndjson',
+        body: answerStream(slugs, '/ja').split('\n').slice(0, 2).join('\n') + '\n',
+      }),
+    )
+    await page.locator('[data-search-input]').fill('途中で切れる')
+    await page.locator('[data-search-input]').press('Enter')
+    await expect(page.locator('[data-ai-error]')).toBeVisible()
+    await expect(page.locator('[data-ai-status]')).toBeHidden()
+    await expect(page.locator('[data-search-input]')).toHaveValue('途中で切れる')
   })
 
   test('TC-E-67 a suggested question asks itself when clicked, shows only in Ask AI, and fits a phone', async ({ page }) => {
@@ -280,8 +353,14 @@ test.describe('/search with AI (browser calls stubbed)', () => {
     })
     const question = (await presets.first().getAttribute('data-ai-preset')) ?? ''
     await presets.first().click()
-    await expect(page.locator('[data-search-input]')).toHaveValue(question)
+    // Sent: the question leaves the box for the prompt line, as in a chat.
+    await expect(page.locator('[data-prompt-question]')).toHaveText(question)
+    await expect(page.locator('[data-search-input]')).toHaveValue('')
     await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
+    expect(asked).toEqual([question])
+    // Clicked again once answered: no second request, and the box empties again.
+    await presets.first().click()
+    await expect(page.locator('[data-search-input]')).toHaveValue('')
     expect(asked).toEqual([question])
     // Not offered in Search.
     await page.locator('[data-search-mode="keyword"]').click()
@@ -337,6 +416,7 @@ test.describe('/search?mode=ask from elsewhere', () => {
     expect(asked).toEqual([])
     await page.locator('[data-search-input]').press('Enter')
     await expect(page.locator('[data-ai-text]')).toContainText('The first part of the answer.')
+    await expect(page.locator('[data-search-input]')).toHaveValue('')
     expect(asked).toEqual(['how it works'])
 
     // The composer's Ask Hoo row on this site: asked on arrival.
