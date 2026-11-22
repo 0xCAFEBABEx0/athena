@@ -93,6 +93,61 @@ describe('TC-U-67 AI index: tables', () => {
     const chunks = buildChunks({ title: 'T', sections })
     for (const chunk of chunks) expect(chunk.content.startsWith('| Service | Notes |')).toBe(true)
   })
+
+  test('merged cells repeat in every position they cover, so values stay under their headers', () => {
+    const value = root(
+      table(
+        row(cell('Plan', 1), cell('Price', 1), cell('Limit', 1)),
+        row({ ...cell('Hobby'), rowSpan: 2 }, cell('$0'), cell('1 build')),
+        row(cell('$5'), cell('2 builds')),
+        row(cell('Pro'), { ...cell('Ask us'), colSpan: 2 }),
+        row({ ...cell('Odd'), colSpan: 1.5, rowSpan: -1 }),
+      ),
+    )
+    expect(lexicalToSections(value)[0]?.paragraphs).toEqual([
+      [
+        '| Plan | Price | Limit |',
+        '| --- | --- | --- |',
+        '| Hobby | $0 | 1 build |',
+        '| Hobby | $5 | 2 builds |',
+        '| Pro | Ask us | Ask us |',
+        '| Odd |  |  |',
+      ].join('\n'),
+    ])
+  })
+
+  test('a row too long for one part is split by cell: each piece keeps its column header and the row label', () => {
+    const notes = Array.from({ length: 80 }, (_, i) => `Sentence ${i} about the plan limits.`).join(' ')
+    const ja = 'とても長いメモです'.repeat(120)
+    const sections = lexicalToSections(
+      root(
+        table(
+          row(cell('Plan', 1), cell('Price', 1), cell('Notes', 1)),
+          row(cell('Hobby'), cell('$0'), cell(notes)),
+          row(cell('Pro'), cell('$20'), cell(ja)),
+        ),
+      ),
+    )
+    const parts = sections[0]?.paragraphs ?? []
+    expect(parts.length).toBeGreaterThan(3)
+    for (const part of parts) {
+      expect(part.startsWith('| Plan | Price | Notes |\n| --- | --- | --- |\n')).toBe(true)
+      expect(approxTokens(part)).toBeLessThanOrEqual(300)
+    }
+    const lines = parts.flatMap((part) => part.split('\n').slice(2))
+    expect(lines[0]).toBe('| Hobby | $0 |  |')
+    const hobby = lines.filter((line) => line.startsWith('| Hobby |  | Sentence'))
+    expect(hobby.length).toBeGreaterThan(1)
+    expect(hobby.join(' ')).toContain('Sentence 79 about the plan limits.')
+    expect(lines).toContain('| Pro | $20 |  |')
+    const pro = lines.filter((line) => line.startsWith('| Pro |  | '))
+    expect(pro.length).toBeGreaterThan(1)
+    expect(pro.map((line) => line.slice('| Pro |  | '.length, -2)).join('')).toBe(ja)
+    // No chunk loses the table: every one still opens with the header row.
+    for (const chunk of buildChunks({ title: 'T', sections })) {
+      expect(chunk.content.startsWith('| Plan | Price | Notes |')).toBe(true)
+    }
+  })
 })
 
 describe('TC-U-53 AI index: chunks', () => {

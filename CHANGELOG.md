@@ -18,7 +18,8 @@ section of each new version as a GitHub Release.
   editor are not used on the site.
 - AI search reads tables as rows with their header, so a question about a
   value in a table finds it, and an excerpt cut from a long table still
-  says what each column means. Translate translates each cell.
+  says what each column means (merged cells and very long cells too).
+  Translate translates each cell.
 
 ## [1.7.1] - 2026-11-22
 
