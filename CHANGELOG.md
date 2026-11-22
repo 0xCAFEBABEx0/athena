@@ -13,9 +13,10 @@ section of each new version as a GitHub Release.
   so the comparison always saw a difference). Each save re-rendered the home
   page and /builds in every language and re-indexed the build for AI search.
   It now saves only the builds whose GitHub data changed.
-- After a CMS change the site re-renders the changed pages one language at a
-  time instead of all at once, and those re-renders reuse the CMS data the
-  first page of each language read. One saved build used to send about 60
+- After a CMS change the site re-renders the changed pages one at a time per
+  language (the three languages side by side) instead of all at once, and
+  those re-renders reuse the CMS data the first page of each language read.
+  One saved build used to send about 60
   requests to the CMS in the same second, each starting the CMS from cold,
   which used up most of the monthly Vercel Active CPU allowance.
 

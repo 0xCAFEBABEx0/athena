@@ -6,7 +6,7 @@ import type { Redirect } from '@athena/shared/payload-types'
 
 import { tagAsContent } from '@/lib/cache'
 import { getRedirects } from '@/lib/cms'
-import { withFreshCmsReads } from '@/lib/cms-cache'
+import { INVALIDATED_AT_HEADER, withFreshCmsReads } from '@/lib/cms-cache'
 import { env } from '@/lib/env'
 import { withFramePolicy } from '@/lib/frame-policy'
 import { DEFAULT_LOCALE, localizePath, splitLocale, type Locale } from '@/lib/i18n'
@@ -165,8 +165,8 @@ const handle = async (context: APIContext, next: MiddlewareNext): Promise<Respon
 
 /**
  * True for the re-renders /api/invalidate requests right after a CMS change
- * (and Vercel's own ISR revalidation with the same token): they must read the
- * CMS itself, not the Runtime Cache copy from before the change.
+ * (and Vercel's own ISR revalidation with the same token): they must not use
+ * a Runtime Cache copy from before the change (see lib/cms-cache.ts).
  */
 const isRevalidation = (request: Request): boolean => {
   const token = request.headers.get('x-prerender-revalidate')
@@ -176,5 +176,8 @@ const isRevalidation = (request: Request): boolean => {
 export const onRequest = defineMiddleware(async (context, next) => {
   if (!isRevalidation(context.request)) return withFramePolicy(await handle(context, next))
   console.info(`[cms-cache] fresh CMS reads for ${context.url.pathname}`)
-  return withFramePolicy(await withFreshCmsReads(() => handle(context, next)))
+  // Trusted only here, behind the token: the time of the invalidation that
+  // asked for this re-render (absent on Vercel's own revalidation).
+  const since = Number(context.request.headers.get(INVALIDATED_AT_HEADER) ?? 0)
+  return withFramePolicy(await withFreshCmsReads(() => handle(context, next), since))
 })

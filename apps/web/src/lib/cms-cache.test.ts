@@ -97,6 +97,63 @@ describe('cachedCms', () => {
     expect(loads).toBe(1)
   })
 
+  test('a re-render with its invalidation time never uses an entry read at or before it', async () => {
+    const { store } = fakeStore()
+    // The expiry before this one was recorded; this one's write fails.
+    await expireCmsData(store)
+    await new Promise((resolve) => setTimeout(resolve, 2))
+    await cachedCms('k', async () => 'before the change', store)
+    await settle()
+    await new Promise((resolve) => setTimeout(resolve, 2))
+    const invalidatedAt = Date.now()
+    const failing: CmsCacheStore = {
+      ...store,
+      set: (key, value, options) =>
+        key === 'cms-data:expired-at'
+          ? Promise.reject(new Error('cache write failed'))
+          : store.set(key, value, options),
+    }
+    expect(await expireCmsData(failing)).toBe(false)
+    await new Promise((resolve) => setTimeout(resolve, 2))
+
+    // Without the time, the entry looks newer than the last recorded expiry.
+    expect(await withFreshCmsReads(() => cachedCms('k', async () => 'unused', store))).toBe(
+      'before the change',
+    )
+    let loads = 0
+    const load = async () => `after ${++loads}`
+    const rerender = () => withFreshCmsReads(() => cachedCms('k', load, store), invalidatedAt)
+    expect(await rerender()).toBe('after 1')
+    await settle()
+    expect(await rerender()).toBe('after 1')
+    expect(loads).toBe(1)
+  })
+
+  test('the invalidation time alone is enough; a bad one falls back to the recorded expiry', async () => {
+    const { store } = fakeStore()
+    await cachedCms('k', async () => 'old', store)
+    await settle()
+    await new Promise((resolve) => setTimeout(resolve, 2))
+    const invalidatedAt = Date.now()
+    await new Promise((resolve) => setTimeout(resolve, 2))
+
+    // No expiry recorded at all: the time the request carries decides.
+    expect(
+      await withFreshCmsReads(() => cachedCms('k', async () => 'new', store), invalidatedAt),
+    ).toBe('new')
+    await settle()
+    expect(
+      await withFreshCmsReads(() => cachedCms('k', async () => 'unused', store), invalidatedAt),
+    ).toBe('new')
+    // NaN, 0 or a negative time: as without one (no recorded expiry, so a miss).
+    for (const bad of [Number.NaN, 0, -5]) {
+      expect(await withFreshCmsReads(() => cachedCms('k', async () => 'live', store), bad)).toBe(
+        'live',
+      )
+      await settle()
+    }
+  })
+
   test('expireCmsData drops every cached response', async () => {
     const { store, calls } = fakeStore()
     await cachedCms('k', async () => 'old', store)

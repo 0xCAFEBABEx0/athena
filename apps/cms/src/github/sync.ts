@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
 
 /**
- * GitHub data for the /work pages (the `projects` collection).
+ * GitHub data for the /builds pages (the `projects` collection).
  *
  * One GraphQL request fetches every listed repository; a document is only
  * written (and the web cache only invalidated) when its snapshot changed, so

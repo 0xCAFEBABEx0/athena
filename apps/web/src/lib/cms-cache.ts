@@ -22,7 +22,9 @@ import { getCache, waitUntil } from '@vercel/functions'
  * Re-renders (requests carrying the ISR bypass token: the ones
  * /api/invalidate requests and Vercel's own ISR revalidation, see
  * middleware.ts) are stricter: they use an entry only when the expiry time is
- * known and the entry was read after it, so they always see the new content,
+ * known and the entry was read after it (and after the invalidation time the
+ * request carries, INVALIDATED_AT_HEADER, so a failed expiry write cannot let
+ * older data through), so they always see the new content,
  * while the layout data one re-render read (site, header, footer, recent
  * posts, redirects) serves the next ones instead of calling the CMS again.
  * Skipping the cache for every re-render made each CMS change call the CMS
@@ -87,13 +89,27 @@ export const runtimeCache = (): CmsCacheStore | null => {
   }
 }
 
-const freshReads = new AsyncLocalStorage<true>()
+/**
+ * Header /api/invalidate sends with each re-render it requests: the time (ms)
+ * of that invalidation. Read by middleware.ts, and only on a request with the
+ * valid ISR bypass token.
+ */
+export const INVALIDATED_AT_HEADER = 'x-athena-invalidated-at'
+
+/** Set for re-renders; the value is the invalidation time they carry, or 0. */
+const freshReads = new AsyncLocalStorage<number>()
 
 /**
  * Run `fn` (and everything it awaits) as a re-render: only entries read after
  * a known expiry count (see the freshness note above); writes still happen.
+ * `since` is the invalidation time the re-render request carried: entries read
+ * at or before it never count, also when the cache could not record the expiry
+ * (a failed write in `expireCmsData`) and still holds data from before the
+ * change. Without it (Vercel's own ISR revalidation) only the recorded expiry
+ * time decides.
  */
-export const withFreshCmsReads = <T>(fn: () => T): T => freshReads.run(true, fn)
+export const withFreshCmsReads = <T>(fn: () => T, since = 0): T =>
+  freshReads.run(Number.isFinite(since) && since > 0 ? since : 0, fn)
 
 const later = (promise: Promise<unknown>) => {
   try {
@@ -105,17 +121,21 @@ const later = (promise: Promise<unknown>) => {
 
 /**
  * A cached entry that is still fresh (read after the last expiry), or null.
- * `strict` (re-renders): with no known expiry time, nothing is fresh.
+ * `since` (re-renders only, else undefined): the entry must also be newer
+ * than that invalidation time, and with neither that nor a recorded expiry
+ * time nothing is fresh.
  */
 const readFresh = async (
   store: CmsCacheStore,
   key: string,
-  strict = false,
+  since?: number,
 ): Promise<Entry | null> => {
   const [hit, expiredAt] = await Promise.all([store.get(key), store.get(EXPIRED_AT_KEY)])
   if (!isEntry(hit)) return null
-  if (typeof expiredAt !== 'number') return strict ? null : hit
-  return hit.readAt > expiredAt ? hit : null
+  const recorded = typeof expiredAt === 'number' ? expiredAt : null
+  if (since === undefined) return recorded === null || hit.readAt > recorded ? hit : null
+  if (recorded === null && since <= 0) return null
+  return hit.readAt > Math.max(recorded ?? 0, since) ? hit : null
 }
 
 const writeEntry = (store: CmsCacheStore, key: string, entry: Entry) =>
@@ -138,7 +158,7 @@ export const cachedCms = async <T>(
 
   const readAt = Date.now()
   try {
-    const hit = await readFresh(store, key, freshReads.getStore() === true)
+    const hit = await readFresh(store, key, freshReads.getStore())
     if (hit) return hit.value as T
   } catch (error) {
     console.error('[cms-cache] read failed', error)

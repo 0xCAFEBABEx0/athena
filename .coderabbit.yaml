@@ -175,9 +175,12 @@ reviews:
         (`x-prerender-revalidate`) run with `withFreshCmsReads`: a
         re-render after a CMS change uses a Runtime Cache entry only when the
         expiry time is known and the entry was read after it, never older
-        data. `/api/invalidate` re-renders one language at a time
-        (`lib/rerender.ts`); do not switch back to rendering every path at
-        once, which made each CMS change start dozens of CMS instances.
+        data, and never data read at or before the invalidation time the
+        request carries (`x-athena-invalidated-at`, trusted only with the
+        token). `/api/invalidate` re-renders one page at a time per language,
+        the languages side by side (`lib/rerender.ts`); do not switch back to
+        rendering every path at once, which made each CMS change start dozens
+        of CMS instances.
     - path: 'infra/terraform/**'
       instructions: |
         Vercel infrastructure as code. Flag any credential or secret value in

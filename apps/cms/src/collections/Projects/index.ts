@@ -18,7 +18,7 @@ import { translateUIField } from '@/translation/translate'
 import { invalidateWeb } from '@/utilities/invalidateWeb'
 
 /**
- * Portfolio entries shown on the public site at /work, one per GitHub
+ * Portfolio entries shown on the public site at /builds, one per GitHub
  * repository. Only repositories added here appear (nothing is imported
  * automatically), and "Hidden" takes one off the site without deleting it.
  *
