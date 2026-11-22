@@ -61,20 +61,23 @@ describe('TC-U-66 Invalidation re-renders', () => {
     expect(failed).toEqual(['/', '/builds'])
   })
 
-  test('paths not started within the budget are reported as failed without a request', async () => {
+  test('each render gets only the time left; paths not started within the budget fail without a request', async () => {
     let clock = 0
-    const seen: string[] = []
+    const seen: [string, number][] = []
     const failed = await rerenderInLanes(
       ['/', '/builds', '/notes'],
-      async (path) => {
-        seen.push(path)
+      async (path, timeLeftMs) => {
+        seen.push([path, timeLeftMs])
         clock += 15_000
         return true
       },
       20_000,
       () => clock,
     )
-    expect(seen).toEqual(['/', '/builds'])
+    expect(seen).toEqual([
+      ['/', 20_000],
+      ['/builds', 5_000],
+    ])
     expect(failed).toEqual(['/notes'])
   })
 })

@@ -110,11 +110,11 @@ const rerender = async (paths: string[], bypassToken: string): Promise<string[]>
   const headers: Record<string, string> = { 'x-prerender-revalidate': bypassToken }
   const protectionBypass = env('VERCEL_AUTOMATION_BYPASS_SECRET')
   if (protectionBypass) headers['x-vercel-protection-bypass'] = protectionBypass
-  return rerenderInLanes(paths, async (path) => {
+  return rerenderInLanes(paths, async (path, timeLeftMs) => {
     const res = await fetch(`${webURL()}${path}`, {
       headers,
       redirect: 'manual',
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(Math.min(10_000, timeLeftMs)),
     })
     // 404: the page is gone (an unpublished post), which is its new state.
     return res.ok || res.status === 404

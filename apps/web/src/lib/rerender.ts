@@ -26,14 +26,16 @@ export const rerenderLanes = (paths: string[]): string[][] => {
 
 /**
  * Re-render `paths` with `render` (true when done), the lanes side by side
- * and each lane one path at a time. Paths not started within `budgetMs` are
- * reported as failed without being requested: they are already marked stale,
- * so their next visitor re-renders them, and the CMS stops waiting for this
- * call after 25 s. Returns the paths that failed.
+ * and each lane one path at a time. Everything ends within `budgetMs`: each
+ * render gets at most the time left (`render`'s second argument, in ms), and
+ * paths not started in time are reported as failed without being requested.
+ * They are already marked stale, so their next visitor re-renders them, and
+ * the CMS stops waiting for this call after 25 s. Returns the paths that
+ * failed.
  */
 export const rerenderInLanes = async (
   paths: string[],
-  render: (path: string) => Promise<boolean>,
+  render: (path: string, timeLeftMs: number) => Promise<boolean>,
   budgetMs = 20_000,
   now: () => number = Date.now,
 ): Promise<string[]> => {
@@ -42,11 +44,12 @@ export const rerenderInLanes = async (
   await Promise.all(
     rerenderLanes(paths).map(async (lane) => {
       for (const path of lane) {
-        if (now() >= deadline) {
+        const left = deadline - now()
+        if (left <= 0) {
           failed.push(path)
           continue
         }
-        const ok = await render(path).catch(() => false)
+        const ok = await render(path, left).catch(() => false)
         if (!ok) failed.push(path)
       }
     }),

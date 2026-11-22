@@ -65,7 +65,7 @@ production build in `apps/web/.vercel/output`.
 | TC-U-61 | Site AI settings | `aiPresets` keeps up to 6 trimmed, non-empty questions of at most 300 characters; `aiModel` is kept only when it looks like a Claude model id, else null |
 | TC-U-62 | Frame policy | `frame-ancestors 'self'` plus the CMS origin (just `'self'` without a usable `CMS_URL`); set on HTML responses only, and a redirect with fixed headers does not throw |
 | TC-U-63 | AI answers | A kept answer is replayed only with the same `source_key`, and for the same question (case and spacing aside) or, for a paraphrase, when the kept question is one of the Site's suggested questions |
-| TC-U-66 | Invalidation re-renders | `/api/invalidate` re-renders in one lane per language, in the order given (root-only paths such as sitemaps go with English); a lane renders one path at a time while the languages run side by side; a failed or throwing render is reported and the lane goes on; paths not started within 20 s are reported as failed without a request |
+| TC-U-66 | Invalidation re-renders | `/api/invalidate` re-renders in one lane per language, in the order given (root-only paths such as sitemaps go with English); a lane renders one path at a time while the languages run side by side; a failed or throwing render is reported and the lane goes on; each render gets at most the time left of 20 s, and paths not started within it are reported as failed without a request |
 | TC-U-64 | AI request body | The AI endpoints read at most 2,048 bytes (bytes, not characters: 700 Japanese characters are over), stop reading a streamed body past the limit, and refuse a declared `Content-Length` over it without reading |
 | (14 more) | i18n, cms | Existing `i18n.test.ts` and `cms.test.ts` |
 
