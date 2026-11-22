@@ -69,37 +69,50 @@ describe('cachedCms', () => {
     expect(await expireCmsData(broken)).toBe(false)
   })
 
-  test('re-renders read the CMS unless the entry was read after a known expiry, and refresh it', async () => {
-    const { store } = fakeStore()
+  test('a re-render without an invalidation time always reads the CMS, and refreshes the entry', async () => {
+    const { store, calls } = fakeStore()
     await cachedCms('k', async () => 'old', store)
     await settle()
-
-    // No expiry recorded yet: a re-render cannot tell the entry is current.
-    const value = await withFreshCmsReads(() => cachedCms('k', async () => 'new', store))
-    expect(value).toBe('new')
+    await new Promise((resolve) => setTimeout(resolve, 2))
+    await expireCmsData(store)
+    await new Promise((resolve) => setTimeout(resolve, 2))
+    await cachedCms('k', async () => 'current', store)
     await settle()
-    expect(await cachedCms('k', async () => 'unused', store)).toBe('new')
+
+    // Vercel's own revalidation: even an entry read after the recorded expiry
+    // is not used, and the cache is not asked at all.
+    const gets = calls.get
+    let loads = 0
+    const load = async () => `live ${++loads}`
+    expect(await withFreshCmsReads(() => cachedCms('k', load, store))).toBe('live 1')
+    await settle()
+    expect(await withFreshCmsReads(() => cachedCms('k', load, store))).toBe('live 2')
+    expect(calls.get).toBe(gets)
+    await settle()
+    expect(await cachedCms('k', async () => 'unused', store)).toBe('live 2')
   })
 
-  test('after an expiry, the first re-render reads the CMS and the next ones reuse it', async () => {
+  test('after an expiry, the first re-render of that invalidation reads the CMS and the next ones reuse it', async () => {
     const { store } = fakeStore()
     await cachedCms('layout', async () => 'before', store)
     await settle()
     await new Promise((resolve) => setTimeout(resolve, 2))
+    const invalidatedAt = Date.now()
     await expireCmsData(store)
     await new Promise((resolve) => setTimeout(resolve, 2))
 
     let loads = 0
     const load = async () => `after ${++loads}`
-    expect(await withFreshCmsReads(() => cachedCms('layout', load, store))).toBe('after 1')
+    const rerender = () => withFreshCmsReads(() => cachedCms('layout', load, store), invalidatedAt)
+    expect(await rerender()).toBe('after 1')
     await settle()
-    expect(await withFreshCmsReads(() => cachedCms('layout', load, store))).toBe('after 1')
+    expect(await rerender()).toBe('after 1')
     expect(loads).toBe(1)
   })
 
-  test('a re-render with its invalidation time never uses an entry read at or before it', async () => {
+  test('when the expiry could not be recorded, no re-render uses an entry from before the change', async () => {
     const { store } = fakeStore()
-    // The expiry before this one was recorded; this one's write fails.
+    // The expiry before this one was recorded; this one fails altogether.
     await expireCmsData(store)
     await new Promise((resolve) => setTimeout(resolve, 2))
     await cachedCms('k', async () => 'before the change', store)
@@ -112,24 +125,25 @@ describe('cachedCms', () => {
         key === 'cms-data:expired-at'
           ? Promise.reject(new Error('cache write failed'))
           : store.set(key, value, options),
+      expireTag: () => Promise.reject(new Error('cache expiry failed')),
     }
     expect(await expireCmsData(failing)).toBe(false)
     await new Promise((resolve) => setTimeout(resolve, 2))
 
-    // Without the time, the entry looks newer than the last recorded expiry.
-    expect(await withFreshCmsReads(() => cachedCms('k', async () => 'unused', store))).toBe(
-      'before the change',
-    )
+    // The entry is still there and newer than the last recorded expiry.
     let loads = 0
     const load = async () => `after ${++loads}`
+    // The re-renders /api/invalidate requests carry its time.
     const rerender = () => withFreshCmsReads(() => cachedCms('k', load, store), invalidatedAt)
     expect(await rerender()).toBe('after 1')
     await settle()
     expect(await rerender()).toBe('after 1')
-    expect(loads).toBe(1)
+    // Vercel's own revalidation carries no time: it reads the CMS.
+    expect(await withFreshCmsReads(() => cachedCms('k', load, store))).toBe('after 2')
+    expect(loads).toBe(2)
   })
 
-  test('the invalidation time alone is enough; a bad one falls back to the recorded expiry', async () => {
+  test('the invalidation time alone is enough; a bad one reads the CMS', async () => {
     const { store } = fakeStore()
     await cachedCms('k', async () => 'old', store)
     await settle()
@@ -145,13 +159,31 @@ describe('cachedCms', () => {
     expect(
       await withFreshCmsReads(() => cachedCms('k', async () => 'unused', store), invalidatedAt),
     ).toBe('new')
-    // NaN, 0 or a negative time: as without one (no recorded expiry, so a miss).
+    // NaN, 0 or a negative time: as without one.
+    let loads = 0
     for (const bad of [Number.NaN, 0, -5]) {
-      expect(await withFreshCmsReads(() => cachedCms('k', async () => 'live', store), bad)).toBe(
-        'live',
-      )
+      expect(
+        await withFreshCmsReads(() => cachedCms('k', async () => `live ${++loads}`, store), bad),
+      ).toBe(`live ${loads}`)
       await settle()
     }
+    expect(loads).toBe(3)
+  })
+
+  test('expireCmsData still expires the tag when the expiry time cannot be written', async () => {
+    const { store, calls } = fakeStore()
+    await cachedCms('k', async () => 'old', store)
+    await settle()
+    const failing: CmsCacheStore = {
+      ...store,
+      set: (key, value, options) =>
+        key === 'cms-data:expired-at'
+          ? Promise.reject(new Error('cache write failed'))
+          : store.set(key, value, options),
+    }
+    expect(await expireCmsData(failing)).toBe(false)
+    expect(calls.expired).toEqual([CMS_DATA_TAG])
+    expect(await cachedCms('k', async () => 'new', store)).toBe('new')
   })
 
   test('expireCmsData drops every cached response', async () => {

@@ -19,17 +19,19 @@ import { getCache, waitUntil } from '@vercel/functions'
  * finish after that and write old data back, so every entry records when its
  * CMS read started and /api/invalidate records when it expired the cache
  * (EXPIRED_AT_KEY): an entry read before the last expiry is a miss.
- * Re-renders (requests carrying the ISR bypass token: the ones
- * /api/invalidate requests and Vercel's own ISR revalidation, see
- * middleware.ts) are stricter: they use an entry only when the expiry time is
- * known and the entry was read after it (and after the invalidation time the
- * request carries, INVALIDATED_AT_HEADER, so a failed expiry write cannot let
- * older data through), so they always see the new content,
- * while the layout data one re-render read (site, header, footer, recent
- * posts, redirects) serves the next ones instead of calling the CMS again.
- * Skipping the cache for every re-render made each CMS change call the CMS
- * six times per re-rendered page, all at once, each call a cold Payload
- * start (Fluid Active CPU, 2026-11-22).
+ * Re-renders (requests carrying the ISR bypass token, see middleware.ts) are
+ * stricter. The ones /api/invalidate requests carry the time of that
+ * invalidation (INVALIDATED_AT_HEADER) and use an entry only when it was read
+ * after that time and after the recorded expiry, so they always see the new
+ * content even when the expiry could not be recorded, while the layout data
+ * one re-render read (site, header, footer, recent posts, redirects) serves
+ * the next ones instead of calling the CMS again. A re-render without that
+ * time (Vercel's own ISR revalidation, if it sends the token) cannot tell a
+ * recorded expiry from one whose write failed, so it never reads the cache
+ * and always calls the CMS, as every re-render did before 1.7.1.
+ * Skipping the cache for the re-renders of an invalidation made each CMS
+ * change call the CMS six times per re-rendered page, all at once, each call
+ * a cold Payload start (Fluid Active CPU, 2026-11-22).
  * TTL_SECONDS is only a safety net for a missed webhook; it stays below the
  * ISR expiration so an ISR re-render after a missed webhook still picks up
  * changes within a day.
@@ -100,13 +102,13 @@ export const INVALIDATED_AT_HEADER = 'x-athena-invalidated-at'
 const freshReads = new AsyncLocalStorage<number>()
 
 /**
- * Run `fn` (and everything it awaits) as a re-render: only entries read after
- * a known expiry count (see the freshness note above); writes still happen.
- * `since` is the invalidation time the re-render request carried: entries read
- * at or before it never count, also when the cache could not record the expiry
- * (a failed write in `expireCmsData`) and still holds data from before the
- * change. Without it (Vercel's own ISR revalidation) only the recorded expiry
- * time decides.
+ * Run `fn` (and everything it awaits) as a re-render (see the freshness note
+ * above); writes still happen. `since` is the invalidation time the re-render
+ * request carried: only entries read after it (and after the recorded expiry)
+ * count, also when the cache could not record the expiry (a failed write in
+ * `expireCmsData`) and still holds data from before the change. Without a
+ * valid time (Vercel's own ISR revalidation, a bad header) the cache is not
+ * read at all.
  */
 export const withFreshCmsReads = <T>(fn: () => T, since = 0): T =>
   freshReads.run(Number.isFinite(since) && since > 0 ? since : 0, fn)
@@ -122,19 +124,18 @@ const later = (promise: Promise<unknown>) => {
 /**
  * A cached entry that is still fresh (read after the last expiry), or null.
  * `since` (re-renders only, else undefined): the entry must also be newer
- * than that invalidation time, and with neither that nor a recorded expiry
- * time nothing is fresh.
+ * than that invalidation time; a re-render without one (0) reads nothing.
  */
 const readFresh = async (
   store: CmsCacheStore,
   key: string,
   since?: number,
 ): Promise<Entry | null> => {
+  if (since !== undefined && since <= 0) return null
   const [hit, expiredAt] = await Promise.all([store.get(key), store.get(EXPIRED_AT_KEY)])
   if (!isEntry(hit)) return null
   const recorded = typeof expiredAt === 'number' ? expiredAt : null
   if (since === undefined) return recorded === null || hit.readAt > recorded ? hit : null
-  if (recorded === null && since <= 0) return null
   return hit.readAt > Math.max(recorded ?? 0, since) ? hit : null
 }
 
@@ -232,18 +233,28 @@ export const bumpCounter = async (
   }
 }
 
-/** Expire every cached CMS response. Returns false when it could not. */
+/**
+ * Expire every cached CMS response. Returns false when either step failed.
+ * The tag is expired even when the expiry time could not be written, so a
+ * failed write does not also leave every old entry in place.
+ */
 export const expireCmsData = async (
   store: CmsCacheStore | null = runtimeCache(),
 ): Promise<boolean> => {
   if (!store) return true
+  let ok = true
   try {
     // First, so entries read before now stop counting even before the tag expiry lands.
     await store.set(EXPIRED_AT_KEY, Date.now(), { ttl: TTL_SECONDS })
+  } catch (error) {
+    console.error('[cms-cache] recording the expiry failed', error)
+    ok = false
+  }
+  try {
     await store.expireTag(CMS_DATA_TAG)
-    return true
   } catch (error) {
     console.error('[cms-cache] expireTag failed', error)
-    return false
+    ok = false
   }
+  return ok
 }

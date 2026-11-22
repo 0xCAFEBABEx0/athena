@@ -165,8 +165,8 @@ const handle = async (context: APIContext, next: MiddlewareNext): Promise<Respon
 
 /**
  * True for the re-renders /api/invalidate requests right after a CMS change
- * (and Vercel's own ISR revalidation with the same token): they must not use
- * a Runtime Cache copy from before the change (see lib/cms-cache.ts).
+ * (and Vercel's own ISR revalidation, if it sends the same token): they must
+ * not use a Runtime Cache copy from before the change (see lib/cms-cache.ts).
  */
 const isRevalidation = (request: Request): boolean => {
   const token = request.headers.get('x-prerender-revalidate')
@@ -175,9 +175,13 @@ const isRevalidation = (request: Request): boolean => {
 
 export const onRequest = defineMiddleware(async (context, next) => {
   if (!isRevalidation(context.request)) return withFramePolicy(await handle(context, next))
-  console.info(`[cms-cache] fresh CMS reads for ${context.url.pathname}`)
   // Trusted only here, behind the token: the time of the invalidation that
-  // asked for this re-render (absent on Vercel's own revalidation).
+  // asked for this re-render. Without it (Vercel's own revalidation) the
+  // re-render reads the CMS and never the Runtime Cache.
   const since = Number(context.request.headers.get(INVALIDATED_AT_HEADER) ?? 0)
+  const timed = Number.isFinite(since) && since > 0
+  console.info(
+    `[cms-cache] fresh CMS reads for ${context.url.pathname} (${timed ? 'after its invalidation' : 'no invalidation time: CMS only'})`,
+  )
   return withFramePolicy(await withFreshCmsReads(() => handle(context, next), since))
 })

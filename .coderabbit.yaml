@@ -173,12 +173,15 @@ reviews:
         with a plain 404 and no CMS request; a new dotted route must be added
         there. Requests carrying the ISR bypass token
         (`x-prerender-revalidate`) run with `withFreshCmsReads`: a
-        re-render after a CMS change uses a Runtime Cache entry only when the
-        expiry time is known and the entry was read after it, never older
-        data, and never data read at or before the invalidation time the
-        request carries (`x-athena-invalidated-at`, trusted only with the
-        token). `/api/invalidate` re-renders one page at a time per language,
-        the languages side by side (`lib/rerender.ts`); do not switch back to
+        re-render after a CMS change uses a Runtime Cache entry only when it
+        was read after the invalidation time the request carries
+        (`x-athena-invalidated-at`, trusted only with the token) and after
+        the recorded expiry, never older data. A request with the token but
+        without that time (Vercel's own ISR revalidation) must not read the
+        Runtime Cache at all: it cannot tell a recorded expiry from one
+        whose write failed. `/api/invalidate` re-renders one page at a time
+        per language, the languages side by side (`lib/rerender.ts`); do not
+        switch back to
         rendering every path at once, which made each CMS change start dozens
         of CMS instances.
     - path: 'infra/terraform/**'
