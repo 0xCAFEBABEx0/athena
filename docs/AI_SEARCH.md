@@ -56,7 +56,9 @@ POST /api/ai/search  ◄──────────────── Bearer 
   (a note's content; a page's hero and blocks; a build's description, brief
   and notes; About's lead and story; Stack's intro and tools) and
   `lexical.ts` turns rich text into sections (headings, paragraphs, lists,
-  code, banners); `chunk.ts` packs them
+  code, banners, tables as Markdown rows whose header rows open every part
+  of about 300 tokens, so an excerpt from a long table keeps its column
+  names); `chunk.ts` packs them
   into chunks that never cross a heading, the meta description first;
   `embeddings.ts` calls Voyage (`voyage-4-lite`, 1024 dimensions; OpenAI's
   `text-embedding-3-small` at 1024 also works); `store.ts` is the only SQL;

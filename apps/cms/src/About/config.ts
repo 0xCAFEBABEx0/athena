@@ -11,6 +11,7 @@ import {
 } from '@payloadcms/richtext-lexical'
 
 import { indexGlobalAfterChange } from '@/ai/hooks'
+import { TableFeature } from '@/fields/tableFeature'
 
 import { revalidateAbout } from './hooks/revalidateAbout'
 
@@ -81,6 +82,7 @@ export const About: GlobalConfig = {
           OrderedListFeature(),
           BlockquoteFeature(),
           HorizontalRuleFeature(),
+          TableFeature(),
           FixedToolbarFeature(),
           InlineToolbarFeature(),
         ],

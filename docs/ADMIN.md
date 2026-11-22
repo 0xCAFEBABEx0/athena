@@ -83,7 +83,11 @@ admin UI):
    only what Payload 4's own design gets wrong, with 4's class names.
 4. Check that the daisyUI scope still holds: if Payload 4 stops using
    `--color-base-*` on `:root`, `.whoa-ui` can stay as it is anyway.
-5. `bun run generate:importmap`, then the admin checks in `docs/TESTING.md`
+5. Tables: the codemod's `rename-experimental-table-feature` renames
+   `EXPERIMENTAL_TableFeature` to `TableFeature`; here it is one line in
+   `apps/cms/src/fields/tableFeature.ts`. Check that stored tables still
+   load and render (TC-A-07, TC-U-69).
+6. `bun run generate:importmap`, then the admin checks in `docs/TESTING.md`
    (TC-A-*).
 
 ## Checking it

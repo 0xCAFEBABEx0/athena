@@ -4,6 +4,23 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.8.0] - 2026-11-22
+
+### Added
+
+- Tables in rich text: notes, the Content block of pages and the About
+  story can hold tables (Payload's table feature: the toolbar's + menu or
+  `/table`, then the cell menu for rows, columns, merged cells, header rows
+  and columns, row striping and a frozen first column). On the site a table
+  follows the theme in both views, and a table wider than the text column
+  scrolls sideways inside its own box (also with the keyboard), so phones
+  never scroll the whole page. Column widths and cell colors set in the
+  editor are not used on the site.
+- AI search reads tables as rows with their header, so a question about a
+  value in a table finds it, and an excerpt cut from a long table still
+  says what each column means (merged cells and very long cells too).
+  Translate translates each cell.
+
 ## [1.7.1] - 2026-11-22
 
 ### Fixed

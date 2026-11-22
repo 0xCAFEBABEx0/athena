@@ -211,6 +211,7 @@ const en = {
   aboutDescription: (who: string) => `About ${who}: background, work and how to get in touch.`,
   aboutLinks: 'Elsewhere',
   keepReading: 'Keep reading',
+  richTable: 'Table',
 }
 
 export type Dictionary = typeof en
@@ -376,6 +377,7 @@ const ja: Dictionary = {
   aboutDescription: (who: string) => `${who} について：経歴、取り組んでいること、連絡先。`,
   aboutLinks: 'リンク',
   keepReading: '続けて読む',
+  richTable: '表',
 }
 
 const zh: Dictionary = {
@@ -536,6 +538,7 @@ const zh: Dictionary = {
   aboutDescription: (who: string) => `关于 ${who}：经历、正在做的事和联系方式。`,
   aboutLinks: '在别处',
   keepReading: '继续阅读',
+  richTable: '表格',
 }
 
 const DICTIONARIES: Record<Locale, Dictionary> = { en, ja, zh }

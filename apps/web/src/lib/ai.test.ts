@@ -118,6 +118,10 @@ describe('TC-U-57 AI search (web): queries and ranking', () => {
 
   test('snippets drop code blocks and are cut at 140 characters', () => {
     expect(snippetOf('Run\n\n```sh\nbun run build\n```\n\nthen   wait.')).toBe('Run then wait.')
+    // Tables come from the index as Markdown rows (TC-U-67).
+    expect(snippetOf('Prices:\n\n| Plan | Price |\n| --- | --- |\n| Hobby | $0 |\n| a\\|b |  |\n\nAfter.')).toBe(
+      'Prices: Plan · Price / Hobby · $0 / a|b After.',
+    )
     const long = snippetOf('word '.repeat(60))
     expect(long.length).toBeLessThanOrEqual(140)
     expect(long.endsWith('…')).toBe(true)
