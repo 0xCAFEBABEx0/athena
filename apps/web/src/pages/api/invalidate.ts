@@ -6,6 +6,7 @@ import { expireCmsData } from '@/lib/cms-cache'
 import { env, webURL } from '@/lib/env'
 import { LOCALES, localizePath } from '@/lib/i18n'
 import { isrBypassToken } from '@/lib/isr-bypass.mjs'
+import { rerenderInLanes } from '@/lib/rerender'
 
 /**
  * Cache-invalidation webhook called by the CMS on publish/unpublish
@@ -23,6 +24,10 @@ import { isrBypassToken } from '@/lib/isr-bypass.mjs'
  * The paths that changed directly are then re-fetched with
  * `x-prerender-revalidate: <bypassToken>`, which re-renders and re-caches them
  * right away, so their first visitor already sees the new content.
+ *
+ * They run one language at a time (lib/rerender.ts), so the layout data the
+ * first page of a language reads from the CMS serves the rest of that
+ * language from the Runtime Cache.
  *
  * The response waits for those re-renders, so when the CMS logs
  * "Web invalidated" the changed pages are already fresh: answering earlier
@@ -97,26 +102,21 @@ export const POST: APIRoute = async ({ request }) => {
   return Response.json({ invalidated, cmsData, revalidated, failed, tags: body.tags ?? [] })
 }
 
-/** Re-render and re-cache `paths` now; returns the paths that failed. */
+/**
+ * Re-render and re-cache `paths` now, one language at a time per lane (see
+ * lib/rerender.ts); returns the paths that failed.
+ */
 const rerender = async (paths: string[], bypassToken: string): Promise<string[]> => {
   const headers: Record<string, string> = { 'x-prerender-revalidate': bypassToken }
   const protectionBypass = env('VERCEL_AUTOMATION_BYPASS_SECRET')
   if (protectionBypass) headers['x-vercel-protection-bypass'] = protectionBypass
-  const failed: string[] = []
-  await Promise.all(
-    paths.map(async (path) => {
-      try {
-        const res = await fetch(`${webURL()}${path}`, {
-          headers,
-          redirect: 'manual',
-          signal: AbortSignal.timeout(10_000),
-        })
-        // 404: the page is gone (an unpublished post), which is its new state.
-        if (!res.ok && res.status !== 404) failed.push(path)
-      } catch {
-        failed.push(path)
-      }
-    }),
-  )
-  return failed
+  return rerenderInLanes(paths, async (path) => {
+    const res = await fetch(`${webURL()}${path}`, {
+      headers,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(10_000),
+    })
+    // 404: the page is gone (an unpublished post), which is its new state.
+    return res.ok || res.status === 404
+  })
 }

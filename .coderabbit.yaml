@@ -172,8 +172,12 @@ reviews:
         The middleware answers dotted paths that are not in DOTTED_ROUTES
         with a plain 404 and no CMS request; a new dotted route must be added
         there. Requests carrying the ISR bypass token
-        (`x-prerender-revalidate`) run with `withFreshCmsReads`, so the
-        re-renders after a CMS change never read the Runtime Cache.
+        (`x-prerender-revalidate`) run with `withFreshCmsReads`: a
+        re-render after a CMS change uses a Runtime Cache entry only when the
+        expiry time is known and the entry was read after it, never older
+        data. `/api/invalidate` re-renders one language at a time
+        (`lib/rerender.ts`); do not switch back to rendering every path at
+        once, which made each CMS change start dozens of CMS instances.
     - path: 'infra/terraform/**'
       instructions: |
         Vercel infrastructure as code. Flag any credential or secret value in

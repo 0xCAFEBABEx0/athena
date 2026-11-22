@@ -4,6 +4,21 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.7.1] - 2026-11-22
+
+### Fixed
+
+- The 6-hourly GitHub sync saved every build on every run, even when nothing
+  had changed on GitHub (Postgres reorders the keys of the stored snapshot,
+  so the comparison always saw a difference). Each save re-rendered the home
+  page and /builds in every language and re-indexed the build for AI search.
+  It now saves only the builds whose GitHub data changed.
+- After a CMS change the site re-renders the changed pages one language at a
+  time instead of all at once, and those re-renders reuse the CMS data the
+  first page of each language read. One saved build used to send about 60
+  requests to the CMS in the same second, each starting the CMS from cold,
+  which used up most of the monthly Vercel Active CPU allowance.
+
 ## [1.7.0] - 2026-11-16
 
 ### Added

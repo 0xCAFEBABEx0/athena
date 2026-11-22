@@ -69,16 +69,32 @@ describe('cachedCms', () => {
     expect(await expireCmsData(broken)).toBe(false)
   })
 
-  test('fresh reads skip the cache but refresh it', async () => {
-    const { store, calls } = fakeStore()
+  test('re-renders read the CMS unless the entry was read after a known expiry, and refresh it', async () => {
+    const { store } = fakeStore()
     await cachedCms('k', async () => 'old', store)
     await settle()
 
+    // No expiry recorded yet: a re-render cannot tell the entry is current.
     const value = await withFreshCmsReads(() => cachedCms('k', async () => 'new', store))
     expect(value).toBe('new')
-    expect(calls.get).toBe(2) // entry + expiry time, both on the first call only
     await settle()
     expect(await cachedCms('k', async () => 'unused', store)).toBe('new')
+  })
+
+  test('after an expiry, the first re-render reads the CMS and the next ones reuse it', async () => {
+    const { store } = fakeStore()
+    await cachedCms('layout', async () => 'before', store)
+    await settle()
+    await new Promise((resolve) => setTimeout(resolve, 2))
+    await expireCmsData(store)
+    await new Promise((resolve) => setTimeout(resolve, 2))
+
+    let loads = 0
+    const load = async () => `after ${++loads}`
+    expect(await withFreshCmsReads(() => cachedCms('layout', load, store))).toBe('after 1')
+    await settle()
+    expect(await withFreshCmsReads(() => cachedCms('layout', load, store))).toBe('after 1')
+    expect(loads).toBe(1)
   })
 
   test('expireCmsData drops every cached response', async () => {
@@ -93,7 +109,11 @@ describe('cachedCms', () => {
   test('a read that started before an expiry cannot bring old data back', async () => {
     const { store } = fakeStore()
     let finishOld: (value: string) => void = () => {}
-    const slow = cachedCms('k', () => new Promise<string>((resolve) => (finishOld = resolve)), store)
+    const slow = cachedCms(
+      'k',
+      () => new Promise<string>((resolve) => (finishOld = resolve)),
+      store,
+    )
 
     // A publish lands while that read is in flight: expire, then re-render.
     await new Promise((resolve) => setTimeout(resolve, 2))
