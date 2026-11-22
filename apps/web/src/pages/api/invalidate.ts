@@ -2,10 +2,11 @@ import type { APIRoute } from 'astro'
 
 import { CACHE_TAGS, ROUTES, type CacheTag } from '@athena/shared/constants'
 import { invalidateContent } from '@/lib/cache'
-import { expireCmsData } from '@/lib/cms-cache'
+import { expireCmsData, INVALIDATED_AT_HEADER } from '@/lib/cms-cache'
 import { env, webURL } from '@/lib/env'
 import { LOCALES, localizePath } from '@/lib/i18n'
 import { isrBypassToken } from '@/lib/isr-bypass.mjs'
+import { RERENDER_BUDGET_MS, rerenderInLanes } from '@/lib/rerender'
 
 /**
  * Cache-invalidation webhook called by the CMS on publish/unpublish
@@ -13,7 +14,7 @@ import { isrBypassToken } from '@/lib/isr-bypass.mjs'
  *
  *   POST /api/invalidate
  *   Authorization: Bearer ${REVALIDATE_SECRET}
- *   { "paths": ["/posts/foo"], "tags": ["posts", "sitemap"] }
+ *   { "paths": ["/notes/foo"], "tags": ["posts", "sitemap"] }
  *   { "tags": ["ai_index"] }   (AI index updated: expire cached CMS data only)
  *
  * Vercel caches every rendered page, feed and sitemap (ISR) under one cache
@@ -23,6 +24,11 @@ import { isrBypassToken } from '@/lib/isr-bypass.mjs'
  * The paths that changed directly are then re-fetched with
  * `x-prerender-revalidate: <bypassToken>`, which re-renders and re-caches them
  * right away, so their first visitor already sees the new content.
+ *
+ * They run one page at a time per language, the languages side by side
+ * (lib/rerender.ts), so the per-language layout data the first page of a
+ * language reads from the CMS serves the rest of that language from the
+ * Runtime Cache.
  *
  * The response waits for those re-renders, so when the CMS logs
  * "Web invalidated" the changed pages are already fresh: answering earlier
@@ -87,36 +93,48 @@ export const POST: APIRoute = async ({ request }) => {
   // Before the re-renders below, so they are not marked stale again. The
   // cached CMS responses go first: every page re-rendered from now on (these
   // paths, and every other page on its next visit) must read the new content.
+  // The re-renders carry this time: cached CMS data read at or before it is
+  // never used for them, even if the expiry below could not be recorded.
+  const invalidatedAt = Date.now()
   const cmsData = await expireCmsData()
   const invalidated = await invalidateContent()
 
-  const failed = await rerender([...paths], bypassToken)
+  const failed = await rerender([...paths], bypassToken, invalidatedAt)
   const revalidated = [...paths].filter((path) => !failed.includes(path))
   if (failed.length) console.warn(`[invalidate] re-render failed: ${failed.join(', ')}`)
 
   return Response.json({ invalidated, cmsData, revalidated, failed, tags: body.tags ?? [] })
 }
 
-/** Re-render and re-cache `paths` now; returns the paths that failed. */
-const rerender = async (paths: string[], bypassToken: string): Promise<string[]> => {
-  const headers: Record<string, string> = { 'x-prerender-revalidate': bypassToken }
+/**
+ * Re-render and re-cache `paths` now, one page at a time per language, the
+ * languages side by side (see lib/rerender.ts); returns the paths that failed.
+ */
+const rerender = async (
+  paths: string[],
+  bypassToken: string,
+  invalidatedAt: number,
+): Promise<string[]> => {
+  const headers: Record<string, string> = {
+    'x-prerender-revalidate': bypassToken,
+    [INVALIDATED_AT_HEADER]: String(invalidatedAt),
+  }
   const protectionBypass = env('VERCEL_AUTOMATION_BYPASS_SECRET')
   if (protectionBypass) headers['x-vercel-protection-bypass'] = protectionBypass
-  const failed: string[] = []
-  await Promise.all(
-    paths.map(async (path) => {
-      try {
-        const res = await fetch(`${webURL()}${path}`, {
-          headers,
-          redirect: 'manual',
-          signal: AbortSignal.timeout(10_000),
-        })
-        // 404: the page is gone (an unpublished post), which is its new state.
-        if (!res.ok && res.status !== 404) failed.push(path)
-      } catch {
-        failed.push(path)
-      }
-    }),
+  // The budget counts from the start of the invalidation, so the time the
+  // cache expiry took comes off it.
+  const budgetMs = RERENDER_BUDGET_MS - (Date.now() - invalidatedAt)
+  return rerenderInLanes(
+    paths,
+    async (path, timeLeftMs) => {
+      const res = await fetch(`${webURL()}${path}`, {
+        headers,
+        redirect: 'manual',
+        signal: AbortSignal.timeout(Math.min(10_000, timeLeftMs)),
+      })
+      // 404: the page is gone (an unpublished post), which is its new state.
+      return res.ok || res.status === 404
+    },
+    budgetMs,
   )
-  return failed
 }

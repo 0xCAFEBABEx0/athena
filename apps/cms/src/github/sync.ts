@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
 
 /**
- * GitHub data for the /work pages (the `projects` collection).
+ * GitHub data for the /builds pages (the `projects` collection).
  *
  * One GraphQL request fetches every listed repository; a document is only
  * written (and the web cache only invalidated) when its snapshot changed, so
@@ -186,8 +186,21 @@ export async function fetchRepos(repos: string[]): Promise<Map<string, FetchResu
   return results
 }
 
-/** Stable comparison so an unchanged repository causes no write. */
-const sameSnapshot = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b)
+/** JSON with every object's keys sorted, so key order never counts as a change. */
+const canonical = (value: unknown): string =>
+  JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : v,
+  )
+
+/**
+ * Stable comparison so an unchanged repository causes no write. Postgres
+ * stores the json field as jsonb, which reorders the keys, so comparing plain
+ * JSON strings saw a change on every run: each 6-hourly sync rewrote every
+ * project and re-rendered /builds in every language (see sameCalendar).
+ */
+export const sameSnapshot = (a: unknown, b: unknown): boolean => canonical(a) === canonical(b)
 
 /**
  * Scheduled task body: refresh every project's GitHub snapshot and save only
