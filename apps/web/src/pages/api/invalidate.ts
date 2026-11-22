@@ -6,7 +6,7 @@ import { expireCmsData, INVALIDATED_AT_HEADER } from '@/lib/cms-cache'
 import { env, webURL } from '@/lib/env'
 import { LOCALES, localizePath } from '@/lib/i18n'
 import { isrBypassToken } from '@/lib/isr-bypass.mjs'
-import { rerenderInLanes } from '@/lib/rerender'
+import { RERENDER_BUDGET_MS, rerenderInLanes } from '@/lib/rerender'
 
 /**
  * Cache-invalidation webhook called by the CMS on publish/unpublish
@@ -121,13 +121,20 @@ const rerender = async (
   }
   const protectionBypass = env('VERCEL_AUTOMATION_BYPASS_SECRET')
   if (protectionBypass) headers['x-vercel-protection-bypass'] = protectionBypass
-  return rerenderInLanes(paths, async (path, timeLeftMs) => {
-    const res = await fetch(`${webURL()}${path}`, {
-      headers,
-      redirect: 'manual',
-      signal: AbortSignal.timeout(Math.min(10_000, timeLeftMs)),
-    })
-    // 404: the page is gone (an unpublished post), which is its new state.
-    return res.ok || res.status === 404
-  })
+  // The budget counts from the start of the invalidation, so the time the
+  // cache expiry took comes off it.
+  const budgetMs = RERENDER_BUDGET_MS - (Date.now() - invalidatedAt)
+  return rerenderInLanes(
+    paths,
+    async (path, timeLeftMs) => {
+      const res = await fetch(`${webURL()}${path}`, {
+        headers,
+        redirect: 'manual',
+        signal: AbortSignal.timeout(Math.min(10_000, timeLeftMs)),
+      })
+      // 404: the page is gone (an unpublished post), which is its new state.
+      return res.ok || res.status === 404
+    },
+    budgetMs,
+  )
 }

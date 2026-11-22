@@ -25,6 +25,13 @@ export const rerenderLanes = (paths: string[]): string[][] => {
 }
 
 /**
+ * Time /api/invalidate gives a whole run, counted from when it starts (the
+ * cache expiry included): the CMS stops waiting after 25 s, and the answer
+ * naming the failed paths must reach it before that.
+ */
+export const RERENDER_BUDGET_MS = 20_000
+
+/**
  * Re-render `paths` with `render` (true when done), the lanes side by side
  * and each lane one path at a time. Everything ends within `budgetMs`: each
  * render gets at most the time left (`render`'s second argument, in ms), and
@@ -36,7 +43,7 @@ export const rerenderLanes = (paths: string[]): string[][] => {
 export const rerenderInLanes = async (
   paths: string[],
   render: (path: string, timeLeftMs: number) => Promise<boolean>,
-  budgetMs = 20_000,
+  budgetMs = RERENDER_BUDGET_MS,
   now: () => number = Date.now,
 ): Promise<string[]> => {
   const deadline = now() + budgetMs
