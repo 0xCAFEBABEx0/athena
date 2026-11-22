@@ -336,7 +336,7 @@ html[data-theme='light'] {
   }
 
   /* "Toggle First Column Freeze" in the editor. */
-  .rt-table-frozen tr > :first-child {
+  .rt-table-frozen .rt-frozen {
     position: sticky;
     inset-inline-start: 0;
     z-index: 1;
@@ -344,8 +344,8 @@ html[data-theme='light'] {
     box-shadow: inset -1px 0 0 var(--color-base-300);
   }
 
-  .rt-table-frozen thead tr > :first-child,
-  .rt-table-frozen.table-zebra tbody tr:nth-child(even) > :first-child {
+  .rt-table-frozen thead .rt-frozen,
+  .rt-table-frozen.table-zebra tbody tr:nth-child(even) > .rt-frozen {
     background-color: var(--color-base-200);
   }
 }

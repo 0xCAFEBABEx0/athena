@@ -108,6 +108,55 @@ describe('TC-U-69 Rich text tables', () => {
     expect(out).not.toContain('<thead>')
   })
 
+  test('a frozen column marks only the cells that start in column 0, also under a cell merged down', () => {
+    const out = html(
+      doc(
+        table(
+          [
+            row(cell(1, [paragraph(text('Plan'))]), cell(1, [paragraph(text('Price'))])),
+            row(cell(2, [paragraph(text('Hobby'))], { rowSpan: 2 }), cell(0, [paragraph(text('$0'))])),
+            row(cell(0, [paragraph(text('$5'))])),
+            row(cell(2, [paragraph(text('Pro'))]), cell(0, [paragraph(text('$20'))])),
+          ],
+          { frozenColumnCount: 1 },
+        ),
+      ),
+    )
+    expect(out).toContain('<thead><tr><th scope="col" class="rt-frozen"><p>Plan</p></th><th scope="col"><p>Price</p></th></tr></thead>')
+    expect(out).toContain('<th scope="row" class="rt-frozen" rowspan="2"><p>Hobby</p></th><td><p>$0</p></td>')
+    // $5 is the row's first child but sits in column 1: not frozen.
+    expect(out).toContain('<tr><td><p>$5</p></td></tr>')
+    expect(out).toContain('<th scope="row" class="rt-frozen"><p>Pro</p></th><td><p>$20</p></td>')
+    expect(out.match(/rt-frozen"/g)?.length).toBe(3)
+  })
+
+  test('a header cell merged down past the header rows puts the whole table in one tbody, th kept', () => {
+    const out = html(
+      doc(
+        table([
+          row(cell(1, [paragraph(text('A'))], { rowSpan: 2 }), cell(1, [paragraph(text('B'))])),
+          row(cell(0, [paragraph(text('C'))])),
+        ]),
+      ),
+    )
+    expect(out).not.toContain('<thead>')
+    expect(out).toContain(
+      '<tbody><tr><th scope="col" rowspan="2"><p>A</p></th><th scope="col"><p>B</p></th></tr><tr><td><p>C</p></td></tr></tbody>',
+    )
+    // A rowspan inside the header rows keeps them in thead.
+    const inside = html(
+      doc(
+        table([
+          row(cell(1, [paragraph(text('A'))], { rowSpan: 2 }), cell(1, [paragraph(text('B'))])),
+          row(cell(1, [paragraph(text('C'))])),
+          row(cell(0, [paragraph(text('x'))]), cell(0, [paragraph(text('y'))])),
+        ]),
+      ),
+    )
+    expect(inside).toContain('<thead><tr><th scope="col" rowspan="2">')
+    expect(inside).toContain('</tr></thead><tbody><tr><td><p>x</p></td>')
+  })
+
   test('cell text is escaped like any rich text; links in cells keep their href', () => {
     const out = html(
       doc(

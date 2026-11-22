@@ -135,7 +135,8 @@ const cellsOf = (row: unknown): SerializedTableCellNode[] => {
  * rows go in `<thead>`; header cells are `<th>` with a scope; merged cells
  * keep `colspan`/`rowspan`; a cell with a long text gets `rt-long` so its
  * column does not shrink to a word per line on phones. Row striping becomes
- * `table-zebra` and a frozen first column stays in view while scrolling.
+ * `table-zebra` and a frozen first column (the cells that start in column 0,
+ * `rt-frozen`) stays in view while scrolling.
  * Column widths and cell background colors from the editor are not used:
  * widths follow the text and the screen, colors follow the theme.
  */
@@ -147,19 +148,54 @@ const tableHTML = (
   const rows = (node.children ?? []).filter(
     (row): row is SerializedTableRowNode => row?.type === 'tablerow',
   )
+  const frozen = typeof node.frozenColumnCount === 'number' && node.frozenColumnCount > 0
+  // Each cell's first logical column: a cell merged down from a row above
+  // takes its columns in the rows it covers, so a row's first child is not
+  // always in column 0. Only cells that start in column 0 are frozen.
+  const rowSpanOf = (cell: SerializedTableCellNode) =>
+    spanAttr('rowspan', cell.rowSpan) ? (cell.rowSpan as number) : 1
+  const colSpanOf = (cell: SerializedTableCellNode) =>
+    spanAttr('colspan', cell.colSpan) ? (cell.colSpan as number) : 1
+  const startColumns: number[][] = []
+  const covered: number[] = [] // per column: rows still covered by a rowspan from above
+  for (const row of rows) {
+    const starts: number[] = []
+    let column = 0
+    for (const cell of cellsOf(row)) {
+      while ((covered[column] ?? 0) > 0) column += 1
+      starts.push(column)
+      for (let i = 0; i < colSpanOf(cell); i += 1) covered[column + i] = rowSpanOf(cell)
+      column += colSpanOf(cell)
+    }
+    for (let i = 0; i < covered.length; i += 1) covered[i] = Math.max(0, (covered[i] ?? 0) - 1)
+    startColumns.push(starts)
+  }
+
   let headCount = 0
   while (headCount < rows.length) {
     const cells = cellsOf(rows[headCount])
     if (!cells.length || !cells.every((cell) => headerStateOf(cell) & ROW_HEADER)) break
     headCount += 1
   }
-  const rowHTML = (row: SerializedTableRowNode) =>
+  // A cell cannot span from <thead> into <tbody>: if a header cell is merged
+  // down past the header rows, the whole table goes in one <tbody> (its
+  // header cells stay <th>).
+  const reach = rows
+    .slice(0, headCount)
+    .flatMap((row, r) => cellsOf(row).map((cell) => r + rowSpanOf(cell)))
+  if (reach.some((end) => end > headCount)) headCount = 0
+
+  const rowHTML = (row: SerializedTableRowNode, r: number) =>
     `<tr>${cellsOf(row)
-      .map((cell) => {
+      .map((cell, i) => {
         const inner = cellHTML(cell)
         const state = headerStateOf(cell)
+        const classNames = [
+          textLength(inner) > LONG_CELL ? 'rt-long' : '',
+          frozen && startColumns[r]?.[i] === 0 ? 'rt-frozen' : '',
+        ].filter(Boolean)
         const attrs =
-          (textLength(inner) > LONG_CELL ? ' class="rt-long"' : '') +
+          (classNames.length ? ` class="${classNames.join(' ')}"` : '') +
           spanAttr('colspan', cell.colSpan) +
           spanAttr('rowspan', cell.rowSpan)
         if (!state) return `<td${attrs}>${inner}</td>`
@@ -167,14 +203,15 @@ const tableHTML = (
         return `<th${scope ? ` scope="${scope}"` : ''}${attrs}>${inner}</th>`
       })
       .join('')}</tr>`
-  const head = rows.slice(0, headCount).map(rowHTML).join('')
-  const body = rows.slice(headCount).map(rowHTML).join('')
+  const head = rows.slice(0, headCount).map((row, r) => rowHTML(row, r)).join('')
+  const body = rows
+    .slice(headCount)
+    .map((row, r) => rowHTML(row, headCount + r))
+    .join('')
   if (!head && !body) return ''
   const classes = ['table']
   if (node.rowStriping === true) classes.push('table-zebra')
-  if (typeof node.frozenColumnCount === 'number' && node.frozenColumnCount > 0) {
-    classes.push('rt-table-frozen')
-  }
+  if (frozen) classes.push('rt-table-frozen')
   return `<div class="rt-table not-prose" role="region" tabindex="0" aria-label="${escapeHTML(dict(locale).richTable)}"><table class="${classes.join(' ')}">${head ? `<thead>${head}</thead>` : ''}${body ? `<tbody>${body}</tbody>` : ''}</table></div>`
 }
 
