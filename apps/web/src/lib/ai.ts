@@ -248,8 +248,36 @@ export type SearchHit = {
 
 const SNIPPET_CHARS = 140
 
+const TABLE_ROW = /^\|.*\|$/
+const TABLE_RULE = /^\|(\s*:?-{3,}:?\s*\|)+$/
+
+/**
+ * Tables reach the index as Markdown rows (`| a | b |`, apps/cms/src/ai/lexical.ts):
+ * cells become `a · b`, rows are joined by ` / `, the `| --- |` line goes.
+ */
+const flattenTables = (text: string): string =>
+  text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => !TABLE_RULE.test(line))
+    .map((line) =>
+      TABLE_ROW.test(line)
+        ? `\u0000${line
+            .slice(1, -1)
+            .split(/(?<!\\)\|/)
+            .map((cell) => cell.trim().replaceAll('\\|', '|'))
+            .filter(Boolean)
+            .join(' · ')}\u0000`
+        : line,
+    )
+    .join('\n')
+    .replace(/\u0000\n\u0000/g, ' / ')
+    .replaceAll('\u0000', '')
+
 export const snippetOf = (content: string): string => {
-  const flat = content.replace(/```[\s\S]*?```/g, ' ').replace(/\s+/g, ' ').trim()
+  const flat = flattenTables(content.replace(/```[\s\S]*?```/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim()
   return flat.length > SNIPPET_CHARS ? `${flat.slice(0, SNIPPET_CHARS - 1).trimEnd()}…` : flat
 }
 

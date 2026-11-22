@@ -39,6 +39,7 @@ feature detection), never for every visitor.
 | `<details>` menus | CLI language menu (`Header.astro`) | Widely | — |
 | `color-scheme`, `prefers-reduced-motion`, `:focus-visible`, `aspect-ratio` | `global.css` | Widely | — |
 | `color-mix()`, cascade layers | `global.css`, Tailwind output | Widely | (floor) |
+| `position: sticky` on table cells, `overscroll-behavior` | Rich text tables (`.rt-table`, frozen first column) | Widely | — |
 | `@property` | Tailwind output | Newly (2024-07) | (floor) |
 | `text-wrap: balance` | headings, `global.css` | Newly (2024-05) | normal wrapping |
 | `backdrop-filter` | ADE top bar | Newly (2024-09) | no blur; the bar background is 88 % opaque |
@@ -81,7 +82,9 @@ Rules that come with them:
   The CLI header is lowercase (`posts`, `[ade]`, `[dark]`, `[en]`).
 - **Fonts**: Geist Sans / Geist Mono, Latin subsets only, served as files
   (never inlined). Japanese and Chinese fall back to system fonts.
-- **Narrow screens**: no horizontal scroll down to 320 px. Check real
+- **Narrow screens**: no horizontal scroll down to 320 px. Content that
+  cannot wrap scrolls inside its own box instead (code blocks, rich text
+  tables), never the page. Check real
   screens at 320 / 390 / 768 / 1280 px, light and dark, en / ja / zh, before
   calling a UI change done (`docs/TESTING.md`).
 - **Marks and icons**: nothing that resembles another company's logo or

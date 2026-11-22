@@ -3,6 +3,9 @@ import type {
   DefaultNodeTypes,
   SerializedBlockNode,
   SerializedLinkNode,
+  SerializedTableCellNode,
+  SerializedTableNode,
+  SerializedTableRowNode,
 } from '@payloadcms/richtext-lexical'
 import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
 import {
@@ -14,13 +17,16 @@ import {
 import type { BannerBlock, CallToActionBlock, MediaBlock } from '@athena/shared/payload-types'
 
 import { imgAttrs } from './media'
-import { DEFAULT_LOCALE, type Locale, localizePath } from './i18n'
+import { DEFAULT_LOCALE, dict, type Locale, localizePath } from './i18n'
 import { linkHref, type CMSLinkData } from './links'
 
 type CodeBlockFields = { code: string; language?: string; blockType: 'code' }
 
 type NodeTypes =
   | DefaultNodeTypes
+  | SerializedTableNode
+  | SerializedTableRowNode
+  | SerializedTableCellNode
   | SerializedBlockNode<BannerBlock | CallToActionBlock | MediaBlock | CodeBlockFields>
 
 export const escapeHTML = (value: string): string =>
@@ -89,11 +95,108 @@ const ctaLinkHTML = (links: CallToActionBlock['links'], locale: Locale): string 
     })
     .join('')
 
+/** Lexical's TableCellHeaderStates bits: ROW heads a column (header row), COLUMN heads a row. */
+const ROW_HEADER = 1
+const COLUMN_HEADER = 2
+
+const headerStateOf = (node: unknown): number => {
+  const state = (node as { headerState?: unknown }).headerState
+  return typeof state === 'number' ? state : 0
+}
+
+/** Stored JSON is not type-checked: only small whole numbers become attributes. */
+const spanAttr = (name: 'colspan' | 'rowspan', value: unknown): string =>
+  typeof value === 'number' && Number.isInteger(value) && value > 1 && value <= 1000
+    ? ` ${name}="${value}"`
+    : ''
+
+/** A cell with more characters than this keeps its column at least 10rem wide (`.rt-long`). */
+const LONG_CELL = 24
+
+const textLength = (html: string): number =>
+  html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&[a-z]+;|&#\d+;/g, ' ')
+    .trim().length
+
+const cellsOf = (row: unknown): SerializedTableCellNode[] => {
+  const children = (row as { children?: unknown }).children
+  return Array.isArray(children)
+    ? children.filter((cell): cell is SerializedTableCellNode => cell?.type === 'tablecell')
+    : []
+}
+
+/**
+ * A rich text table (EXPERIMENTAL_TableFeature in the CMS), replacing
+ * Payload's converter, which inlines `border: 1px solid #ccc` and
+ * `padding: 8px` on every cell. Here it is a daisyUI `table` inside a
+ * scroll box (`.rt-table`, global.css): a wide table scrolls sideways
+ * inside the text column instead of widening the page. The leading header
+ * rows go in `<thead>`; header cells are `<th>` with a scope; merged cells
+ * keep `colspan`/`rowspan`; a cell with a long text gets `rt-long` so its
+ * column does not shrink to a word per line on phones. Row striping becomes
+ * `table-zebra` and a frozen first column stays in view while scrolling.
+ * Column widths and cell background colors from the editor are not used:
+ * widths follow the text and the screen, colors follow the theme.
+ */
+const tableHTML = (
+  node: SerializedTableNode,
+  cellHTML: (cell: SerializedTableCellNode) => string,
+  locale: Locale,
+): string => {
+  const rows = (node.children ?? []).filter(
+    (row): row is SerializedTableRowNode => row?.type === 'tablerow',
+  )
+  let headCount = 0
+  while (headCount < rows.length) {
+    const cells = cellsOf(rows[headCount])
+    if (!cells.length || !cells.every((cell) => headerStateOf(cell) & ROW_HEADER)) break
+    headCount += 1
+  }
+  const rowHTML = (row: SerializedTableRowNode) =>
+    `<tr>${cellsOf(row)
+      .map((cell) => {
+        const inner = cellHTML(cell)
+        const state = headerStateOf(cell)
+        const attrs =
+          (textLength(inner) > LONG_CELL ? ' class="rt-long"' : '') +
+          spanAttr('colspan', cell.colSpan) +
+          spanAttr('rowspan', cell.rowSpan)
+        if (!state) return `<td${attrs}>${inner}</td>`
+        const scope = state & ROW_HEADER ? 'col' : state & COLUMN_HEADER ? 'row' : ''
+        return `<th${scope ? ` scope="${scope}"` : ''}${attrs}>${inner}</th>`
+      })
+      .join('')}</tr>`
+  const head = rows.slice(0, headCount).map(rowHTML).join('')
+  const body = rows.slice(headCount).map(rowHTML).join('')
+  if (!head && !body) return ''
+  const classes = ['table']
+  if (node.rowStriping === true) classes.push('table-zebra')
+  if (typeof node.frozenColumnCount === 'number' && node.frozenColumnCount > 0) {
+    classes.push('rt-table-frozen')
+  }
+  return `<div class="rt-table not-prose" role="region" tabindex="0" aria-label="${escapeHTML(dict(locale).richTable)}"><table class="${classes.join(' ')}">${head ? `<thead>${head}</thead>` : ''}${body ? `<tbody>${body}</tbody>` : ''}</table></div>`
+}
+
 const htmlConverters = (locale: Locale, toc: TocEntry[]): HTMLConvertersFunction<NodeTypes> => {
   const seen = new Map<string, number>()
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     ...LinkHTMLConverter({ internalDocToHref: internalDocToHref(locale) }),
+    table: ({ node, nodesToHTML }) =>
+      tableHTML(node, (cell) => nodesToHTML({ nodes: cell.children }).join(''), locale),
+    // The editor keeps an empty paragraph around a table it inserts; on the
+    // page that is a blank line on top of the table's own margin.
+    paragraph: ({ node, nodesToHTML, parent, providedStyleTag }) => {
+      const children = nodesToHTML({ nodes: node.children })
+      if (children.length) return `<p${providedStyleTag}>${children.join('')}</p>`
+      const siblings = (parent as { children?: { type?: string }[] }).children ?? []
+      const index = siblings.indexOf(node)
+      const nextToTable =
+        index >= 0 &&
+        (siblings[index - 1]?.type === 'table' || siblings[index + 1]?.type === 'table')
+      return nextToTable ? '' : `<p${providedStyleTag}><br /></p>`
+    },
     // h2/h3 get stable ids so the "On this page" panel can link to them.
     heading: ({ node, nodesToHTML, providedStyleTag }) => {
       const children = nodesToHTML({ nodes: node.children }).join('')

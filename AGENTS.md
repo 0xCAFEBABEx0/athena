@@ -28,7 +28,7 @@ Both apps deploy to **Vercel** (two projects, one repo) with Neon PostgreSQL and
 - **Runtime**: Vercel Functions of both apps run on **Bun 1.4** (`"bunVersion": "1.4.x"` in each `vercel.json`, Vercel's Bun runtime, beta), and both production builds run under Bun (`bun --bun next build` / `bun --bun astro build`; the Astro adapter derives `bun1.x` from the build process, which Vercel maps to Bun 1.3, so `apps/web/scripts/pin-bun-runtime.mjs` rewrites it to `bunVersion` after the build). Do not add `engines.node` to the app `package.json` files: it overrides `bunVersion` and puts functions back on Node. Node.js 24 LTS (pinned to 24.22.1 via `.nvmrc`, Vercel project setting 24.x) still runs tooling (`astro check`, Payload CLI, CI) and the CMS dev server (`next dev` under Bun fails to resolve Turbopack's hashed externals)
 - **Package Manager**: Bun (always use `bun`, never `npm` or `pnpm`)
 - **Database**: PostgreSQL 16 (`@payloadcms/db-postgres`, Neon)
-- **Rich Text**: Lexical (`@payloadcms/richtext-lexical`; the web app renders it via `convertLexicalToHTML` in `apps/web/src/lib/richtext.ts`)
+- **Rich Text**: Lexical (`@payloadcms/richtext-lexical`; the web app renders it via `convertLexicalToHTML` in `apps/web/src/lib/richtext.ts`). Tables come from Payload's `EXPERIMENTAL_TableFeature`, imported through `apps/cms/src/fields/tableFeature.ts` (Payload 4.0 renames it `TableFeature`); the web app renders them itself (daisyUI `table` in a scroll box), not with Payload's converter
 - **Monitoring**: Sentry (CMS), Vercel Web Analytics + Speed Insights (web)
 
 ## Key Commands (run from the repo root)
