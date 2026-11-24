@@ -4,6 +4,21 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.8.1] - 2026-11-24
+
+### Added
+
+- An accessibility statement, `ACCESSIBILITY.md`, which GitHub shows as the
+  repository's Accessibility tab: the WCAG 2.2 AA target (not a claim of
+  conformance), what the site does for keyboard, motion, themes, zoom and
+  languages today, the browsers it supports and what has not been tested
+  yet, the known barriers with their workarounds, how to report a barrier
+  and what happens next, and the checks expected from contributors and
+  coding agents.
+- An "Accessibility barrier" issue form, which files reports with the
+  `accessibility` label and asks only what went wrong (page, setup and
+  screenshots are optional).
+
 ## [1.8.0] - 2026-11-22
 
 ### Added
