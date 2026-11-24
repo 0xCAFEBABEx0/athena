@@ -45,7 +45,9 @@ Everything lives in [`docs/`](./docs/README.md):
 - [Decision Records](./docs/adr/README.md)
 - [Deployment](./docs/DEPLOYMENT.md) · [CI/CD](./docs/CI_CD.md) · [Sentry](./docs/SENTRY_SETUP.md) · [Upgrade Notes](./docs/UPGRADE_NOTES.md)
 
-Guidance for AI coding agents is in [`AGENTS.md`](./AGENTS.md).
+Guidance for AI coding agents is in [`AGENTS.md`](./AGENTS.md). The site's
+accessibility statement, and how to report a barrier, is in
+[`ACCESSIBILITY.md`](./ACCESSIBILITY.md).
 
 ## License
 

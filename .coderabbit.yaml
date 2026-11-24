@@ -221,6 +221,13 @@ reviews:
         the OS media query alone. New animations must stop under
         `prefers-reduced-motion: reduce` and `[data-motion='reduce']`.
         Switches keep the order view -> language -> theme.
+        Accessibility (`ACCESSIBILITY.md`, contributor checklist): flag UI
+        that cannot be used with the keyboard or loses the visible focus
+        outline, controls without an accessible name, decorative art not
+        hidden with aria-hidden, new single-key shortcuts that fire in text
+        fields or dialogs or ignore `[data-keys='off']`, and text in another
+        language without `lang`. A change that fixes or adds a barrier in its
+        Known limitations table must update that table.
     - path: '**/vercel.json'
       instructions: |
         `git.deploymentEnabled` is a whitelist: keep `"**": false` with only

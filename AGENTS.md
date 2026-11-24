@@ -102,6 +102,12 @@ The CMS knows the web app via `WEB_URL`; the web app reaches the CMS via `CMS_UR
 - **Never edit** `packages/shared/src/payload-types.ts` - regenerate with `bun run generate:types`
 - **CMS**: Server Components by default; add `'use client'` only when needed
 - **CMS admin UI** ([`docs/ADMIN.md`](./docs/ADMIN.md)): build it to survive Payload 4.0. Use only the stable admin APIs (`graphics`, `beforeLogin`, `beforeDashboard`, field `Cell`, `admin.group`); style our components with `tw:`-prefixed daisyUI classes inside `.whoa-ui`, not Payload's `Button` or SCSS imports; colors come from the `--whoa-*` tokens; Payload 3 class overrides go only in part 3 of `custom.scss`. Check every admin change at 1440, 390 and 320px, light and dark (TC-A-*)
+- **Accessibility** (`apps/web`): follow the contributor checklist in
+  [`ACCESSIBILITY.md`](./ACCESSIBILITY.md) (keyboard and visible focus in both views,
+  shortcuts off in text fields and dialogs and behind the Keyboard shortcuts setting,
+  reduced motion, accessible names, `lang` on text in another language, no sideways
+  scroll at 320px). When a change fixes or adds a barrier listed there, update its
+  Known limitations table in the same change
 - **Front-end design and browser support** (`apps/web`): read [`docs/BASELINE.md`](./docs/BASELINE.md) before changing UI, CSS or client-side JS. It holds the Baseline target (Widely available freely; Newly available and Limited only as progressive enhancement), the features in use and their fallbacks, and the design rules: themes and dark mode (`data-theme`, not the OS media query), the daisyUI `include:` list, motion, switches, narrow widths
 - **Prefix unused vars** with `_` to suppress lint warnings
 - **Section paths**: posts live under `/notes`, projects under `/builds`, the Stack global at `/stacks` (renamed in 1.2.0), the About global at `/about`. Build them from `ROUTES` in `packages/shared/src/constants.ts`, never as string literals (the E2E specs in `apps/web/e2e/` are the exception: they spell the public URLs out, so a change to `ROUTES` that moves a public URL fails them); `middleware.ts` answers the old `/posts`, `/work`, `/stack` (every language) with a 308 to the new path (query kept; `apps/web/scripts/route-legacy-redirects.mjs` routes those paths to the plain function after the build, because the ISR function never sees the query and caches by path), and CMS links typed with an old path are mapped by `currentRoute`

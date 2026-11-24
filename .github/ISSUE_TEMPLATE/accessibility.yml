@@ -1,0 +1,40 @@
+name: Accessibility barrier
+description: Something on whoa.me is hard or impossible to use. English, 日本語 or 中文 are all fine.
+title: "[a11y] "
+labels: ["accessibility"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for telling us. Only the first box is required; fill in
+        whatever else you know. Screenshots and recordings are optional, and
+        you never need to tell us about a disability. What happens next is
+        described in [ACCESSIBILITY.md](https://github.com/0xCAFEBABEx0/athena/blob/main/ACCESSIBILITY.md).
+  - type: textarea
+    id: barrier
+    attributes:
+      label: What went wrong?
+      description: What you were trying to do, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page address
+      placeholder: https://whoa.me/notes/...
+    validations:
+      required: false
+  - type: textarea
+    id: setup
+    attributes:
+      label: Your setup
+      description: Browser, operating system, and any assistive technology or setting (screen reader, zoom level, keyboard only, reduced motion, CLI or ADE view, light or dark theme).
+    validations:
+      required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: A workaround you found, how it should work, or screenshots (optional).
+    validations:
+      required: false

@@ -31,7 +31,10 @@ same change that alters the behaviour they describe.
 | [Security Vulnerabilities](./SECURITY_VULNERABILITIES.md) | Historical CVE audit (January 2025). |
 
 Agent-specific guidance (Claude Code, Cursor and others) lives in
-[`AGENTS.md`](../AGENTS.md) at the repository root.
+[`AGENTS.md`](../AGENTS.md) at the repository root. The accessibility
+statement (goals, known limitations, how to report a barrier, what
+contributors check) is [`ACCESSIBILITY.md`](../ACCESSIBILITY.md), also at the
+root, where GitHub shows it as the repository's Accessibility tab.
 
 ## Conventions
 
