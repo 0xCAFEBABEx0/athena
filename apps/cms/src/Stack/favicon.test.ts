@@ -7,6 +7,7 @@ import {
   googleFaviconUrl,
   iconCandidates,
   isPrivateAddress,
+  pinnedFetch,
   publicHost,
   readCapped,
   withinDeadline,
@@ -649,5 +650,113 @@ describe('TC-U-41 Stack hook', () => {
     expect(out).toEqual([2, 4, 6, 8, 10, 12, 14, 16, 18, 20])
     expect(peak).toBe(4)
     expect(await mapLimit([], 4, async (n: number) => n)).toEqual([])
+  })
+})
+
+describe('TC-U-37 favicon connections go to the checked addresses (DNS rebinding)', () => {
+  const okPng = async () => Buffer.from('png')
+
+  const loopbackServer = () => {
+    const hits: string[] = []
+    const server = Bun.serve({
+      hostname: '127.0.0.1',
+      port: 0,
+      fetch(req) {
+        const path = new URL(req.url).pathname
+        hits.push(`${req.headers.get('host')} ${path}`)
+        if (path === '/moved')
+          return new Response(null, { status: 302, headers: { location: '/' } })
+        return new Response('<link rel="icon" href="/i.png">', {
+          headers: { 'content-type': 'text/html', 'x-test': 'yes' },
+        })
+      },
+    })
+    return { hits, port: server.port, stop: () => server.stop(true) }
+  }
+
+  test('a resolver answering public then 127.0.0.1 never gets a connection to loopback', async () => {
+    const server = loopbackServer()
+    try {
+      const asked: string[] = []
+      // Public for the site check and the page's own check, loopback for any later lookup.
+      const resolve = async (host: string) => {
+        asked.push(host)
+        return asked.length <= 2 ? ['93.184.215.14'] : ['127.0.0.1']
+      }
+      const icon = await fetchFavicon(`http://rebind.example:${server.port}/`, okPng, undefined, {
+        resolve,
+        budgetMs: 300,
+      })
+      expect(icon).toBeNull()
+      expect(server.hits).toEqual([])
+      // The page was requested once its check passed, and the connection asked DNS nothing more.
+      expect(asked.filter((host) => host === 'rebind.example')).toEqual([
+        'rebind.example',
+        'rebind.example',
+      ])
+    } finally {
+      server.stop()
+    }
+  })
+
+  test('the default fetch connects to the given addresses only, and refuses a private one', async () => {
+    const server = loopbackServer()
+    try {
+      const init = { signal: AbortSignal.timeout(2000) }
+      // `rebind.example` has no DNS record: the connection can only come from the pinned address.
+      const url = `http://rebind.example:${server.port}/`
+      await expect(pinnedFetch(url, init, ['127.0.0.1'])).rejects.toThrow()
+      await expect(pinnedFetch(url, init, ['93.184.215.14', '127.0.0.1'])).rejects.toThrow()
+      expect(server.hits).toEqual([])
+
+      const allowAll = () => false
+      const res = await pinnedFetch(
+        url,
+        { ...init, headers: { Accept: 'text/html' } },
+        ['127.0.0.1'],
+        allowAll,
+      )
+      expect(res.status).toBe(200)
+      expect(res.url).toBe(url)
+      expect(res.headers.get('x-test')).toBe('yes')
+      expect(await res.text()).toContain('rel="icon"')
+      expect(server.hits).toEqual([`rebind.example:${server.port} /`])
+
+      const moved = await pinnedFetch(`${url}moved`, init, ['127.0.0.1'], allowAll)
+      expect(moved.status).toBe(302)
+      expect(moved.headers.get('location')).toBe('/')
+      expect(server.hits.length).toBe(2)
+    } finally {
+      server.stop()
+    }
+  })
+
+  test('the default fetch stops a body that stalls when its signal fires', async () => {
+    const server = Bun.serve({
+      hostname: '127.0.0.1',
+      port: 0,
+      fetch: () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('<html>'))
+            },
+          }),
+          { headers: { 'content-type': 'text/html' } },
+        ),
+    })
+    try {
+      const started = Date.now()
+      const res = await pinnedFetch(
+        `http://stall.example:${server.port}/`,
+        { signal: AbortSignal.timeout(150) },
+        ['127.0.0.1'],
+        () => false,
+      )
+      await expect(res.text()).rejects.toThrow()
+      expect(Date.now() - started).toBeLessThan(1000)
+    } finally {
+      server.stop(true)
+    }
   })
 })

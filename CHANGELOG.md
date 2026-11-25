@@ -4,6 +4,15 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.8.2] - 2026-11-25
+
+### Security
+
+- The Stack favicon fetch connects only to the addresses it has just checked
+  as public. It used to look the host up again when connecting, so a DNS
+  server that changes its answer (DNS rebinding) could point the request at
+  an internal address.
+
 ## [1.8.1] - 2026-11-24
 
 ### Added
