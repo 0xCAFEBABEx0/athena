@@ -14,6 +14,13 @@ A running log of notable dependency upgrades. Newest first.
   on jobs `run` / `queue` / `cancel`, and in `/api/translate`,
   `/api/ai/reindex` and the logged-in path of `/api/ai/search`. Reads stay
   as they were, so the `service` role still reads drafts.
+- Payload's own `payload-locked-documents` (create/update/delete) and
+  `payload-jobs-stats` (read/update) are added while Payload sanitizes the
+  config, open to any logged-in user; `restrictPayloadInternals` sets them to
+  `isEditor` on the sanitized config (`buildConfig(...).then(...)`).
+- `keepAnEditor` (Users hooks): the first user is always an editor, whatever
+  the first-user form sends, and the last editor can be neither demoted nor
+  deleted (`400`, bulk requests too), so the admin cannot be locked out.
 - `create-web-service-account.ts` sets `role: 'service'` when it creates or
   rotates the account (and now actually runs under `payload run`).
 

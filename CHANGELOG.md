@@ -12,9 +12,11 @@ section of each new version as a GitHub Release.
   `web-frontend` service account (its API key is `PAYLOAD_API_KEY` on
   athena-web) gets `service`: it still reads drafts for preview, but can no
   longer open the admin, create, edit or delete users, or change any
-  content, global, redirect, form, job or the AI index. Before, any
-  logged-in user, that key included, could do all of it, so a leaked key
-  meant a new admin login. Every other existing user becomes an editor.
+  content, global, redirect, form, job, document lock or the AI index.
+  Before, any logged-in user, that key included, could do all of it, so a
+  leaked key meant a new admin login. Every other existing user becomes an editor.
+  The first user is always an editor, and the last editor can be neither
+  demoted nor deleted, so the admin cannot be locked out.
   Needs `docs/sql/2026-11-25-user-roles.sql` before the CMS deploys.
 
 ### Fixed

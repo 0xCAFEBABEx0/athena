@@ -31,7 +31,7 @@ import { Stack } from './Stack/config'
 import { About } from './About/config'
 import { plugins } from './plugins'
 import { DEFAULT_LOCALE } from '@athena/shared/constants'
-import { isEditor, isEditorUser } from '@/access/isEditor'
+import { isEditor, isEditorUser, restrictPayloadInternals } from '@/access/isEditor'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL, getWebURL } from './utilities/getURL'
 import { getLoggerConfig } from './utilities/workersLogger'
@@ -173,4 +173,4 @@ export default buildConfig({
       },
     ],
   },
-})
+}).then(restrictPayloadInternals)

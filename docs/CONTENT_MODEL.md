@@ -71,8 +71,10 @@ Users have a `role`: `editor` (the default; full rights, including other
 users and the admin panel) or `service`. The `web-frontend` service account
 has the `service` role: its API key reads everything a logged-in user can,
 drafts included, but cannot open the admin, write content or manage users.
-The `/api/translate` and `/api/ai/reindex` routes and running, queueing or
-cancelling jobs are editor-only as well.
+The `/api/translate` and `/api/ai/reindex` routes, running, queueing or
+cancelling jobs, changing document locks and the scheduler's
+`payload-jobs-stats` global are editor-only as well. The first user is
+always an editor, and the last editor can be neither demoted nor deleted.
 
 ## 3. Collections
 

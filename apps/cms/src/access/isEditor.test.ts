@@ -71,3 +71,35 @@ describe('the service account is read-only', async () => {
     expect(await run?.({ req } as never)).toBe(false)
   })
 })
+
+describe('Payload internals', async () => {
+  const sanitized = await config
+
+  test('payload-locked-documents: the service account cannot change locks', async () => {
+    const locks = sanitized.collections.find(({ slug }) => slug === 'payload-locked-documents')
+    expect(locks).toBeDefined()
+    for (const op of ['create', 'update', 'delete'] as const) {
+      expect(await allows(locks?.access[op], 'service')).toBe(false)
+      expect(await allows(locks?.access[op], 'editor')).toBe(true)
+    }
+  })
+
+  test('payload-jobs-stats: the service account cannot touch the scheduler state', async () => {
+    const stats = sanitized.globals.find(({ slug }) => slug === 'payload-jobs-stats')
+    expect(stats).toBeDefined()
+    for (const op of ['read', 'update'] as const) {
+      expect(await allows(stats?.access[op], 'service')).toBe(false)
+    }
+  })
+
+  test('no other internal collection is writable beyond its owner', async () => {
+    for (const { slug, access } of sanitized.collections) {
+      if (!slug.startsWith('payload-')) continue
+      // Preferences are scoped to their owner; migrations have no REST or GraphQL API.
+      if (slug === 'payload-preferences' || slug === 'payload-migrations') continue
+      for (const op of ['create', 'update', 'delete'] as const) {
+        expect([slug, op, await allows(access[op], 'service')]).toEqual([slug, op, false])
+      }
+    }
+  })
+})

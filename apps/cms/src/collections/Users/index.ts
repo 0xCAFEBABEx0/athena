@@ -2,6 +2,8 @@ import type { CollectionConfig } from 'payload'
 
 import { isEditor } from '@/access/isEditor'
 
+import { keepAnEditor, keepAnEditorOnDelete } from './keepAnEditor'
+
 export const Users: CollectionConfig = {
   slug: 'users',
   access: {
@@ -44,5 +46,9 @@ export const Users: CollectionConfig = {
       },
     },
   ],
+  hooks: {
+    beforeChange: [keepAnEditor],
+    beforeDelete: [keepAnEditorOnDelete],
+  },
   timestamps: true,
 }
