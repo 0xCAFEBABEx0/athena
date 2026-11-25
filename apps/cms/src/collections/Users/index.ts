@@ -2,14 +2,14 @@ import type { CollectionConfig } from 'payload'
 
 import { isEditor } from '@/access/isEditor'
 
-import { keepAnEditor, keepAnEditorOnDelete } from './keepAnEditor'
+import { canDeleteUser, keepAnEditor, keepAnEditorOnDelete } from './keepAnEditor'
 
 export const Users: CollectionConfig = {
   slug: 'users',
   access: {
     admin: isEditor,
     create: isEditor,
-    delete: isEditor,
+    delete: canDeleteUser,
     read: isEditor,
     unlock: isEditor,
     update: isEditor,

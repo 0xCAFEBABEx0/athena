@@ -51,7 +51,8 @@ describe('the service account is read-only', async () => {
     for (const op of ['admin', 'create', 'read', 'update', 'delete', 'unlock'] as const) {
       const rule = users?.access[op] as Access | undefined
       expect(await allows(rule, 'service')).toBe(false)
-      expect(await allows(rule, 'editor')).toBe(true)
+      // delete is covered in keepAnEditor.test.ts (it counts editors)
+      if (op !== 'delete') expect(await allows(rule, 'editor')).toBe(true)
     }
   })
 
