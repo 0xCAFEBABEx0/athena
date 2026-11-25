@@ -69,6 +69,8 @@ export const seed = async ({
 
   await payload.delete({
     collection: 'users',
+    // The demo author may be the only editor (the first user); it is created again below.
+    context: { allowDeletingLastEditor: true },
     depth: 0,
     where: {
       email: {
@@ -265,7 +267,6 @@ export const seed = async ({
       disableRevalidate: true,
     },
   })
-
 
   payload.logger.info(`— Seeding contact form...`)
 
