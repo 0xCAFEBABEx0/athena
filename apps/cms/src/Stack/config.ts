@@ -1,5 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
+import { isEditor } from '@/access/isEditor'
+
 import { indexGlobalAfterChange } from '@/ai/hooks'
 
 import { fillStackIcons } from './hooks/fillStackIcons'
@@ -16,6 +18,7 @@ export const Stack: GlobalConfig = {
   label: 'Stack',
   access: {
     read: () => true,
+    update: isEditor,
   },
   admin: {
     description:

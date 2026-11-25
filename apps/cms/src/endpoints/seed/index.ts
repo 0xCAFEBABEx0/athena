@@ -65,18 +65,6 @@ export const seed = async ({
     }
   }
 
-  payload.logger.info(`— Seeding demo author and user...`)
-
-  await payload.delete({
-    collection: 'users',
-    depth: 0,
-    where: {
-      email: {
-        equals: 'demo-author@example.com',
-      },
-    },
-  })
-
   payload.logger.info(`— Seeding media...`)
 
   const [image1Buffer, image2Buffer, image3Buffer, hero1Buffer] = await Promise.all([
@@ -94,15 +82,29 @@ export const seed = async ({
     ),
   ])
 
-  const [demoAuthor, image1Doc, image2Doc, image3Doc, imageHomeDoc] = await Promise.all([
-    payload.create({
+  payload.logger.info(`— Seeding demo author and user...`)
+
+  const demoAuthorData = {
+    name: 'Demo Author',
+    email: 'demo-author@example.com',
+    password: 'password',
+    role: 'editor',
+  } as const
+  // Updated in place, not deleted and created again: the demo author may be
+  // the only editor, and a seed failing in between would lock out the admin.
+  const existingDemoAuthor = (
+    await payload.find({
       collection: 'users',
-      data: {
-        name: 'Demo Author',
-        email: 'demo-author@example.com',
-        password: 'password',
-      },
-    }),
+      depth: 0,
+      limit: 1,
+      where: { email: { equals: demoAuthorData.email } },
+    })
+  ).docs[0]
+
+  const [demoAuthor, image1Doc, image2Doc, image3Doc, imageHomeDoc] = await Promise.all([
+    existingDemoAuthor
+      ? payload.update({ collection: 'users', data: demoAuthorData, id: existingDemoAuthor.id })
+      : payload.create({ collection: 'users', data: demoAuthorData }),
     payload.create({
       collection: 'media',
       data: image1,
@@ -264,7 +266,6 @@ export const seed = async ({
       disableRevalidate: true,
     },
   })
-
 
   payload.logger.info(`— Seeding contact form...`)
 

@@ -1,6 +1,6 @@
 {
   "name": "athena",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "description": "Athena monorepo: Payload CMS (apps/cms) + Astro frontend (apps/web)",
   "license": "MIT",
   "type": "module",

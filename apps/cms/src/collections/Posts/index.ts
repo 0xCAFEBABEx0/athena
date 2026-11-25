@@ -9,7 +9,7 @@ import {
   lexicalEditor,
 } from '@payloadcms/richtext-lexical'
 
-import { authenticated } from '@/access/authenticated'
+import { isEditor } from '@/access/isEditor'
 import { indexAfterChange, removeAfterDelete } from '@/ai/hooks'
 import { authenticatedOrPublished } from '@/access/authenticatedOrPublished'
 import { Banner } from '@/blocks/Banner/config'
@@ -35,10 +35,10 @@ export const Posts: CollectionConfig<'posts'> = {
   // Shown as Notes, like the public section (/notes).
   labels: { singular: 'Note', plural: 'Notes' },
   access: {
-    create: authenticated,
-    delete: authenticated,
+    create: isEditor,
+    delete: isEditor,
     read: authenticatedOrPublished,
-    update: authenticated,
+    update: isEditor,
   },
   // This config controls what's populated by default when a post is referenced
   // https://payloadcms.com/docs/queries/select#defaultpopulate-collection-config-property

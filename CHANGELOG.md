@@ -4,6 +4,29 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.9.0] - 2026-11-25
+
+### Security
+
+- CMS users have a role, `editor` or `service`. The web app's
+  `web-frontend` service account (its API key is `PAYLOAD_API_KEY` on
+  athena-web) gets `service`: it still reads drafts for preview, but can no
+  longer open the admin, create, edit or delete users, or change any
+  content, global, redirect, form, job, document lock or the AI index.
+  Before, any logged-in user, that key included, could do all of it, so a
+  leaked key meant a new admin login. Every other existing user becomes an editor.
+  The first user is always an editor, and the last editor can be neither
+  demoted nor deleted, so the admin cannot be locked out (a bulk delete
+  skips that editor and keeps their admin preferences; the seed updates its
+  demo author in place, so reseeding works when that is the only editor).
+  Needs `docs/sql/2026-11-25-user-roles.sql` before the CMS deploys.
+
+### Fixed
+
+- `create-web-service-account.ts` did nothing under `payload run` (the
+  command exited before the script's async work started); it now creates or
+  rotates the account, and sets its `service` role.
+
 ## [1.8.1] - 2026-11-24
 
 ### Added

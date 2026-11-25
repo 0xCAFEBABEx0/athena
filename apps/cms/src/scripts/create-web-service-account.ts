@@ -1,6 +1,7 @@
 /**
  * One-off: create (or reset the API key of) the `web-frontend` service
- * account the Astro app uses for draft-content fetches.
+ * account the Astro app uses for draft-content fetches. It has the `service`
+ * role: its API key reads drafts but cannot log in to the admin or write.
  *
  *   bun run --filter @athena/cms payload run src/scripts/create-web-service-account.ts
  *
@@ -29,7 +30,7 @@ const run = async () => {
     await payload.update({
       collection: 'users',
       id: existing.docs[0].id,
-      data: { enableAPIKey: true, apiKey },
+      data: { role: 'service', enableAPIKey: true, apiKey },
     })
     console.log(`Rotated API key for existing ${EMAIL}`)
   } else {
@@ -38,6 +39,7 @@ const run = async () => {
       data: {
         name: 'web-frontend (service account)',
         email: EMAIL,
+        role: 'service',
         password: randomBytes(32).toString('hex'),
         enableAPIKey: true,
         apiKey,
@@ -50,4 +52,4 @@ const run = async () => {
   process.exit(0)
 }
 
-void run()
+await run()

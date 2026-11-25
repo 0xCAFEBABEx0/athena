@@ -11,7 +11,7 @@ import type { Project } from '@athena/shared/payload-types'
 
 import { CACHE_TAGS, ROUTES } from '@athena/shared/constants'
 
-import { authenticated } from '@/access/authenticated'
+import { isEditor } from '@/access/isEditor'
 import { indexAfterChange, removeAfterDelete } from '@/ai/hooks'
 import { fetchRepos, isRepoName } from '@/github/sync'
 import { translateUIField } from '@/translation/translate'
@@ -99,9 +99,9 @@ export const Projects: CollectionConfig<'projects'> = {
   // Shown as Builds, like the public section (/builds).
   labels: { singular: 'Build', plural: 'Builds' },
   access: {
-    create: authenticated,
-    delete: authenticated,
-    update: authenticated,
+    create: isEditor,
+    delete: isEditor,
+    update: isEditor,
     // Visitors (the web app) never see hidden entries.
     read: ({ req: { user } }): boolean | Where => (user ? true : { hidden: { not_equals: true } }),
   },

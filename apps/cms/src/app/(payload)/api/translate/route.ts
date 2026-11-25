@@ -3,6 +3,7 @@ import { anthropicConnection } from '@athena/shared/anthropic'
 import Anthropic from '@anthropic-ai/sdk'
 import { getPayload } from 'payload'
 
+import { isEditorUser } from '@/access/isEditor'
 import {
   TARGET_LOCALES,
   TRANSLATABLE,
@@ -26,10 +27,13 @@ const json = (body: unknown, status = 200) => Response.json(body, { status })
 export async function POST(request: Request): Promise<Response> {
   const payload = await getPayload({ config })
   const { user } = await payload.auth({ headers: request.headers })
-  if (!user) return json({ error: 'Log in to translate.' }, 401)
+  if (!isEditorUser(user)) return json({ error: 'Log in as an editor to translate.' }, 401)
   if (!anthropicConnection((key) => process.env[key])) {
     return json(
-      { error: 'Set ANTHROPIC_API_KEY (or ANTHROPIC_BASE_URL + CF_AIG_TOKEN for Cloudflare AI Gateway) on the CMS deployment.' },
+      {
+        error:
+          'Set ANTHROPIC_API_KEY (or ANTHROPIC_BASE_URL + CF_AIG_TOKEN for Cloudflare AI Gateway) on the CMS deployment.',
+      },
       503,
     )
   }
