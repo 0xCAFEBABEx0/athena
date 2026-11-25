@@ -2,6 +2,7 @@ import config from '@/payload.config'
 import { after } from 'next/server'
 import { getPayload } from 'payload'
 
+import { isEditorUser } from '@/access/isEditor'
 import { isServerCaller } from '@/ai/auth'
 import { reindexAll } from '@/ai/indexer'
 import { SearchUnavailableError, parseSearchRequest, semanticSearch } from '@/ai/search'
@@ -22,14 +23,15 @@ const json = (body: unknown, status = 200) =>
  * stacks): embeds the query and returns the nearest excerpts, best first.
  * Called server-side by the web app
  * (Authorization: Bearer REVALIDATE_SECRET, the secret both deployments
- * already share) or by a logged-in editor; every call costs an embedding
- * request, so it is not open to the public.
+ * already share) or by a logged-in editor (not the read-only service
+ * account); every call costs an embedding request, so it is not open to the
+ * public.
  */
 export async function POST(request: Request): Promise<Response> {
   const payload = await getPayload({ config })
   if (!isServerCaller(request)) {
     const { user } = await payload.auth({ headers: request.headers })
-    if (!user) return json({ error: 'Unauthorized' }, 401)
+    if (!isEditorUser(user)) return json({ error: 'Unauthorized' }, 401)
   }
   const query = parseSearchRequest(await request.json().catch(() => null))
   if (!query) return json({ error: 'q must be 1-300 characters.' }, 400)

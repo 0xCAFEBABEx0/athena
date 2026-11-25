@@ -1,4 +1,6 @@
 import type { GlobalConfig } from 'payload'
+
+import { isEditor } from '@/access/isEditor'
 import {
   BlockquoteFeature,
   FixedToolbarFeature,
@@ -25,6 +27,7 @@ export const About: GlobalConfig = {
   label: 'About',
   access: {
     read: () => true,
+    update: isEditor,
   },
   admin: {
     description:

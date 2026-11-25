@@ -4,6 +4,7 @@ import { redirectsPlugin } from '@payloadcms/plugin-redirects'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { searchPlugin } from '@payloadcms/plugin-search'
 import type { Plugin } from 'payload'
+import { isEditor } from '@/access/isEditor'
 import { revalidateRedirects } from '@/hooks/revalidateRedirects'
 import type { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
@@ -28,6 +29,7 @@ export const plugins: Plugin[] = [
   redirectsPlugin({
     collections: ['pages', 'posts'],
     overrides: {
+      access: { create: isEditor, delete: isEditor, update: isEditor },
       // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
       fields: ({ defaultFields }) => {
         return defaultFields.map((field) => {
@@ -60,6 +62,7 @@ export const plugins: Plugin[] = [
       payment: false,
     },
     formOverrides: {
+      access: { create: isEditor, delete: isEditor, update: isEditor },
       fields: ({ defaultFields }) => {
         return defaultFields.map((field) => {
           if ('name' in field && field.name === 'confirmationMessage') {
@@ -80,11 +83,16 @@ export const plugins: Plugin[] = [
         })
       },
     },
+    // Visitors still submit forms (create stays public).
+    formSubmissionOverrides: {
+      access: { delete: isEditor, read: isEditor },
+    },
   }),
   searchPlugin({
     collections: ['posts'],
     beforeSync: beforeSyncWithSearch,
     searchOverrides: {
+      access: { delete: isEditor, update: isEditor },
       fields: ({ defaultFields }) => {
         return [...defaultFields, ...searchFields]
       },

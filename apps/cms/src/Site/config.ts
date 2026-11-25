@@ -1,5 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
+import { isEditor } from '@/access/isEditor'
+
 import { fillContributions, isGitHubLogin } from '@/github/contributions'
 import { normalizeXUrl } from '@/x/oembed'
 import { fillXPicks } from './hooks/fillXPicks'
@@ -14,6 +16,7 @@ export const Site: GlobalConfig = {
   label: 'Site',
   access: {
     read: () => true,
+    update: isEditor,
   },
   admin: {
     description:

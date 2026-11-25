@@ -291,7 +291,6 @@ export interface Media {
     };
     [k: string]: unknown;
   } | null;
-  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -390,6 +389,10 @@ export interface Category {
 export interface User {
   id: number;
   name?: string | null;
+  /**
+   * Editors manage the site. Service accounts can only read, drafts included.
+   */
+  role: 'editor' | 'service';
   updatedAt: string;
   createdAt: string;
   enableAPIKey?: boolean | null;
@@ -1300,7 +1303,6 @@ export interface ProjectsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
-  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1413,6 +1415,7 @@ export interface CategoriesSelect<T extends boolean = true> {
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   enableAPIKey?: T;

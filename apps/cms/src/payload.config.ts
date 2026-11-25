@@ -31,6 +31,7 @@ import { Stack } from './Stack/config'
 import { About } from './About/config'
 import { plugins } from './plugins'
 import { DEFAULT_LOCALE } from '@athena/shared/constants'
+import { isEditor, isEditorUser } from '@/access/isEditor'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL, getWebURL } from './utilities/getURL'
 import { getLoggerConfig } from './utilities/workersLogger'
@@ -127,9 +128,11 @@ export default buildConfig({
   },
   jobs: {
     access: {
+      cancel: isEditor,
+      queue: isEditor,
       run: ({ req }: { req: PayloadRequest }): boolean => {
-        // Allow logged in users to execute this endpoint (default)
-        if (req.user) return true
+        // Editors may run jobs from the admin; the read-only service account may not
+        if (isEditorUser(req.user)) return true
 
         const secret = process.env.CRON_SECRET
         if (!secret) return false

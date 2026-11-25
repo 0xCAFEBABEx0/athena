@@ -53,20 +53,26 @@ Defined in `apps/cms/src/access/`:
 | Function | Rule |
 |---|---|
 | `anyone` | Always `true`. |
-| `authenticated` | `true` when `req.user` is set. |
-| `authenticatedOrPublished` | `true` for logged-in users; otherwise a query constraint `_status = 'published'`. |
+| `isEditor` | `true` when the user's `role` is `editor` (not for the `service` role or anonymous callers). |
+| `authenticatedOrPublished` | `true` for logged-in users (both roles); otherwise a query constraint `_status = 'published'`. |
 
 | Collection | create | read | update | delete |
 |---|---|---|---|---|
-| pages, posts | authenticated | authenticatedOrPublished | authenticated | authenticated |
-| media, categories | authenticated | anyone | authenticated | authenticated |
-| projects | authenticated | logged-in users: all; visitors: entries without `hidden` | authenticated | authenticated |
-| users | authenticated | authenticated | authenticated | authenticated (also `admin`) |
-| site, header, footer | n/a | anyone | (Payload default: authenticated) | n/a |
+| pages, posts | isEditor | authenticatedOrPublished | isEditor | isEditor |
+| media, categories | isEditor | anyone | isEditor | isEditor |
+| projects | isEditor | logged-in users: all; visitors: entries without `hidden` | isEditor | isEditor |
+| users | isEditor | isEditor | isEditor | isEditor (also `admin`, `unlock`) |
+| redirects, forms | isEditor | anyone | isEditor | isEditor |
+| form-submissions | anyone | isEditor | nobody | isEditor |
+| search | nobody (synced by hooks) | anyone | isEditor | isEditor |
+| site, stack, about, header, footer | n/a | anyone | isEditor | n/a |
 
-There is no role field. Any user who can log in can edit everything, including
-other users. The `web-frontend` service account is a normal user whose API key
-is used only for draft reads.
+Users have a `role`: `editor` (the default; full rights, including other
+users and the admin panel) or `service`. The `web-frontend` service account
+has the `service` role: its API key reads everything a logged-in user can,
+drafts included, but cannot open the admin, write content or manage users.
+The `/api/translate` and `/api/ai/reindex` routes and running, queueing or
+cancelling jobs are editor-only as well.
 
 ## 3. Collections
 
@@ -138,7 +144,8 @@ in Vercel Blob. Renditions (also listed in `IMAGE_SIZES`):
 
 ### 3.5 Users (`users`)
 
-Auth collection with `useAPIKey: true` and a single custom field `name`.
+Auth collection with `useAPIKey: true` and the custom fields `name` and
+`role` (`editor` | `service`, required, default `editor`, in the JWT).
 Timestamps on. Create or rotate the web service account with
 `apps/cms/src/scripts/create-web-service-account.ts`.
 

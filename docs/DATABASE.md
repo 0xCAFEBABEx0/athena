@@ -98,6 +98,6 @@ database stores their URLs and metadata only.
 
 | Script | Purpose |
 |---|---|
-| `create-web-service-account.ts` | Create the `web-frontend@service.local` user or rotate its API key. Prints the key once. Run with `bun run --filter @athena/cms payload run src/scripts/create-web-service-account.ts`. |
+| `create-web-service-account.ts` | Create the `web-frontend@service.local` user or rotate its API key, with the read-only `service` role. Prints the key once. Run with `bun run --filter @athena/cms payload run src/scripts/create-web-service-account.ts`. |
 | `check-media.ts` | Print the first 10 media rows for debugging (`bun run --filter @athena/cms check:media`). |
 | `seed-standalone.ts` | Seed without a running server (destructive, see above). |

@@ -288,9 +288,9 @@ a second hourly wake-up to the shared CU-hour budget.
 
 | Concern | Mechanism |
 |---|---|
-| Admin access | Payload auth on the `users` collection. Every authenticated user has full rights; there are no roles yet. |
+| Admin access | Payload auth on the `users` collection. Users with the `editor` role have full rights; the `service` role can only read (drafts included) and cannot open the admin. |
 | Public reads | `authenticatedOrPublished` on Pages/Posts returns only `_status = published` to anonymous callers. Media, Categories, Header, Footer are public. Users are private. |
-| Draft reads from web | `web-frontend` service account API key, server-side only (`PAYLOAD_API_KEY`). |
+| Draft reads from web | `web-frontend` service account API key (`service` role, read-only), server-side only (`PAYLOAD_API_KEY`). |
 | Preview entry | `PREVIEW_SECRET` query param, HttpOnly `SameSite=Lax` cookies, `Secure` in production. Draft mode needs both `athena-draft` and a `__prerender_bypass` cookie equal to the ISR bypass token (`lib/draft.ts`), so setting `athena-draft` by hand shows nothing. `/api/preview` and `/api/exit-preview` redirect only to a path on the site (`lib/safe-url.ts`). |
 | Cache invalidation | `REVALIDATE_SECRET` bearer token. The ISR bypass token is a SHA-256 derived from it (`lib/isr-bypass.mjs`), never the secret itself. |
 | Links from content | CMS and GitHub URLs become an `href` only as http(s), mailto, tel or an on-site path (`safeHref` / `httpUrl` in `lib/safe-url.ts`); X picks link only to `https://x.com/<handle>/status/<id>`. Text from the CMS, GitHub and X is escaped by Astro; rich text goes through Payload's HTML converter. |

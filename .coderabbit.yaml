@@ -68,7 +68,9 @@ reviews:
       instructions: |
         Collections export a `CollectionConfig` typed with their slug.
         Public read should use `authenticatedOrPublished`; writes should use
-        `authenticated`. Flag any access rule that exposes drafts or
+        `isEditor` (the `service` role of the web-frontend API key is
+        read-only), and every `users` rule too. Flag any write rule that a
+        `service` user passes, and any access rule that exposes drafts or
         unpublished content to anonymous users. Revalidation hooks
         (`afterChange`, `afterDelete`) must call `invalidateWeb()`.
     - path: 'apps/cms/src/{components/**,admin-ui/**,app/(payload)/custom.scss,plugins/adminNav.ts}'

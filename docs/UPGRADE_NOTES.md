@@ -2,6 +2,35 @@
 
 A running log of notable dependency upgrades. Newest first.
 
+## User roles (1.9.0) — 2026-11-25
+
+**CMS**
+
+- `users.role` (select `editor` | `service`, required, default `editor`,
+  saved to the JWT). New access function `isEditor`
+  (`src/access/isEditor.ts`) replaces `authenticated` on every write rule,
+  on all `users` rules (also `admin` and `unlock`), on the globals' `update`,
+  on the redirects, forms, form-submissions and search plugin collections,
+  on jobs `run` / `queue` / `cancel`, and in `/api/translate`,
+  `/api/ai/reindex` and the logged-in path of `/api/ai/search`. Reads stay
+  as they were, so the `service` role still reads drafts.
+- `create-web-service-account.ts` sets `role: 'service'` when it creates or
+  rotates the account (and now actually runs under `payload run`).
+
+**Database (manual, schema push is off)**
+
+Run [`docs/sql/2026-11-25-user-roles.sql`](./sql/2026-11-25-user-roles.sql)
+(enum `enum_users_role`, column `users.role` defaulting to `editor`, and
+`role = 'service'` for `web-frontend@service.local`) on the preview Neon
+branch, then production, before the CMS deploys: Payload reads the column
+on every login and API-key request. Checked: it runs twice; a push of the
+new config on a database that ran it changes nothing.
+
+**After deploying**
+
+If the service account uses another email, set its role in the admin (as an
+editor) or run the script again. Check TC-P-25.
+
 ## AI search on `/search` — 2026-11-13 (pages added 2026-11-15)
 
 **CMS**
