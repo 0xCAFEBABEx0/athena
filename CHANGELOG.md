@@ -4,6 +4,15 @@ All notable changes to the site are listed here. The version rules are in
 [`docs/VERSIONING.md`](docs/VERSIONING.md); the release workflow publishes the
 section of each new version as a GitHub Release.
 
+## [1.8.2] - 2026-11-25
+
+### Security
+
+- A CMS Redirects entry only sends visitors to a path on this site. An entry
+  whose custom URL points elsewhere (`https://…`, `//host`) is ignored, so a
+  CMS account can no longer turn an old link on the site into a redirect to
+  another website.
+
 ## [1.8.1] - 2026-11-24
 
 ### Added

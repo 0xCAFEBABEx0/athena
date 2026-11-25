@@ -6,11 +6,11 @@ import type { Redirect } from '@athena/shared/payload-types'
 
 import { tagAsContent } from '@/lib/cache'
 import { getRedirects } from '@/lib/cms'
+import { cmsRedirectTarget } from '@/lib/cms-redirect'
 import { INVALIDATED_AT_HEADER, withFreshCmsReads } from '@/lib/cms-cache'
 import { env } from '@/lib/env'
 import { withFramePolicy } from '@/lib/frame-policy'
 import { DEFAULT_LOCALE, localizePath, splitLocale, type Locale } from '@/lib/i18n'
-import { linkHref, type CMSLinkData } from '@/lib/links'
 import { isrBypassToken } from '@/lib/isr-bypass.mjs'
 import { getFooterNav, getHeaderNav, getRecentPosts } from '@/lib/nav'
 import { getSite } from '@/lib/site'
@@ -75,32 +75,15 @@ const notFound = () =>
     },
   })
 
-/**
- * The CMS Redirects entry for this path, as a 301, or null. An entry written
- * for an old section path (`/posts/old-slug`) also answers its renamed path
- * (`/notes/old-slug`), because CMS links typed with the old path are rewritten
- * to the new one before anyone clicks them; an exact entry wins.
- */
+/** The CMS Redirects entry for this path, as a 301, or null. */
 const cmsRedirect = (
   redirects: Redirect[],
   pathname: string,
   locale: Locale,
   context: APIContext,
 ): Response | null => {
-  const match =
-    redirects.find((redirect) => redirect.from === pathname) ??
-    redirects.find(
-      (redirect) =>
-        typeof redirect.from === 'string' &&
-        redirect.from !== pathname &&
-        currentRoute(redirect.from) === pathname,
-    )
-  if (!match?.to) return null
-  const dest =
-    match.to.type === 'reference'
-      ? linkHref({ type: 'reference', reference: match.to.reference } as CMSLinkData)
-      : match.to.url
-  return dest ? context.redirect(localizePath(locale, dest), 301) : null
+  const target = cmsRedirectTarget(redirects, pathname, locale)
+  return target ? context.redirect(target, 301) : null
 }
 
 const handle = async (context: APIContext, next: MiddlewareNext): Promise<Response> => {
