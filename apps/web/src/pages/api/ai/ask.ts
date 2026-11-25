@@ -86,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const cached = restoreAnswer(await peekCms<StoredAnswer>(key), ask.locale)
   if (cached) return new Response(ndjson(pacedReplay(cached)), { headers: streamHeaders })
 
-  if (!allowVisitor(clientAddress(request))) return error(429, 'busy', 'Too many questions. Try again in a few minutes.')
+  if (!(await allowVisitor(clientAddress(request)))) return error(429, 'busy', 'Too many questions. Try again in a few minutes.')
   if (!(await allowToday())) return error(429, 'daily', 'The daily limit for AI answers is used up. Try again tomorrow.')
 
   const readAt = Date.now()

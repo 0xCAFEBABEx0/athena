@@ -48,7 +48,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const chunks = await searchChunks(query, CHUNKS, {
       beforeLoad: async () => {
-        if (!allowVisitor(visitor)) throw new AiSearchError('Too many searches.', 429, 'busy')
+        if (!(await allowVisitor(visitor))) throw new AiSearchError('Too many searches.', 429, 'busy')
         if (!(await allowToday())) throw new AiSearchError('Daily limit reached.', 429, 'daily')
       },
     })
