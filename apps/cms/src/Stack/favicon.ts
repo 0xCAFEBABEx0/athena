@@ -7,12 +7,19 @@
  *
  * Links come from signed-in editors only, but icon URLs come from the tool's
  * own HTML: only public http(s) hosts whose DNS answers are all public
- * addresses are fetched, redirects are re-checked, every response is
- * size-capped, and a whole lookup ends after LOOKUP_BUDGET_MS so the save
+ * addresses are fetched, and each connection goes to the addresses just
+ * checked (no second DNS lookup a rebinding DNS server could answer with a
+ * private one); redirects are re-checked, every response is size-capped,
+ * and a whole lookup ends after LOOKUP_BUDGET_MS so the save
  * finishes well inside the CMS function's time limit.
  */
 
 import { lookup as dnsLookup } from 'node:dns/promises'
+import { request as httpRequest } from 'node:http'
+import { request as httpsRequest } from 'node:https'
+import type { LookupFunction } from 'node:net'
+import { pipeline, Readable } from 'node:stream'
+import { createBrotliDecompress, createGunzip, createInflate } from 'node:zlib'
 
 export const ICON_SIZE = 64
 
@@ -90,17 +97,18 @@ const resolveAll: Resolve = async (host) =>
   (await dnsLookup(host, { all: true, verbatim: true })).map((entry) => entry.address)
 
 /**
- * True when the host resolves before `deadline`, and only to public addresses
- * (`127.0.0.1.nip.io` does not). A stalled resolver counts as not public.
+ * The host's addresses when it resolves before `deadline` and only to public
+ * addresses (`127.0.0.1.nip.io` does not), or null. A stalled resolver counts
+ * as not public.
  */
-const resolvesPublic = async (
+const publicAddresses = async (
   host: string,
   resolve: Resolve,
   deadline: number,
-): Promise<boolean> => {
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return !isPrivateAddress(host)
+): Promise<string[] | null> => {
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return isPrivateAddress(host) ? null : [host]
   const left = deadline - Date.now()
-  if (left <= 0) return false
+  if (left <= 0) return null
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
     const addresses = await Promise.race([
@@ -110,8 +118,10 @@ const resolvesPublic = async (
       }),
     ])
     return addresses.length > 0 && addresses.every((address) => !isPrivateAddress(address))
+      ? addresses
+      : null
   } catch {
-    return false
+    return null
   } finally {
     clearTimeout(timer)
   }
@@ -193,7 +203,103 @@ export const iconCandidates = (html: string, pageUrl: string): string[] => {
 export const googleFaviconUrl = (host: string): string =>
   `https://www.google.com/s2/favicons?sz=${ICON_SIZE}&domain=${encodeURIComponent(host)}`
 
-type Fetch = typeof fetch
+/**
+ * A GET that connects only to `addresses`, the answers that were checked for
+ * the URL's host. It must not resolve the host again.
+ */
+export type Fetch = (url: string, init: RequestInit, addresses: string[]) => Promise<Response>
+
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304])
+
+/** A decoder for the `Content-Encoding`s `fetch` decodes, or null for none (or one we cannot read). */
+const decoderFor = (encoding: string | undefined) => {
+  switch ((encoding ?? '').trim().toLowerCase()) {
+    case 'gzip':
+    case 'x-gzip':
+      return createGunzip()
+    case 'deflate':
+      return createInflate()
+    case 'br':
+      return createBrotliDecompress()
+    default:
+      return null
+  }
+}
+
+/** A `lookup` that answers with `addresses` only, never asks DNS, and refuses them all if one is refused. */
+const pinnedLookup =
+  (addresses: string[], refuse: (address: string) => boolean): LookupFunction =>
+  (_hostname, options, callback) => {
+    const family = options.family
+    const want = family === 4 || family === 'IPv4' ? 4 : family === 6 || family === 'IPv6' ? 6 : 0
+    const entries = addresses
+      .map((address) => ({ address, family: address.includes(':') ? 6 : 4 }))
+      .filter((entry) => !want || entry.family === want)
+    const first = entries[0]
+    if (!first || addresses.some(refuse)) {
+      callback(Object.assign(new Error('Address refused'), { code: 'EREFUSED' }), '', 0)
+    } else if (options.all) {
+      callback(null, entries)
+    } else {
+      callback(null, first.address, first.family)
+    }
+  }
+
+/**
+ * The default `Fetch`: node:http(s) with a `lookup` pinned to the checked
+ * addresses (Bun's `fetch` has no way to set the address it connects to).
+ * TLS still verifies the certificate for the URL's host. Redirects are not
+ * followed, a fresh connection is used every time (no pooled socket from an
+ * earlier answer), a gzip/deflate/br body is decoded like `fetch` does, and
+ * `init.signal` aborts the request and its body.
+ */
+export const pinnedFetch = (
+  url: string,
+  init: RequestInit,
+  addresses: string[],
+  refuse: (address: string) => boolean = isPrivateAddress,
+): Promise<Response> =>
+  new Promise((resolve, reject) => {
+    const target = new URL(url)
+    const request = target.protocol === 'https:' ? httpsRequest : httpRequest
+    const req = request(
+      target,
+      {
+        method: 'GET',
+        headers: Object.fromEntries(new Headers(init.headers)),
+        agent: false,
+        lookup: pinnedLookup(addresses, refuse),
+        signal: init.signal ?? undefined,
+      },
+      (res) => {
+        const status = res.statusCode ?? 0
+        const headers = new Headers()
+        for (let i = 0; i + 1 < res.rawHeaders.length; i += 2) {
+          headers.append(res.rawHeaders[i] ?? '', res.rawHeaders[i + 1] ?? '')
+        }
+        try {
+          const nullBody = NULL_BODY_STATUSES.has(status)
+          if (nullBody) res.resume()
+          const decoder = nullBody ? null : decoderFor(res.headers['content-encoding'])
+          let stream: Readable = res
+          if (decoder) {
+            headers.delete('content-encoding')
+            headers.delete('content-length')
+            stream = pipeline(res, decoder, () => {})
+          }
+          const body = nullBody ? null : (Readable.toWeb(stream) as ReadableStream<Uint8Array>)
+          const response = new Response(body, { status, headers })
+          Object.defineProperty(response, 'url', { value: url })
+          resolve(response)
+        } catch (error) {
+          res.destroy()
+          reject(error)
+        }
+      },
+    )
+    req.on('error', reject)
+    req.end()
+  })
 
 type Lookup = { fetch: Fetch; resolve: Resolve; deadline: number }
 
@@ -202,21 +308,28 @@ const safeGet = async (input: string, accept: string, ctx: Lookup): Promise<Resp
   let url = input
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     const host = publicHost(url)
-    if (!host || !(await resolvesPublic(host, ctx.resolve, ctx.deadline))) return null
+    const addresses = host && (await publicAddresses(host, ctx.resolve, ctx.deadline))
+    if (!addresses) return null
     const left = ctx.deadline - Date.now()
     if (left <= 0) return null
-    const res = await ctx.fetch(url, {
-      headers: { Accept: accept, 'User-Agent': 'athena-cms (favicon)' },
-      redirect: 'manual',
-      signal: AbortSignal.timeout(Math.min(TIMEOUT_MS, left)),
-    })
+    const res = await ctx.fetch(
+      url,
+      {
+        headers: { Accept: accept, 'User-Agent': 'athena-cms (favicon)' },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(Math.min(TIMEOUT_MS, left)),
+      },
+      addresses,
+    )
+    if (res.ok) return res
+    void res.body?.cancel().catch(() => {})
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get('location')
       if (!location) return null
       url = new URL(location, url).href
       continue
     }
-    return res.ok ? res : null
+    return null
   }
   return null
 }
@@ -268,7 +381,7 @@ export type ToPng = (image: Uint8Array) => Promise<Buffer | null>
 export const fetchFavicon = async (
   siteUrl: string,
   toPng: ToPng,
-  fetchImpl: Fetch = fetch,
+  fetchImpl: Fetch = pinnedFetch,
   {
     resolve = resolveAll,
     budgetMs = LOOKUP_BUDGET_MS,
@@ -278,7 +391,7 @@ export const fetchFavicon = async (
   if (!host) return null
   const ctx: Lookup = { fetch: fetchImpl, resolve, deadline: Date.now() + budgetMs }
   // A site that resolves to a private address gets no lookup at all, not even via Google.
-  if (!(await resolvesPublic(host, resolve, ctx.deadline))) return null
+  if (!(await publicAddresses(host, resolve, ctx.deadline))) return null
 
   let candidates: string[] = []
   try {

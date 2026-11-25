@@ -120,7 +120,7 @@ export const saveFavicon = async (req: PayloadRequest, icon: Favicon): Promise<n
 export const fillStackIcons =
   (
     lookup: (url: string, budgetMs: number) => Promise<Favicon | null> = (url, budgetMs) =>
-      fetchFavicon(url, toPng, fetch, { budgetMs: Math.min(budgetMs, LOOKUP_BUDGET_MS) }),
+      fetchFavicon(url, toPng, undefined, { budgetMs: Math.min(budgetMs, LOOKUP_BUDGET_MS) }),
     save: (req: PayloadRequest, icon: Favicon) => Promise<number | string> = saveFavicon,
     filenameOf: (
       req: PayloadRequest,
