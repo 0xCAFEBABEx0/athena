@@ -18,7 +18,7 @@ import {
   searchFailure,
   snippetOf,
 } from './ai'
-import { allowToday, allowVisitor, dailyLimit, resetVisitorLimits } from './ai-limits'
+import { allowToday, allowVisitor, dailyLimit, visitorDailyLimit, visitorKey } from './ai-limits'
 import { bumpCounter, peekCms, storeCms, type CmsCacheStore } from './cms-cache'
 import { anthropicConnection } from '@athena/shared/anthropic'
 import { ROUTES } from '@athena/shared/constants'
@@ -139,7 +139,14 @@ describe('TC-U-57 AI search (web): queries and ranking', () => {
     expect(isCrossSite(request({ origin: 'https://evil.example' }))).toBe(true)
     expect(isCrossSite(request({ origin: 'null' }))).toBe(true)
     expect(isCrossSite(request({ 'sec-fetch-site': 'cross-site' }))).toBe(true)
-    expect(isCrossSite(request({}))).toBe(false)
+    expect(isCrossSite(request({ 'sec-fetch-site': 'same-origin' }))).toBe(false)
+    expect(isCrossSite(request({ origin: 'https://whoa.me', 'sec-fetch-site': 'same-origin' }))).toBe(false)
+    // Neither header (curl), or one that says otherwise, is refused.
+    expect(isCrossSite(request({}))).toBe(true)
+    expect(isCrossSite(request({ 'sec-fetch-site': 'same-site' }))).toBe(true)
+    expect(isCrossSite(request({ 'sec-fetch-site': 'none' }))).toBe(true)
+    expect(isCrossSite(request({ origin: 'https://whoa.me', 'sec-fetch-site': 'cross-site' }))).toBe(true)
+    expect(isCrossSite(request({ origin: 'https://evil.example', 'sec-fetch-site': 'same-origin' }))).toBe(true)
     expect(clientAddress(request({ 'x-real-ip': '1.1.1.1', 'x-forwarded-for': '2.2.2.2' }))).toBe('1.1.1.1')
     expect(clientAddress(request({ 'x-forwarded-for': '2.2.2.2, 10.0.0.1' }))).toBe('2.2.2.2')
     expect(clientAddress(request({}))).toBe('unknown')
@@ -290,15 +297,52 @@ describe('TC-U-58 AI search (web): asking the CMS', () => {
 describe('TC-U-59 AI search (web): limits and stored answers', () => {
   afterEach(() => {
     restoreEnv()
-    resetVisitorLimits()
   })
 
-  test('10 questions per visitor in 10 minutes, counted per visitor', () => {
-    const t = 1_000_000
-    for (let i = 0; i < 10; i++) expect(allowVisitor('a', t + i)).toBe(true)
-    expect(allowVisitor('a', t + 10)).toBe(false)
-    expect(allowVisitor('b', t + 10)).toBe(true)
-    expect(allowVisitor('a', t + 10 * 60 * 1000 + 1)).toBe(true)
+  test('10 questions per visitor in 10 minutes, counted per visitor in the shared cache', async () => {
+    process.env.AI_DAILY_LIMIT = '1000'
+    const store = memoryStore()
+    const t = new Date('2030-01-01T12:00:00Z').getTime()
+    for (let i = 0; i < 10; i++) expect(await allowVisitor('1.1.1.1', new Date(t + i), store)).toBe(true)
+    expect(await allowVisitor('1.1.1.1', new Date(t + 10), store)).toBe(false)
+    expect(await allowVisitor('2.2.2.2', new Date(t + 10), store)).toBe(true)
+    expect(await allowVisitor('1.1.1.1', new Date(t + 10 * 60 * 1000), store)).toBe(true)
+    // Refused requests did not use up the day's share (100 here).
+    expect(await bumpCounter('ai:visitor-daily:2030-01-01:1.1.1.1', 60, 0, store)).toBe(11)
+  })
+
+  test('one visitor gets a tenth of the daily budget, across every instance', async () => {
+    delete process.env.AI_DAILY_LIMIT
+    expect(visitorDailyLimit()).toBe(10)
+    expect(visitorDailyLimit(5)).toBe(1)
+    expect(visitorDailyLimit(0)).toBe(0)
+    process.env.AI_DAILY_LIMIT = '30'
+    // Two function instances share one Runtime Cache.
+    const shared = memoryStore()
+    const day = new Date('2030-01-01T00:00:00Z').getTime()
+    const at = (i: number) => new Date(day + i * 11 * 60 * 1000)
+    for (let i = 0; i < 3; i++) expect(await allowVisitor('1.1.1.1', at(i), shared)).toBe(true)
+    expect(await allowVisitor('1.1.1.1', at(3), shared)).toBe(false)
+    // A refused visitor never reaches the daily count.
+    expect(await bumpCounter('ai:daily:2030-01-01', 60, 0, shared)).toBe(0)
+    // The next UTC day starts again.
+    expect(await allowVisitor('1.1.1.1', new Date('2030-01-02T00:00:00Z'), shared)).toBe(true)
+    process.env.AI_DAILY_LIMIT = '0'
+    expect(await allowVisitor('3.3.3.3', at(0), shared)).toBe(false)
+  })
+
+  test('a visitor is an IPv4 address or an IPv6 /64', async () => {
+    expect(visitorKey('1.2.3.4')).toBe('1.2.3.4')
+    expect(visitorKey('::ffff:1.2.3.4')).toBe('1.2.3.4')
+    expect(visitorKey('2001:DB8:0:1:aaaa::1')).toBe('2001:db8:0:1::/64')
+    expect(visitorKey('2001:db8::1:2:3:4%eth0')).toBe('2001:db8:0:0::/64')
+    expect(visitorKey('2001:0db8:0000:0001:ffff:ffff:ffff:ffff')).toBe('2001:db8:0:1::/64')
+    expect(visitorKey('unknown')).toBe('unknown')
+    const store = memoryStore()
+    const now = new Date('2030-01-01T00:00:00Z')
+    for (let i = 0; i < 10; i++) expect(await allowVisitor(`2001:db8:0:1::${i + 1}`, now, store)).toBe(true)
+    expect(await allowVisitor('2001:db8:0:1::ff', now, store)).toBe(false)
+    expect(await allowVisitor('2001:db8:0:2::1', now, store)).toBe(true)
   })
 
   test('the daily cap defaults to 100; AI_DAILY_LIMIT sets it (0 turns uncached questions off)', async () => {
@@ -358,11 +402,14 @@ describe('TC-U-59 AI search (web): limits and stored answers', () => {
     expect(await bumpCounter('c', 60, 1, broken)).toBe(Number.POSITIVE_INFINITY)
     expect(await allowToday(new Date(), broken)).toBe(false)
     expect(await allowToday(new Date(), memoryStore())).toBe(true)
+    expect(await allowVisitor('1.1.1.1', new Date(), broken)).toBe(false)
+    expect(await allowVisitor('1.1.1.1', new Date(), memoryStore())).toBe(true)
     // On Vercel with no shared cache at all, a per-instance count would not bound the site: refuse.
     const vercel = process.env.VERCEL
     process.env.VERCEL = '1'
     try {
       expect(await allowToday(new Date(), null)).toBe(false)
+      expect(await allowVisitor('1.1.1.1', new Date(), null)).toBe(false)
     } finally {
       if (vercel === undefined) delete process.env.VERCEL
       else process.env.VERCEL = vercel

@@ -176,13 +176,20 @@ POST /api/ai/search  ◄──────────────── Bearer 
   same events as a new one, paced like one (the sources after 0.35–0.8 s, the
   text after 0.9–1.8 s, in small pieces over about 6 s), and nothing in the
   response says it was reused. Do not add a `cached` flag or a header.
-- Uncached requests: 10 per visitor per 10 minutes (per function instance),
-  and `AI_DAILY_LIMIT` per UTC day for the whole site (default 100; `0` turns
-  uncached AI requests off). Beyond that the page shows "busy" or "daily
-  limit" in an alert. If the daily count cannot be read or written (Runtime
-  Cache failure), the request is refused: the limit fails closed.
-- Only same-origin browsers may call `/api/ai/*` (Origin check); bodies over
-  2 KB and questions over 300 characters are refused before anything runs.
+- Uncached requests: 10 per visitor per 10 minutes and a tenth of
+  `AI_DAILY_LIMIT` per visitor per UTC day (at least 1), then
+  `AI_DAILY_LIMIT` per UTC day for the whole site (default 100; `0` turns
+  uncached AI requests off). A visitor is an IPv4 address or an IPv6 /64
+  (`x-real-ip`). Every count lives in the Runtime Cache, shared by all
+  function instances; the visitor is checked first, so a refused visitor
+  does not move the site's count. Beyond that the page shows "busy" or
+  "daily limit" in an alert. If a count cannot be read or written (Runtime
+  Cache failure, or no Runtime Cache on Vercel), the request is refused: the
+  limits fail closed.
+- Only same-origin browsers may call `/api/ai/*`: `Sec-Fetch-Site`, when
+  sent, must be `same-origin`, and `Origin`, when sent, must be this host; a
+  request with neither (curl) is refused. Bodies over 2 KB and questions over
+  300 characters are refused before anything runs.
 - The page never asks on its own: the AI modes run on Enter, and a page
   prerendered by a hovered link waits until it is shown. A link to
   `/search?q=…&mode=ask` asks on arrival only when the visitor came from this

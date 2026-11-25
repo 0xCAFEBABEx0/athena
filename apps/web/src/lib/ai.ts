@@ -333,12 +333,16 @@ export const relevantChunks = (chunks: ChunkHit[]): ChunkHit[] => {
 
 /**
  * Same-origin check for the browser-facing AI endpoints: a page on another
- * site cannot make a reader's browser spend this site's API budget. Requests
- * without an Origin header (curl) are left to the rate limits.
+ * site cannot make a reader's browser spend this site's API budget, and a
+ * request that does not come from a page of this site (curl sends neither
+ * header) is refused too. Browsers send `Sec-Fetch-Site` and, on a POST,
+ * `Origin`; either must say same origin, and neither may say otherwise.
  */
 export const isCrossSite = (request: Request): boolean => {
+  const fetchSite = request.headers.get('sec-fetch-site')
+  if (fetchSite !== null && fetchSite !== 'same-origin') return true
   const origin = request.headers.get('origin')
-  if (!origin) return request.headers.get('sec-fetch-site') === 'cross-site'
+  if (!origin) return fetchSite !== 'same-origin'
   try {
     return new URL(origin).host !== new URL(request.url).host
   } catch {

@@ -220,6 +220,10 @@ export const bumpCounter = async (
     const current = localCounters.get(key)
     const value = (current && current.expires > now ? current.value : 0) + by
     localCounters.set(key, { value, expires: now + ttlSeconds * 1000 })
+    // Keep the map small on a long-lived server (one key per visitor and window).
+    if (localCounters.size > 5_000) {
+      for (const [old, entry] of localCounters) if (entry.expires <= now) localCounters.delete(old)
+    }
     return value
   }
   try {
