@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
+import { brotliCompressSync, deflateSync } from 'node:zlib'
+
 import type { PayloadRequest } from 'payload'
 
 import {
@@ -728,6 +730,39 @@ describe('TC-U-37 favicon connections go to the checked addresses (DNS rebinding
       expect(server.hits.length).toBe(2)
     } finally {
       server.stop()
+    }
+  })
+
+  test('the default fetch decodes a compressed body', async () => {
+    const html = '<link rel="icon" href="/i.png">'
+    const encoded: Record<string, Uint8Array> = {
+      gzip: Bun.gzipSync(html),
+      deflate: deflateSync(html),
+      br: brotliCompressSync(html),
+    }
+    const server = Bun.serve({
+      hostname: '127.0.0.1',
+      port: 0,
+      fetch(req) {
+        const encoding = new URL(req.url).pathname.slice(1)
+        return new Response(encoded[encoding] ?? html, {
+          headers: { 'content-type': 'text/html', 'content-encoding': encoding },
+        })
+      },
+    })
+    try {
+      for (const encoding of Object.keys(encoded)) {
+        const res = await pinnedFetch(
+          `http://packed.example:${server.port}/${encoding}`,
+          { signal: AbortSignal.timeout(2000) },
+          ['127.0.0.1'],
+          () => false,
+        )
+        expect(res.headers.get('content-encoding'), encoding).toBeNull()
+        expect(await res.text(), encoding).toBe(html)
+      }
+    } finally {
+      server.stop(true)
     }
   })
 

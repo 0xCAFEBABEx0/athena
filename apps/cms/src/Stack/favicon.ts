@@ -18,7 +18,8 @@ import { lookup as dnsLookup } from 'node:dns/promises'
 import { request as httpRequest } from 'node:http'
 import { request as httpsRequest } from 'node:https'
 import type { LookupFunction } from 'node:net'
-import { Readable } from 'node:stream'
+import { pipeline, Readable } from 'node:stream'
+import { createBrotliDecompress, createGunzip, createInflate } from 'node:zlib'
 
 export const ICON_SIZE = 64
 
@@ -210,6 +211,21 @@ export type Fetch = (url: string, init: RequestInit, addresses: string[]) => Pro
 
 const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304])
 
+/** A decoder for the `Content-Encoding`s `fetch` decodes, or null for none (or one we cannot read). */
+const decoderFor = (encoding: string | undefined) => {
+  switch ((encoding ?? '').trim().toLowerCase()) {
+    case 'gzip':
+    case 'x-gzip':
+      return createGunzip()
+    case 'deflate':
+      return createInflate()
+    case 'br':
+      return createBrotliDecompress()
+    default:
+      return null
+  }
+}
+
 /** A `lookup` that answers with `addresses` only, never asks DNS, and refuses them all if one is refused. */
 const pinnedLookup =
   (addresses: string[], refuse: (address: string) => boolean): LookupFunction =>
@@ -234,7 +250,8 @@ const pinnedLookup =
  * addresses (Bun's `fetch` has no way to set the address it connects to).
  * TLS still verifies the certificate for the URL's host. Redirects are not
  * followed, a fresh connection is used every time (no pooled socket from an
- * earlier answer), and `init.signal` aborts the request and its body.
+ * earlier answer), a gzip/deflate/br body is decoded like `fetch` does, and
+ * `init.signal` aborts the request and its body.
  */
 export const pinnedFetch = (
   url: string,
@@ -263,7 +280,14 @@ export const pinnedFetch = (
         try {
           const nullBody = NULL_BODY_STATUSES.has(status)
           if (nullBody) res.resume()
-          const body = nullBody ? null : (Readable.toWeb(res) as ReadableStream<Uint8Array>)
+          const decoder = nullBody ? null : decoderFor(res.headers['content-encoding'])
+          let stream: Readable = res
+          if (decoder) {
+            headers.delete('content-encoding')
+            headers.delete('content-length')
+            stream = pipeline(res, decoder, () => {})
+          }
+          const body = nullBody ? null : (Readable.toWeb(stream) as ReadableStream<Uint8Array>)
           const response = new Response(body, { status, headers })
           Object.defineProperty(response, 'url', { value: url })
           resolve(response)
