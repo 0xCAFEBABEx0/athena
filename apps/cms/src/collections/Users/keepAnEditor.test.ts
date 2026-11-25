@@ -92,12 +92,6 @@ describe('canDeleteUser', () => {
     expect(await canDeleteUser(as('editor', users))).toEqual({ role: { not_equals: 'editor' } })
   })
 
-  test('the seed may clear its demo author even when it is the only editor', async () => {
-    const req = reqWith([{ id: 1, role: 'editor' }])
-    const context = { allowDeletingLastEditor: true }
-    await expect(keepAnEditorOnDelete({ context, id: 1, req } as never)).resolves.toBeUndefined()
-  })
-
   test('a bulk delete of every editor keeps one', async () => {
     const req = reqWith([
       { id: 1, role: 'editor' },

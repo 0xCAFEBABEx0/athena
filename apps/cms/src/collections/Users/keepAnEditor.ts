@@ -66,9 +66,8 @@ export const canDeleteUser: Access<User> = async ({ req }) => {
   return totalDocs > 1 || { role: { not_equals: 'editor' } }
 }
 
-/** Backstop for calls that skip access; the seed clears its demo author with `allowDeletingLastEditor`. */
+/** Backstop for calls that skip access. */
 export const keepAnEditorOnDelete: CollectionBeforeDeleteHook = async ({ context, id, req }) => {
-  if (context.allowDeletingLastEditor) return
   // A bulk delete runs these hooks concurrently: each one counts the editors
   // outside every user this request has started deleting, so the last hook
   // to count refuses when the selection holds every editor.

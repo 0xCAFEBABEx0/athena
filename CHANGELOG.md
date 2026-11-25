@@ -17,8 +17,8 @@ section of each new version as a GitHub Release.
   leaked key meant a new admin login. Every other existing user becomes an editor.
   The first user is always an editor, and the last editor can be neither
   demoted nor deleted, so the admin cannot be locked out (a bulk delete
-  skips that editor and keeps their admin preferences; reseeding still works
-  when the demo author is the only editor).
+  skips that editor and keeps their admin preferences; the seed updates its
+  demo author in place, so reseeding works when that is the only editor).
   Needs `docs/sql/2026-11-25-user-roles.sql` before the CMS deploys.
 
 ### Fixed

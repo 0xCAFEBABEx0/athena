@@ -76,7 +76,7 @@ cancelling jobs, changing document locks and the scheduler's
 `payload-jobs-stats` global are editor-only as well. The first user is
 always an editor, and the last editor can be neither demoted nor deleted
 (a bulk delete then skips editors, so their admin preferences stay too).
-The seed may still replace its demo author when that is the only editor.
+The seed updates its demo author in place rather than deleting it.
 
 ## 3. Collections
 
