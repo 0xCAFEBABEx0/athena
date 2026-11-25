@@ -23,7 +23,7 @@
     "env:check": "node -e \"console.log('Environment:', process.env.NODE_ENV || 'development'); console.log('Vercel Env:', process.env.VERCEL_ENV || 'local');\""
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.7.0",
+    "@anthropic-ai/sdk": "^1.11.0",
     "@athena/shared": "workspace:*",
     "@fontsource-variable/inter": "^5.2.5",
     "@payloadcms/db-postgres": "3.93.0",
@@ -38,7 +38,7 @@
     "@payloadcms/ui": "3.93.0",
     "@sentry/nextjs": "^11.11.0",
     "cross-env": "^10.1.0",
-    "next": "16.4.5",
+    "next": "16.4.6",
     "payload": "3.93.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
